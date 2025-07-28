@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from models.backbone import CNN
+from models.backbone import MLP, CNN, ConditionalCNN
 from utils.args import parse_args
 from utils.loggers import WandBLogger
 
@@ -42,7 +42,7 @@ def train(args):
     )
     stats = get_dataset_stats(dataset)
 
-    model = CNN(
+    model = ConditionalCNN(
         horizon=args.horizon, transition_dim=transition_dim, hidden_dim=args.hidden_dim
     ).to(args.device)
     path = AffineProbPath(scheduler=CondOTScheduler())
