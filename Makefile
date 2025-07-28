@@ -39,6 +39,19 @@ baseline_bc:
 fm_bc:
 	python src/pipelines/fm_bc.py
 
+.PHONY: mujoco_data
+mujoco_data:
+	@echo "Downloading MuJoCo hopper expert dataset..."
+	minari download mujoco/hopper/expert-v0
+
+.PHONY: kitchen_data
+kitchen_data:
+	@echo "Downloading kitchen dataset..."
+	minari download D4RL/kitchen/partial-v2
+	minari download D4RL/kitchen/complete-v2
+	minari download D4RL/kitchen/mixed-v2
+
+
 .PHONY: clean
 clean:
 	rm -rf videos/*
