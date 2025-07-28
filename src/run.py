@@ -4,6 +4,8 @@ import time
 import random
 import numpy as np
 import pprint
+import wandb
+from matplotlib import pyplot as plt
 
 import torch
 from torch.utils.data import DataLoader
@@ -18,10 +20,7 @@ from flow_matching.path import AffineProbPath
 from flow_matching.utils import ModelWrapper
 from flow_matching.solver import ODESolver
 
-
 from src.conf.environment import LunarLanderConfig
-
-
 from src.pipelines.preprocessing import (
     collate_fn,
     get_dataset_stats,
@@ -40,7 +39,7 @@ class WrappedConditionalModel(ModelWrapper):
         return self.model(x, t, c)
 
 
-def train(config, args, dataset):
+def train(config, args, dataset, logger):
     # parsing some configs
     obs_dim = config.obs_dim
     action_dim = config.action_dim
@@ -87,33 +86,16 @@ def train(config, args, dataset):
 
     path = AffineProbPath(scheduler=CondOTScheduler())
     optim = torch.optim.Adam(model.parameters(), lr=args.lr)
-    logger = WandBLogger(
-        config={
-            "environment": args.environment,
-            "horizon": args.horizon,
-            "batch_size": args.batch_size,
-            "model_type": args.model_type,
-            "hidden_dim": args.hidden_dim,
-            "kernel_size": (
-                args.kernel_size
-                if args.model_type == "cnn" or args.model_type == "ccnn"
-                else 0
-            ),
-            "num_epochs": args.num_epochs,
-            "lr": args.lr,
-        },
-        run_name=run_name,
-    )
+
     # checkpoints and model saving
-    run_name = f"{args.model_type}_h{args.horizon}_e{args.num_epochs}_k{args.kernel_size}_start_obs"
-    model_name = run_name + ".pth"
+    model_name = logger.run_name + ".pth"
     save_dir = "src/checkpoints"
     model_save_path = os.path.join(save_dir, model_name)
 
     pp = pprint.PrettyPrinter(indent=2)
     print("Training configuration:")
     pp.pprint(config)
-    print("Run name:", run_name)
+    print("Run name:", logger.run_name)
     print("Starting training...")
 
     for epoch in range(args.num_epochs):
@@ -163,12 +145,11 @@ def train(config, args, dataset):
     os.makedirs(save_dir, exist_ok=True)
     torch.save(model.state_dict(), model_save_path)
     logger.save_model(model_save_path)
-    logger.finish()
     print(f"Model saved to {model_save_path}, training complete.")
     return model, stats, input_dim
 
 
-def evaluate_open_loop(env, model, stats, input_dim, args):
+def evaluate_open_loop(env, model, stats, input_dim, args, logger):
     if args.condition_on == "start_obs":
         start_observation, _ = env.reset()
         cond_tensor = torch.from_numpy(start_observation)
@@ -187,7 +168,9 @@ def evaluate_open_loop(env, model, stats, input_dim, args):
         condition={args.condition_on: cond_tensor},
         batch_size=args.inference_batch_size,
     )
-    visualize_trajectories(obs, act)
+    fig, ax = visualize_trajectories(obs, act)
+    logger.log({"trajectory_plot": wandb.Image(fig)})
+    plt.close(fig)
 
 
 def main():
@@ -206,10 +189,28 @@ def main():
     if args.environment == "LunarLander-v3":
         config = LunarLanderConfig()
     dataset = minari.load_dataset(dataset_id=config.dataset_name)
-    model, stats, input_dim = train(config=config, args=args, dataset=dataset)
+    run_name = f"{args.model_type}_h{args.horizon}_e{args.num_epochs}_k{args.kernel_size}_start_obs"
+    logger = WandBLogger(
+        config={
+            "environment": args.environment,
+            "horizon": args.horizon,
+            "batch_size": args.batch_size,
+            "model_type": args.model_type,
+            "hidden_dim": args.hidden_dim,
+            "kernel_size": (
+                args.kernel_size
+                if args.model_type == "cnn" or args.model_type == "ccnn"
+                else 0
+            ),
+            "num_epochs": args.num_epochs,
+            "lr": args.lr,
+        },
+        run_name=run_name,
+    )
+    model, stats, input_dim = train(config=config, args=args, dataset=dataset, logger=logger)
     env = dataset.recover_environment()
-    evaluate_open_loop(env, model, stats, input_dim, args)
-
+    evaluate_open_loop(env, model, stats, input_dim, args, logger=logger)
+    logger.finish()
 
 if __name__ == "__main__":
     main()
