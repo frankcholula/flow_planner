@@ -1,5 +1,13 @@
 python run.py \
+    --environment "LunarLander-v3" \
     --horizon 100 \
     --batch-size 32 \
     --num-epochs 100 \
-    --lr 1e-3 f
+    --lr 1e-3 \
+    --model-type "ccnn" \
+    --kernel-size 5 \
+    --hidden-dim 64 \
+    --step-size 0.05 \
+    --solver-method "midpoint" \
+    --inference-batch-size 1 \
+    --condition-on "start_obs"
