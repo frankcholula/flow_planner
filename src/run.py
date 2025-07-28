@@ -181,6 +181,7 @@ def evaluate_open_loop(env, model, stats, input_dim, args):
         T=T,
         input_dim=input_dim,
         args=args,
+        horizon=args.horizon,
         condition={args.condition_on: cond_tensor},
         batch_size=args.inference_batch_size,
     )
