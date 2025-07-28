@@ -7,7 +7,7 @@ def visualize_trajectories(trajectory_fn, num_trajectories=5):
     for _ in range(num_trajectories):
         colors = ["red", "orange","yellow", "green", "blue"]
         obs, act = trajectory_fn()
-        visualize_chunk(ax, obs, color=colors[_ % len(colors)], mode="scatter")
+        visualize_chunk(ax, obs, color=colors[_ % len(colors)], mode="line")
     return fig, ax
 
 def visualize_chunk(
