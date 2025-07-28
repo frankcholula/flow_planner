@@ -14,7 +14,7 @@ setup:
 .PHONY: lunarlander
 lunarlander:
 	@echo "Running LunarLander experiment..."
-	@src/experiments/lunarlander/fm.sh
+	@src/experiments/lunarlander/cfm_start_obs.sh
 
 .PHONY: train
 train:
