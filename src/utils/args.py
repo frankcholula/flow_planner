@@ -34,6 +34,9 @@ def parse_args() -> argparse.Namespace:
         default="midpoint",
         choices=["midpoint", "euler"],
     )
+    inference_args.add_argument(
+        "--inference-batch-size", type=int, default=1, help="Batch size for inference"
+    )
 
     cnn_args = parser.add_argument_group("CNN-specific arguments")
     cnn_args.add_argument(

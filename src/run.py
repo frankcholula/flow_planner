@@ -134,7 +134,7 @@ def train(config, args, dataset):
     return model, stats, input_dim
 
 
-def evaluate(env, model, stats, input_dim, args):
+def evaluate_open_loop(env, model, stats, input_dim, args):
     if args.condition_on == "start_obs":
         start_observation, _ = env.reset()
         cond_tensor = torch.from_numpy(start_observation)
@@ -150,7 +150,7 @@ def evaluate(env, model, stats, input_dim, args):
         input_dim=input_dim,
         args=args,
         condition={args.condition_on: cond_tensor},
-        batch_size=1,
+        batch_size=args.inference_batch_size,
     )
     visualize_trajectories(obs, act)
 
@@ -166,12 +166,13 @@ def main():
     if args.device:
         torch.set_default_device(args.device)
 
+    # Load configuration based on the environment
     if args.environment == "LunarLander-v3":
         config = LunarLanderConfig()
     dataset = minari.load_dataset(dataset_id=config.dataset_name)
     env = dataset.recover_environment()
-    model, stats, obs_dim, action_dim = train(args, config, dataset)
-    evaluate(env, model, stats, obs_dim, action_dim, args)
+    model, stats, input_dim = train(args, config, dataset)
+    evaluate_open_loop(env, model, stats, input_dim, args)
 
 
 if __name__ == "__main__":
