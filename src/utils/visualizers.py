@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-def visualize_trajectories(stats, observations):
+def visualize_trajectories(observations):
     fig, ax = plt.subplots(figsize=(10, 7))
     ax.set_title(f"Trajectory Visualization")
     for _ in range(4):

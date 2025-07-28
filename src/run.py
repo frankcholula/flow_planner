@@ -88,14 +88,14 @@ def train(config, args, dataset, logger):
     optim = torch.optim.Adam(model.parameters(), lr=args.lr)
 
     # checkpoints and model saving
-    model_name = logger.run_name + ".pth"
+    model_name = logger.run.name + ".pth"
     save_dir = "src/checkpoints"
     model_save_path = os.path.join(save_dir, model_name)
 
     pp = pprint.PrettyPrinter(indent=2)
     print("Training configuration:")
     pp.pprint(config)
-    print("Run name:", logger.run_name)
+    print("Run name:", logger.run.name)
     print("Starting training...")
 
     for epoch in range(args.num_epochs):
@@ -168,7 +168,7 @@ def evaluate_open_loop(env, model, stats, input_dim, args, logger):
         condition={args.condition_on: cond_tensor},
         batch_size=args.inference_batch_size,
     )
-    fig, ax = visualize_trajectories(obs, act)
+    fig, ax = visualize_trajectories(obs)
     logger.log({"trajectory_plot": wandb.Image(fig)})
     plt.close(fig)
 

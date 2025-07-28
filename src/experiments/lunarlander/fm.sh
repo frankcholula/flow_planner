@@ -2,7 +2,7 @@ python -m src.run \
     --environment "LunarLander-v3" \
     --horizon 100 \
     --batch-size 32 \
-    --num-epochs 1 \
+    --num-epochs 10 \
     --print-every 1 \
     --lr 1e-3 \
     --model-type "ccnn" \

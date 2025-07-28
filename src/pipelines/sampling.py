@@ -19,6 +19,10 @@ def unnormalize_trajectory(chunk, stats, horizon, obs_dim, action_dim):
 def generate_trajectory(
     stats, solver, T, input_dim, args, horizon, condition: dict, batch_size: int = 1
 ):
+    # infer obs and action dim from stats
+    obs_dim = stats['obs_mean'].shape[0]
+    action_dim = stats['act_mean'].shape[0]
+
     if "reward" in condition:
         rew_mean = stats["rew_mean"].to(args.device)
         rew_std = stats["rew_std"].to(args.device)
@@ -49,6 +53,6 @@ def generate_trajectory(
         return_intermediates=False,
     )
     obs, act = unnormalize_trajectory(
-        sol[0].flatten().detach(), stats, horizon, args.obs_dim, args.action_dim
+        sol[0].flatten().detach(), stats, horizon, obs_dim, action_dim
     )
     return obs, act
