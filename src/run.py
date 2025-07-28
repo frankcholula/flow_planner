@@ -11,12 +11,13 @@ from torch.utils.data import DataLoader
 from models.backbone import MLP, CNN, ConditionalCNN
 from utils.args import parse_args
 from utils.loggers import WandBLogger
-from utils.visualizers import visualize_chunk
+from utils.visualizers import visualize_chunk, visualize_trajectories
 
 from flow_matching.path.scheduler import CondOTScheduler
 from flow_matching.path import AffineProbPath
-from flow_matching.solver import ODESolver
 from flow_matching.utils import ModelWrapper
+from flow_matching.solver import ODESolver
+
 
 from src.conf.environment import LunarLanderConfig
 
@@ -39,11 +40,9 @@ class WrappedConditionalModel(ModelWrapper):
         return self.model(x, t, c)
 
 
-def train(args):
+def train(config, args, dataset):
     # parsing some configs
-    if args.environment == "LunarLander-v3":
-        config = LunarLanderConfig()
-    dataset = minari.load_dataset(dataset_id=config.dataset_name)
+
     obs_dim = config.obs_dim
     action_dim = config.action_dim
     horizon = args.horizon
@@ -132,15 +131,28 @@ def train(args):
     logger.save_model(model_save_path)
     logger.finish()
     print(f"Model saved to {model_save_path}, training complete.")
-    return model
+    return model, stats, input_dim
 
 
-def evaluate(model, args):
+def evaluate(env, model, stats, input_dim, args):
+    if args.condition_on == "start_obs":
+        start_observation, _ = env.reset()
+        cond_tensor = torch.from_numpy(start_observation)
     wrapped_vf = WrappedConditionalModel(model)
     step_size = args.step_size
     T = torch.linspace(0, 1, 10)  # sample times
     T = T.to(device=args.device)
     solver = ODESolver(velocity_model=wrapped_vf)
+    obs, act = generate_trajectory(
+        stats=stats,
+        solver=solver,
+        T=T,
+        input_dim=input_dim,
+        args=args,
+        condition={args.condition_on: cond_tensor},
+        batch_size=1,
+    )
+    visualize_trajectories(obs, act)
 
 
 def main():
@@ -154,8 +166,12 @@ def main():
     if args.device:
         torch.set_default_device(args.device)
 
-    model = train(args)
-    evaluate(model, args)
+    if args.environment == "LunarLander-v3":
+        config = LunarLanderConfig()
+    dataset = minari.load_dataset(dataset_id=config.dataset_name)
+    env = dataset.recover_environment()
+    model, stats, obs_dim, action_dim = train(args, config, dataset)
+    evaluate(env, model, stats, obs_dim, action_dim, args)
 
 
 if __name__ == "__main__":

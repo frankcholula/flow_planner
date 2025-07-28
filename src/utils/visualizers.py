@@ -2,6 +2,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
+def visualize_trajectories(stats, observations):
+    fig, ax = plt.subplots(figsize=(10, 7))
+    ax.set_title(f"Trajectory Visualization")
+    for _ in range(4):
+        colors = ["blue", "red", "green", "yellow"]
+        visualize_chunk(ax, observations, color=colors[_ % len(colors)], mode="line")
+
+
 def visualize_chunk(
     ax, chunk, color, x_limits=(-0.6, 0.6), y_limits=(-0.2, 1.6), mode="line"
 ):

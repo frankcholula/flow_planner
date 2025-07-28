@@ -40,4 +40,12 @@ def parse_args() -> argparse.Namespace:
         "--kernel-size", type=int, default=5, help="Kernel size for CNN models."
     )
 
+    conditional_args = parser.add_argument_group("Conditional arguments")
+    conditional_args.add_argument(
+        "--condition-on",
+        type=str,
+        default="reward",
+        choices=["reward", "start_obs"],
+        help="Condition type for trajectory generation.",
+    )
     return parser.parse_args()
