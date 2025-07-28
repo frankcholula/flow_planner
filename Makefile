@@ -13,7 +13,8 @@ setup:
 
 .PHONY: lunarlander
 lunarlander:
-	@echo "Running LunarLander experiment..."
+	@echo "Running LunarLander Experiments..."
+	@echo "Conditional Flow Matching on Starting Observations..."
 	@src/experiments/lunarlander/cfm_start_obs.sh
 
 .PHONY: train
