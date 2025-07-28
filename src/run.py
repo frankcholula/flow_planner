@@ -106,19 +106,34 @@ def train(config, args, dataset):
         start_time = time.time()
         for batch in dataloader:
             optim.zero_grad()
-            x1 = create_normalized_chunks(batch, args.horizon, stats)
-            if x1 is None:
-                continue
-            x1 = x1.to(args.device)
+
+            if args.condition_on:
+                x1, c  = create_normalized_chunks(
+                    batch, args.horizon, stats, cond_type=args.condition_on
+                )
+                if x1 is None:
+                    continue
+                x1, c  = x1.to(args.device), c.to(args.device)
+            else:
+                x1 = create_normalized_chunks(batch, args.horizon, stats)
+                if x1 is None:
+                    continue
+                x1 = x1.to(args.device)
+            
             x0 = torch.randn_like(x1)
             t = torch.rand(x1.shape[0], device=args.device)
             sample = path.sample(t=t, x_0=x0, x_1=x1)
-            pred = model(sample.x_t, sample.t)
+
+            if args.condition_on:
+                pred = model(sample.x_t, sample.t, c=c)
+            else:
+                pred = model(sample.x_t, sample.t)
             loss = ((pred - sample.dx_t) ** 2).mean()
             loss.backward()
             optim.step()
             total_loss += loss.item()
             total_chunks += 1
+
         avg_loss = total_loss / total_chunks if total_chunks > 0 else 0.0
         logger.log({"avg_epoch_loss": avg_loss})
         if (epoch + 1) % args.print_every == 0:
@@ -142,7 +157,7 @@ def evaluate_open_loop(env, model, stats, input_dim, args):
         cond_tensor = torch.from_numpy(start_observation)
     wrapped_vf = WrappedConditionalModel(model)
     step_size = args.step_size
-    T = torch.linspace(0, 1, 10)  # sample times
+    T = torch.linspace(0, 1, 10)
     T = T.to(device=args.device)
     solver = ODESolver(velocity_model=wrapped_vf)
     obs, act = generate_trajectory(
