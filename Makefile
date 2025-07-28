@@ -17,28 +17,6 @@ lunarlander:
 	@echo "Conditional Flow Matching on Starting Observations..."
 	@src/experiments/lunarlander/cfm_start_obs.sh
 
-.PHONY: train
-train:
-	@echo "Running training script..."
-	@src/experiments/lunarlander/train.sh
-
-.PHONY: eval
-eval:
-	@echo "Running evaluation script..."
-	@python src/pipelines/eval.py
-
-.PHONY: collect_dataset
-collect_dataset:
-	python src/pipelines/collect_dataset.py
-
-.PHONY: baseline_bc
-baseline_bc:
-	python src/pipelines/baseline_bc.py
-
-.PHONY: fm_bc
-fm_bc:
-	python src/pipelines/fm_bc.py
-
 # Dataset targets
 .PHONY: datasets
 datasets: mujoco_data kitchen_data
