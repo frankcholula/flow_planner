@@ -134,7 +134,7 @@ def train(config, args, dataset, logger):
             total_chunks += 1
 
         epoch_loss = total_loss / total_chunks if total_chunks > 0 else 0.0
-        logger.log({"epoch_loss": epoch_loss})
+        logger.log({"epoch loss": epoch_loss})
         if (epoch + 1) % args.print_every == 0:
             elapsed = time.time() - start_time
             print(
@@ -169,7 +169,7 @@ def evaluate_open_loop(env, model, stats, input_dim, args, logger):
         batch_size=args.inference_batch_size,
     )
     fig, ax = visualize_trajectories(trajectory_fn=trajectory_fn, num_trajectories=5)
-    logger.log({"trajectory_plot": wandb.Image(fig)})
+    logger.log({"trajectory plot": wandb.Image(fig)})
     plt.close(fig)
 
 
