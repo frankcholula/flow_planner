@@ -143,18 +143,19 @@ def train(config, args, dataset):
                 pred = model(sample.x_t, sample.t, c=c)
             else:
                 pred = model(sample.x_t, sample.t)
-            loss = ((pred - sample.dx_t) ** 2).mean()
+
+            loss = torch.pow(pred - sample.dx_t, 2).mean()
             loss.backward()
             optim.step()
             total_loss += loss.item()
             total_chunks += 1
 
-        avg_loss = total_loss / total_chunks if total_chunks > 0 else 0.0
-        logger.log({"avg_epoch_loss": avg_loss})
+        epoch_loss = total_loss / total_chunks if total_chunks > 0 else 0.0
+        logger.log({"epoch_loss": epoch_loss})
         if (epoch + 1) % args.print_every == 0:
             elapsed = time.time() - start_time
             print(
-                f"| Epoch {epoch+1:6d} | {elapsed:.2f} s/epoch | Loss {avg_loss:8.5f} |"
+                f"| Epoch {epoch+1:6d} | {elapsed:.2f} s/epoch | Loss {epoch_loss:8.5f} |"
             )
             start_time = time.time()
     print("Training complete. Saving model...")
