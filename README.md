@@ -12,13 +12,15 @@ conda activate ./.fp
 ## Makefile Targets
 The Makefile in `src` exposes several commands:
 - `make setup` – create a conda environment with the required dependencies.
+- `make clean` – remove models, runs and temporary files.
+
+### Redacted Commands
 - `make fm` – run the flow-matching experiment (`experiments/fm.sh`).
 - `make train` – train a PPO agent using `experiments/lunarlander/train.sh`.
 - `make eval` – evaluate a trained model via `pipelines/lunarlander/eval.py`.
 - `make collect_dataset` – generate a Minari dataset with `pipelines/lunarlander/collect_dataset.py`.
 - `make baseline_bc` – train a simple behavioural cloning policy.
 - `make fm_bc` – behavioural cloning using the flow-matching pipeline.
-- `make clean` – remove models, runs and temporary files.
 
 Run these commands from the `src` directory.
 

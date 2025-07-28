@@ -39,13 +39,15 @@ baseline_bc:
 fm_bc:
 	python src/pipelines/fm_bc.py
 
+# Dataset targets
+.PHONY: datasets
+datasets: mujoco_data kitchen_data
+
 .PHONY: mujoco_data
 mujoco_data:
 	@echo "Downloading MuJoCo hopper and walker2d..."
 	minari download mujoco/hopper/expert-v0
 	minari download mujoco/walker2d/expert-v0
-
-
 
 .PHONY: kitchen_data
 kitchen_data:
@@ -53,7 +55,6 @@ kitchen_data:
 	minari download D4RL/kitchen/partial-v2
 	minari download D4RL/kitchen/complete-v2
 	minari download D4RL/kitchen/mixed-v2
-
 
 .PHONY: clean
 clean:
