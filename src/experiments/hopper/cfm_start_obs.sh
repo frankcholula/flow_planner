@@ -1,5 +1,5 @@
 python -m src.run \
-    --environment "LunarLander-v3" \
+    --environment "hopper-v5" \
     --horizon 100 \
     --batch-size 32 \
     --num-epochs 1000 \
