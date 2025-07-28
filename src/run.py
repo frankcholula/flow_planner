@@ -8,10 +8,10 @@ import pprint
 import torch
 from torch.utils.data import DataLoader
 
-from models.backbone import MLP, CNN, ConditionalCNN
-from utils.args import parse_args
-from utils.loggers import WandBLogger
-from utils.visualizers import visualize_trajectories
+from src.models.backbone import MLP, CNN, ConditionalCNN
+from src.utils.args import parse_args
+from src.utils.loggers import WandBLogger
+from src.utils.visualizers import visualize_trajectories
 
 from flow_matching.path.scheduler import CondOTScheduler
 from flow_matching.path import AffineProbPath

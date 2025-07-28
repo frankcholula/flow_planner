@@ -11,10 +11,10 @@ setup:
 	@echo "Setting up ${ARCH} environment..."
 	conda env create -f $(SETUP_FILE) --prefix ./.fp
 
-.PHONY: fm
-fm:
-	@echo "Running flow matching experiment..."
-	@src/experiments/fm.sh
+.PHONY: lunarlander
+lunarlander:
+	@echo "Running LunarLander experiment..."
+	@src/experiments/lunarlander/fm.sh
 
 .PHONY: train
 train:
