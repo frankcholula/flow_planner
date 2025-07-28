@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 from models.backbone import MLP, CNN, ConditionalCNN
 from utils.args import parse_args
 from utils.loggers import WandBLogger
-from utils.visualizers import visualize_chunk, visualize_trajectories
+from utils.visualizers import visualize_trajectories
 
 from flow_matching.path.scheduler import CondOTScheduler
 from flow_matching.path import AffineProbPath
