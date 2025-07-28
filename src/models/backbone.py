@@ -9,7 +9,6 @@ class MLP(nn.Module):
 
         self.input_dim = input_dim
         self.time_dim = time_dim
-        self.hidden_dim = hidden_dim
 
         self.main = nn.Sequential(
             nn.Linear(input_dim + time_dim, hidden_dim),
@@ -24,29 +23,35 @@ class MLP(nn.Module):
         )
 
     def forward(self, x: Tensor, t: Tensor) -> Tensor:
-        sz = x.size()
-        x = x.reshape(-1, self.input_dim)
-        t = t.reshape(-1, self.time_dim).float()
-
-        t = t.reshape(-1, 1).expand(x.shape[0], 1)
+        original_shape = x.shape
+        x = x.view(-1, self.input_dim)
+        t = t.unsqueeze(1).float()
         h = torch.cat([x, t], dim=1)
         output = self.main(h)
+        return output.view(original_shape)
 
-        return output.reshape(*sz)
 
+class CNN(nn.Module):
+    """
+    An unconditional 1D Temporal CNN, refactored to align with the MLP's convention.
+    """
 
-class TemporalCNN(nn.Module):
     def __init__(
         self,
+        input_dim: int,
         horizon: int,
-        transition_dim: int,
+        time_dim: int = 1,
         hidden_dim: int = 128,
         kernel_size: int = 5,
     ):
         super().__init__()
         self.horizon = horizon
-        self.transition_dim = transition_dim
-        input_channels = transition_dim + 1
+
+        # calculate the transition dim
+        assert input_dim % horizon == 0, "input_dim must be divisible by horizon"
+        self.transition_dim = input_dim // horizon
+
+        input_channels = self.transition_dim + time_dim
         self.main = nn.Sequential(
             nn.Conv1d(
                 input_channels, hidden_dim, kernel_size=kernel_size, padding="same"
@@ -57,7 +62,7 @@ class TemporalCNN(nn.Module):
             nn.Conv1d(hidden_dim, hidden_dim, kernel_size=kernel_size, padding="same"),
             Swish(),
             nn.Conv1d(
-                hidden_dim, transition_dim, kernel_size=kernel_size, padding="same"
+                hidden_dim, self.transition_dim, kernel_size=kernel_size, padding="same"
             ),
         )
 
@@ -69,20 +74,24 @@ class TemporalCNN(nn.Module):
         return out.permute(0, 2, 1).reshape(x.shape)
 
 
-class ConditionalTemporalCNN(torch.nn.Module):
+class ConditionalCNN(torch.nn.Module):
     def __init__(
         self,
+        input_dim: int,
         horizon: int,
-        transition_dim: int,
+        time_dim: int = 1,
         cond_dim: int = 1,
         hidden_dim: int = 128,
         kernel_size: int = 5,
     ):
         super().__init__()
         self.horizon = horizon
-        self.transition_dim = transition_dim
         self.cond_dim = cond_dim
-        input_channels = transition_dim + 1 + cond_dim
+
+        assert input_dim % horizon == 0, "input_dim must be divisible by horizon"
+        self.transition_dim = input_dim // horizon
+
+        input_channels = self.transition_dim + time_dim + cond_dim
         self.main = torch.nn.Sequential(
             torch.nn.Conv1d(
                 input_channels, hidden_dim, kernel_size=kernel_size, padding="same"
@@ -97,7 +106,7 @@ class ConditionalTemporalCNN(torch.nn.Module):
             ),
             Swish(),
             torch.nn.Conv1d(
-                hidden_dim, transition_dim, kernel_size=kernel_size, padding="same"
+                hidden_dim, self.transition_dim, kernel_size=kernel_size, padding="same"
             ),
         )
 
