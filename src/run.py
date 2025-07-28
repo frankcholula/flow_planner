@@ -101,7 +101,8 @@ def train(config, args, dataset):
             ),
             "num_epochs": args.num_epochs,
             "lr": args.lr,
-        }
+        },
+        run_name=run_name,
     )
     # checkpoints and model saving
     run_name = f"{args.model_type}_h{args.horizon}_e{args.num_epochs}_k{args.kernel_size}_start_obs"
