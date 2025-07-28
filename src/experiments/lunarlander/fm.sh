@@ -7,7 +7,7 @@ python -m src.run \
     --lr 1e-3 \
     --model-type "ccnn" \
     --kernel-size 5 \
-    --hidden-dim 64 \
+    --hidden-dim 128 \
     --step-size 0.05 \
     --solver-method "midpoint" \
     --inference-batch-size 1 \

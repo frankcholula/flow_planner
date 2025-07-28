@@ -42,7 +42,6 @@ class WrappedConditionalModel(ModelWrapper):
 
 def train(config, args, dataset):
     # parsing some configs
-
     obs_dim = config.obs_dim
     action_dim = config.action_dim
     horizon = args.horizon
@@ -171,7 +170,7 @@ def main():
         config = LunarLanderConfig()
     dataset = minari.load_dataset(dataset_id=config.dataset_name)
     env = dataset.recover_environment()
-    model, stats, input_dim = train(args, config, dataset)
+    model, stats, input_dim = train(config=config, args=args, dataset=dataset)
     evaluate_open_loop(env, model, stats, input_dim, args)
 
 
