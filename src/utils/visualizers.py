@@ -1,12 +1,13 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-def visualize_trajectories(observations):
+def visualize_trajectories(trajectory_fn, num_trajectories=5):
     fig, ax = plt.subplots(figsize=(10, 7))
     ax.set_title(f"Trajectory Visualization")
-    for _ in range(4):
-        colors = ["blue", "red", "green", "yellow"]
-        visualize_chunk(ax, observations, color=colors[_ % len(colors)], mode="line")
+    for _ in range(num_trajectories):
+        colors = ["red", "orange","yellow", "green", "blue"]
+        obs, act = trajectory_fn()
+        visualize_chunk(ax, obs, color=colors[_ % len(colors)], mode="scatter")
     return fig, ax
 
 def visualize_chunk(

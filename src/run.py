@@ -158,7 +158,7 @@ def evaluate_open_loop(env, model, stats, input_dim, args, logger):
     T = torch.linspace(0, 1, 10)
     T = T.to(device=args.device)
     solver = ODESolver(velocity_model=wrapped_vf)
-    obs, act = generate_trajectory(
+    trajectory_fn = lambda: generate_trajectory(
         stats=stats,
         solver=solver,
         T=T,
@@ -168,7 +168,7 @@ def evaluate_open_loop(env, model, stats, input_dim, args, logger):
         condition={args.condition_on: cond_tensor},
         batch_size=args.inference_batch_size,
     )
-    fig, ax = visualize_trajectories(obs)
+    fig, ax = visualize_trajectories(trajectory_fn=trajectory_fn, num_trajectories=5)
     logger.log({"trajectory_plot": wandb.Image(fig)})
     plt.close(fig)
 
@@ -207,10 +207,13 @@ def main():
         },
         run_name=run_name,
     )
-    model, stats, input_dim = train(config=config, args=args, dataset=dataset, logger=logger)
+    model, stats, input_dim = train(
+        config=config, args=args, dataset=dataset, logger=logger
+    )
     env = dataset.recover_environment()
     evaluate_open_loop(env, model, stats, input_dim, args, logger=logger)
     logger.finish()
+
 
 if __name__ == "__main__":
     main()
