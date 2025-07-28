@@ -52,7 +52,11 @@ def train(config, args, dataset):
     if args.device == "cuda":
         generator = torch.Generator(device=args.device)
     dataloader = DataLoader(
-        dataset, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn, generator=generator
+        dataset,
+        batch_size=args.batch_size,
+        shuffle=True,
+        collate_fn=collate_fn,
+        generator=generator,
     )
     stats = get_dataset_stats(dataset)
 
@@ -63,11 +67,22 @@ def train(config, args, dataset):
         )
     elif args.model_type == "cnn":
         model = CNN(
-            input_dim=input_dim, horizon=horizon, kernel_size=args.kernel_size
+            input_dim=input_dim,
+            hidden_dim=args.hidden_dim,
+            horizon=horizon,
+            kernel_size=args.kernel_size,
         ).to(args.device)
     elif args.model_type == "ccnn":
+        if args.condition_on == "reward":
+            cond_dim = 1
+        elif args.condition_on == "start_obs":
+            cond_dim = obs_dim
         model = ConditionalCNN(
-            input_dim=input_dim, horizon=horizon, kernel_size=args.kernel_size
+            input_dim=input_dim,
+            horizon=horizon,
+            hidden_dim=args.hidden_dim,
+            kernel_size=args.kernel_size,
+            cond_dim=cond_dim,
         ).to(args.device)
 
     path = AffineProbPath(scheduler=CondOTScheduler())
@@ -108,18 +123,18 @@ def train(config, args, dataset):
             optim.zero_grad()
 
             if args.condition_on:
-                x1, c  = create_normalized_chunks(
+                x1, c = create_normalized_chunks(
                     batch, args.horizon, stats, cond_type=args.condition_on
                 )
                 if x1 is None:
                     continue
-                x1, c  = x1.to(args.device), c.to(args.device)
+                x1, c = x1.to(args.device), c.to(args.device)
             else:
                 x1 = create_normalized_chunks(batch, args.horizon, stats)
                 if x1 is None:
                     continue
                 x1 = x1.to(args.device)
-            
+
             x0 = torch.randn_like(x1)
             t = torch.rand(x1.shape[0], device=args.device)
             sample = path.sample(t=t, x_0=x0, x_1=x1)
