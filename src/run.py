@@ -1,7 +1,9 @@
+import os
 import minari
 import time
 import random
 import numpy as np
+import pprint
 
 import torch
 from torch.utils.data import DataLoader
@@ -9,11 +11,14 @@ from torch.utils.data import DataLoader
 from models.backbone import MLP, CNN, ConditionalCNN
 from utils.args import parse_args
 from utils.loggers import WandBLogger
+from utils.visualizers import visualize_chunk
 
 from flow_matching.path.scheduler import CondOTScheduler
 from flow_matching.path import AffineProbPath
 from flow_matching.solver import ODESolver
 from flow_matching.utils import ModelWrapper
+
+from src.conf.environment import LunarLanderConfig
 
 
 from pipelines.lunarlander.preprocessing import (
@@ -27,39 +32,64 @@ from pipelines.lunarlander.preprocessing import (
 class WrappedModel(ModelWrapper):
     def forward(self, x: torch.Tensor, t: torch.Tensor, **extras):
         return self.model(x, t)
-        
 
 
 def train(args):
-    dataset = minari.load_dataset(dataset_id=args.dataset_name)
-    env = dataset.recover_environment()
-    obs_dim = env.observation_space.shape[0]
-    action_dim = env.action_space.shape[0]
-    transition_dim = obs_dim + action_dim
-    input_dim = args.horizon * transition_dim
+    if args.environment == "LunarLander-v3":
+        config = LunarLanderConfig()
+    dataset = config.dataset_name
+    obs_dim = config.obs_dim
+    action_dim = config.action_dim
+    horizon = args.horizon
+    input_dim = horizon * (obs_dim + action_dim)
 
     dataloader = DataLoader(
         dataset, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn
     )
-    stats = get_dataset_stats(dataset)
+    if args.model_type == "mlp":
+        model = MLP(input_dim=input_dim, time_dim=1, hidden_dim=args.hidden_dim).to(
+            args.device
+        )
+    elif args.model_type == "cnn":
+        model = CNN(
+            input_dim=input_dim, horizon=horizon, kernel_size=args.kernel_size
+        ).to(args.device)
+    elif args.model_type == "ccnn":
+        model = ConditionalCNN(
+            input_dim=input_dim, horizon=horizon, kernel_size=args.kernel_size
+        ).to(args.device)
 
-    model = ConditionalCNN(
-        horizon=args.horizon, transition_dim=transition_dim, hidden_dim=args.hidden_dim
-    ).to(args.device)
+    stats = get_dataset_stats(dataset)
     path = AffineProbPath(scheduler=CondOTScheduler())
     optim = torch.optim.Adam(model.parameters(), lr=args.lr)
 
     logger = WandBLogger(
         config={
+            "environment": args.environment,
             "horizon": args.horizon,
             "batch_size": args.batch_size,
+            "model_type": args.model_type,
+            "hidden_dim": args.hidden_dim,
+            "kernel_size": (
+                args.kernel_size
+                if args.model_type == "cnn" or args.model_type == "ccnn"
+                else 0
+            ),
             "num_epochs": args.num_epochs,
             "lr": args.lr,
-            "hidden_dim": args.hidden_dim,
         }
     )
+    run_name = f"{args.model_type}_h{args.horizon}_e{args.num_epochs}_k{args.kernel_size}_start_obs"
+    model_name = run_name + ".pth"
+    save_dir = "src/checkpoints"
+    model_save_path = os.path.join(save_dir, model_name)
 
+    pp = pprint.PrettyPrinter(indent=2)
+    print("Training configuration:")
+    pp.pprint(config)
+    print("Run name:", run_name)
     print("Starting training...")
+
     for epoch in range(args.num_epochs):
         total_loss = 0.0
         total_chunks = 0
