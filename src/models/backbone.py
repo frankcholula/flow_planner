@@ -35,7 +35,7 @@ class MLP(nn.Module):
         return output.reshape(*sz)
 
 
-class TemporalCNN(nn.Module):
+class CNN(nn.Module):
     def __init__(
         self,
         horizon: int,
@@ -69,7 +69,7 @@ class TemporalCNN(nn.Module):
         return out.permute(0, 2, 1).reshape(x.shape)
 
 
-class ConditionalTemporalCNN(torch.nn.Module):
+class ConditionalCNN(torch.nn.Module):
     def __init__(
         self,
         horizon: int,
