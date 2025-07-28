@@ -21,12 +21,12 @@ from flow_matching.utils import ModelWrapper
 from src.conf.environment import LunarLanderConfig
 
 
-from pipelines.lunarlander.preprocessing import (
+from src.pipelines.preprocessing import (
     collate_fn,
     get_dataset_stats,
     create_normalized_chunks,
-    unnormalize_trajectory,
 )
+from src.pipelines.sampling import generate_trajectory
 
 
 class WrappedModel(ModelWrapper):
@@ -34,18 +34,28 @@ class WrappedModel(ModelWrapper):
         return self.model(x, t)
 
 
+class WrappedConditionalModel(ModelWrapper):
+    def forward(self, x: torch.Tensor, t: torch.Tensor, c: torch.Tensor, **extras):
+        return self.model(x, t, c)
+
+
 def train(args):
+    # parsing some configs
     if args.environment == "LunarLander-v3":
         config = LunarLanderConfig()
-    dataset = config.dataset_name
+    dataset = minari.load_dataset(dataset_id=config.dataset_name)
     obs_dim = config.obs_dim
     action_dim = config.action_dim
     horizon = args.horizon
     input_dim = horizon * (obs_dim + action_dim)
 
+    # load the dataset and stats based on config
     dataloader = DataLoader(
         dataset, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn
     )
+    stats = get_dataset_stats(dataset)
+
+    # Setting up models
     if args.model_type == "mlp":
         model = MLP(input_dim=input_dim, time_dim=1, hidden_dim=args.hidden_dim).to(
             args.device
@@ -59,10 +69,8 @@ def train(args):
             input_dim=input_dim, horizon=horizon, kernel_size=args.kernel_size
         ).to(args.device)
 
-    stats = get_dataset_stats(dataset)
     path = AffineProbPath(scheduler=CondOTScheduler())
     optim = torch.optim.Adam(model.parameters(), lr=args.lr)
-
     logger = WandBLogger(
         config={
             "environment": args.environment,
@@ -79,6 +87,7 @@ def train(args):
             "lr": args.lr,
         }
     )
+    # checkpoints and model saving
     run_name = f"{args.model_type}_h{args.horizon}_e{args.num_epochs}_k{args.kernel_size}_start_obs"
     model_name = run_name + ".pth"
     save_dir = "src/checkpoints"
@@ -117,18 +126,21 @@ def train(args):
                 f"| Epoch {epoch+1:6d} | {elapsed:.2f} s/epoch | Loss {avg_loss:8.5f} |"
             )
             start_time = time.time()
+    print("Training complete. Saving model...")
+    os.makedirs(save_dir, exist_ok=True)
+    torch.save(model.state_dict(), model_save_path)
+    logger.save_model(model_save_path)
     logger.finish()
-    return model, stats, input_dim, obs_dim, action_dim
+    print(f"Model saved to {model_save_path}, training complete.")
+    return model
 
 
-def generate(model, stats, input_dim, obs_dim, action_dim, args):
-    wrapped = WrappedModel(model)
-    solver = ODESolver(velocity_model=wrapped)
-    T = torch.linspace(0, 1, 10, device=args.device)
-    x_init = torch.randn((1, input_dim), device=args.device)
-    sol = solver.sample(time_grid=T, x_init=x_init, method="midpoint", step_size=0.05)
-    final_chunk = sol[-1].squeeze(0).detach()
-    return unnormalize_trajectory(final_chunk, stats, args.horizon, obs_dim, action_dim)
+def evaluate(model, args):
+    wrapped_vf = WrappedConditionalModel(model)
+    step_size = args.step_size
+    T = torch.linspace(0, 1, 10)  # sample times
+    T = T.to(device=args.device)
+    solver = ODESolver(velocity_model=wrapped_vf)
 
 
 def main():
@@ -138,13 +150,12 @@ def main():
     torch.manual_seed(args.seed)
     random.seed(args.seed)
     np.random.seed(args.seed)
-
+    # set device
     if args.device:
         torch.set_default_device(args.device)
-    model, stats, input_dim, obs_dim, action_dim = train(args)
-    obs, act = generate(model, stats, input_dim, obs_dim, action_dim, args)
-    print("Generated observation shape:", obs.shape)
-    print("Generated action shape:", act.shape)
+
+    model = train(args)
+    evaluate(model, args)
 
 
 if __name__ == "__main__":
