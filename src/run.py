@@ -48,8 +48,11 @@ def train(config, args, dataset):
     input_dim = horizon * (obs_dim + action_dim)
 
     # load the dataset and stats based on config
+    generator = None
+    if args.device == "cuda":
+        generator = torch.Generator(device=args.device)
     dataloader = DataLoader(
-        dataset, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn
+        dataset, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn, generator=generator
     )
     stats = get_dataset_stats(dataset)
 
@@ -164,13 +167,14 @@ def main():
     # set device
     if args.device:
         torch.set_default_device(args.device)
+        print(f"Using device: {args.device}")
 
     # Load configuration based on the environment
     if args.environment == "LunarLander-v3":
         config = LunarLanderConfig()
     dataset = minari.load_dataset(dataset_id=config.dataset_name)
-    env = dataset.recover_environment()
     model, stats, input_dim = train(config=config, args=args, dataset=dataset)
+    env = dataset.recover_environment()
     evaluate_open_loop(env, model, stats, input_dim, args)
 
 
