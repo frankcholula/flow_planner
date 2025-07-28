@@ -27,6 +27,7 @@ from pipelines.lunarlander.preprocessing import (
 class WrappedModel(ModelWrapper):
     def forward(self, x: torch.Tensor, t: torch.Tensor, **extras):
         return self.model(x, t)
+        
 
 
 def train(args):

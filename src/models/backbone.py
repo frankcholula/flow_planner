@@ -9,7 +9,6 @@ class MLP(nn.Module):
 
         self.input_dim = input_dim
         self.time_dim = time_dim
-        self.hidden_dim = hidden_dim
 
         self.main = nn.Sequential(
             nn.Linear(input_dim + time_dim, hidden_dim),
@@ -24,15 +23,12 @@ class MLP(nn.Module):
         )
 
     def forward(self, x: Tensor, t: Tensor) -> Tensor:
-        sz = x.size()
-        x = x.reshape(-1, self.input_dim)
-        t = t.reshape(-1, self.time_dim).float()
-
-        t = t.reshape(-1, 1).expand(x.shape[0], 1)
+        original_shape = x.shape
+        x = x.view(-1, self.input_dim)
+        t = t.unsqueeze(1).float()
         h = torch.cat([x, t], dim=1)
         output = self.main(h)
-
-        return output.reshape(*sz)
+        return output.view(original_shape)
 
 
 class CNN(nn.Module):
@@ -57,9 +53,7 @@ class CNN(nn.Module):
             Swish(),
             nn.Conv1d(hidden_dim, hidden_dim, kernel_size=kernel_size, padding="same"),
             Swish(),
-            nn.Conv1d(
-                hidden_dim, input_dim, kernel_size=kernel_size, padding="same"
-            ),
+            nn.Conv1d(hidden_dim, input_dim, kernel_size=kernel_size, padding="same"),
         )
 
     def forward(self, x: Tensor, t: Tensor) -> Tensor:
