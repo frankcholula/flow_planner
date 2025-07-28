@@ -41,8 +41,11 @@ fm_bc:
 
 .PHONY: mujoco_data
 mujoco_data:
-	@echo "Downloading MuJoCo hopper expert dataset..."
+	@echo "Downloading MuJoCo hopper and walker2d..."
 	minari download mujoco/hopper/expert-v0
+	minari download mujoco/walker2d/expert-v0
+
+
 
 .PHONY: kitchen_data
 kitchen_data:
