@@ -2,6 +2,23 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
+def visualize_chunk(
+    ax, chunk, color, x_limits=(-0.6, 0.6), y_limits=(-0.2, 1.6), mode="line"
+):
+    ax.fill_between(
+        [-0.2, 0.2], -0.02, 0, color="gold", alpha=0.8, zorder=1, label="Landing Pad"
+    )
+    x = chunk[:, 0].cpu().numpy()
+    y = chunk[:, 1].cpu().numpy()
+    if mode == "line":
+        ax.plot(x, y, linestyle="-", color=color, alpha=0.7)
+    elif mode == "scatter":
+        ax.scatter(x, y, color=color, alpha=0.7)
+    ax.set_xlim(*x_limits)
+    ax.set_ylim(*y_limits)
+    ax.grid(True)
+
+
 def visualize_dataset(dataset):
     episode_lengths = []
     aggregated_rewards = []
