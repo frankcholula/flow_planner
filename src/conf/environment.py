@@ -9,3 +9,9 @@ class LunarLanderConfig:
     dataset_name: str = "LunarLanderContinuous-v3/ppo-1000-deterministic-v1"
     obs_dim: int = 8
     action_dim: int = 2
+
+class HopperConfig:
+    env_name: str = "Hopperm-v5"
+    dataset_name: str = "mujoco/hopper/expert-v0"
+    obs_dim: int = 11
+    action_dim: int = 3
