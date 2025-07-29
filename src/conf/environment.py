@@ -13,7 +13,7 @@ class LunarLanderConfig:
 
 
 class HopperConfig:
-    env_name: str = "Hopperm-v5"
+    env_name: str = "Hopper-v5"
     dataset_name: str = "mujoco/hopper/expert-v0"
     obs_dim: int = 11
     action_dim: int = 3
