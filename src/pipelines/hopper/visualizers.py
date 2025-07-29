@@ -1,0 +1,34 @@
+from matplotlib import pyplot as plt
+import numpy as np
+
+
+def visualize_trajectory(observations):
+    print(f"Analyzing one expert episode with {len(observations)} states...")
+    time_steps = np.arange(len(observations))
+    torso_height = observations[:, 0]
+    torso_angle = observations[:, 1]
+    thigh_joint_angle = observations[:, 2]
+    leg_joint_angle = observations[:, 3]
+
+    fig, axs = plt.subplots(4, 1, figsize=(12, 10), sharex=True)
+    fig.suptitle("Hopper Trajectory", fontsize=16)
+
+    axs[0].plot(time_steps, torso_height, color="dodgerblue")
+    axs[0].set_ylabel("Torso Height (m)")
+    axs[0].grid(True, linestyle="--", alpha=0.6)
+
+    axs[1].plot(time_steps, torso_angle, color="coral")
+    axs[1].set_ylabel("Torso Angle (rad)")
+    axs[1].grid(True, linestyle="--", alpha=0.6)
+
+    axs[2].plot(time_steps, thigh_joint_angle, color="limegreen")
+    axs[2].set_ylabel("Thigh Joint (rad)")
+    axs[2].grid(True, linestyle="--", alpha=0.6)
+
+    axs[3].plot(time_steps, leg_joint_angle, color="orchid")
+    axs[3].set_ylabel("Leg Joint (rad)")
+    axs[3].set_xlabel("Time Step")
+    axs[3].grid(True, linestyle="--", alpha=0.6)
+
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
+    plt.show()
