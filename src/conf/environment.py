@@ -11,14 +11,16 @@ class LunarLanderConfig:
     obs_dim: int = 8
     action_dim: int = 2
 
+
 class HopperConfig:
     env_name: str = "Hopperm-v5"
     dataset_name: str = "mujoco/hopper/expert-v0"
     obs_dim: int = 11
     action_dim: int = 3
 
+
 class Walker2dConfig:
     env_name: str = "Walker2d-v5"
-    dataset_name: str = "mujoco/walker2d"
+    dataset_name: str = "mujoco/walker2d/expert-v0"
     obs_dim: int = 17
     action_dim: int = 6
