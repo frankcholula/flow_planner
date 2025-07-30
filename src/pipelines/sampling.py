@@ -37,6 +37,16 @@ def generate_trajectory(
         start_obs_tensor = condition["start_obs"].float().to(args.device)
         norm_c = (start_obs_tensor - obs_mean) / obs_std
         c_tensor = norm_c.unsqueeze(0).expand(batch_size, -1)
+    elif "start_obs+goal" in condition:
+        obs_mean = stats["obs_mean"].to(args.device)
+        obs_std = stats["obs_std"].to(args.device)
+        start_obs, goal_obs = condition["start_obs+goal"]
+        start_obs_tensor = start_obs.float().to(args.device)
+        goal_obs_tensor = goal_obs.float().to(args.device)
+        norm_start = (start_obs_tensor - obs_mean) / obs_std
+        norm_goal = (goal_obs_tensor - obs_mean) / obs_std
+        norm_c = torch.cat([norm_start, norm_goal])
+        c_tensor = norm_c.unsqueeze(0).expand(batch_size, -1)
     else:
         raise ValueError("Condition dictionary must contain 'reward' or 'start_obs'")
 

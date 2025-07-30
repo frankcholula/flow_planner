@@ -141,5 +141,4 @@ def create_normalized_chunks(batch, horizon, stats, cond_type=None):
             stacked_conds = stacked_conds.unsqueeze(1)
         return stacked_chunks, stacked_conds
     else:
-        # for unconditional case
         return stacked_chunks
