@@ -100,17 +100,6 @@ def create_normalized_chunks(batch, horizon, stats, cond_type=None):
         if length < horizon:
             continue
 
-        norm_end = None
-        if cond_type == "start_obs+goal":
-            end_obs = obs[length - 1]
-            norm_end = (end_obs - obs_mean) / obs_std
-
-        # If conditioning on reward, calculate it once per episode
-        if cond_type == "reward":
-            rew_mean, rew_std = stats["rew_mean"], stats["rew_std"]
-            total_reward = batch["total_rewards"][i]
-            norm_cond = (total_reward - rew_mean) / rew_std
-
         # Slide the window across the episode
         for start_idx in range(length - horizon + 1):
             end_idx = start_idx + horizon
@@ -130,10 +119,15 @@ def create_normalized_chunks(batch, horizon, stats, cond_type=None):
                 all_conds.append(norm_cond)
             if cond_type == "start_obs+goal":
                 start_obs = obs_chunk[0]
+                end_obs = obs[length - 1]
                 norm_start = (start_obs - obs_mean) / obs_std
+                norm_end = (end_obs - obs_mean) / obs_std
                 norm_cond = torch.cat([norm_start, norm_end])
                 all_conds.append(norm_cond)
             elif cond_type == "reward":
+                rew_mean, rew_std = stats["rew_mean"], stats["rew_std"]
+                total_reward = batch["total_rewards"][i]
+                norm_cond = (total_reward - rew_mean) / rew_std
                 all_conds.append(norm_cond)
 
     if not all_chunks:
