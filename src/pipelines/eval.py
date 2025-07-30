@@ -14,7 +14,6 @@ def evaluate_policy_mpc(
     for eps in range(num_episodes):
         obs, _ = env.reset()
         total_rew = 0
-        action_plan = None
 
         for t in range(max_episode_length):
             if render:
