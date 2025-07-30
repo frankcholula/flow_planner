@@ -2,7 +2,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 
 
-def visualize_trajectory(observations: np.ndarray, horizon: int, verbose=False):
+def visualize_trajectory(observations: np.ndarray, horizon: int, verbose=False, y_limits= (1, 1.5)):
     plot_horizon = min(horizon, len(observations))
     time_steps = np.arange(plot_horizon)
     torso_height = observations[:plot_horizon, 0]
@@ -21,8 +21,8 @@ def visualize_trajectory(observations: np.ndarray, horizon: int, verbose=False):
     axs[0].plot(time_steps, torso_height, color="dodgerblue")
     axs[0].set_ylabel("Torso Height (m)")
     axs[0].grid(True, linestyle="--", alpha=0.6)
-    axs[0].set_ylim(1, 1.5)
-    
+    axs[0].set_ylim(y_limits)
+
     if verbose:
         axs[1].plot(time_steps, torso_angle, color="coral")
         axs[1].set_ylabel("Torso Angle (rad)")
