@@ -20,8 +20,8 @@ def generate_trajectory(
     stats, solver, T, input_dim, args, horizon, condition: dict, batch_size: int = 1
 ):
     # infer obs and action dim from stats
-    obs_dim = stats['obs_mean'].shape[0]
-    action_dim = stats['act_mean'].shape[0]
+    obs_dim = stats["obs_mean"].shape[0]
+    action_dim = stats["act_mean"].shape[0]
 
     if "reward" in condition:
         rew_mean = stats["rew_mean"].to(args.device)
@@ -34,7 +34,7 @@ def generate_trajectory(
     elif "start_obs" in condition:
         obs_mean = stats["obs_mean"].to(args.device)
         obs_std = stats["obs_std"].to(args.device)
-        start_obs_tensor = condition["start_obs"].to(args.device)
+        start_obs_tensor = condition["start_obs"].float().to(args.device)
         norm_c = (start_obs_tensor - obs_mean) / obs_std
         c_tensor = norm_c.unsqueeze(0).expand(batch_size, -1)
     else:

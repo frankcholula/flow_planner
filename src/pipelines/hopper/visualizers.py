@@ -17,7 +17,7 @@ def visualize_trajectory(observations, verbose=False):
     fig, axs = plt.subplots(num_plots, 1, figsize=figsize, sharex=True, squeeze=False)
     axs = axs.flatten()
 
-    fig.suptitle("Single Expert Hopper Trajectory", fontsize=16)
+    fig.suptitle("Trajectory Visualization", fontsize=16)
 
     axs[0].plot(time_steps, torso_height, color="dodgerblue")
     axs[0].set_ylabel("Torso Height (m)")
