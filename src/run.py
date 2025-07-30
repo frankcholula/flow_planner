@@ -159,11 +159,16 @@ def train(config, args, dataset, logger):
 def evaluate_open_loop(env, model, stats, input_dim, args, logger):
     if args.condition_on == "start_obs":
         start_observation, _ = env.reset()
-        cond_tensor = torch.from_numpy(start_observation)
+        condition_dict = {"start_obs": torch.from_numpy(start_observation)}
+    elif args.condition_on == "start_obs_goal:
+        start_observation, _ = env.reset()
+        goal_observation = torch.tensor([0, 0, 0, 0, 0, 0, 1, 1], dtype=torch.float32)
+        condition_dict = {args.condition_on: (torch.from_numpy(start_observation), goal_observation)}
+    elif args.condition_on == "reward":
+        # TODO: implement reward conditioning
+        pass
     wrapped_vf = WrappedConditionalModel(model)
-    step_size = args.step_size
     T = torch.linspace(0, 1, 10)
-    T = T.to(device=args.device)
     solver = ODESolver(velocity_model=wrapped_vf)
     trajectory_fn = lambda: generate_trajectory(
         stats=stats,
@@ -171,10 +176,10 @@ def evaluate_open_loop(env, model, stats, input_dim, args, logger):
         T=T,
         input_dim=input_dim,
         horizon=args.horizon,
-        condition={args.condition_on: cond_tensor},
+        condition=condition_dict if args.condition_on else None,
         solver_method=args.solver_method,
         batch_size=args.inference_batch_size,
-        step_size=step_size,
+        step_size=args.step_size,
         return_intermediates=False,
     )
     fig, ax = visualize_trajectories(trajectory_fn=trajectory_fn, num_trajectories=5)
