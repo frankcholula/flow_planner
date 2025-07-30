@@ -83,13 +83,6 @@ def create_trajectory_chunks(batch, horizon):
 
 
 def create_normalized_chunks(batch, horizon, stats, cond_type=None):
-    """
-    Creates normalized chunks. Can be unconditional, or conditional on
-    total reward or the starting observation of the chunk.
-
-    Args:
-        cond_type (str, optional): Can be 'reward' or 'start_obs'. Defaults to None.
-    """
     obs_mean, obs_std = stats["obs_mean"], stats["obs_std"]
     act_mean, act_std = stats["act_mean"], stats["act_std"]
 
@@ -105,6 +98,11 @@ def create_normalized_chunks(batch, horizon, stats, cond_type=None):
 
         if length < horizon:
             continue
+
+        norm_end = None
+        if cond_type == "start_obs+goal":
+            end_obs = obs[length - 1]
+            norm_end = (end_obs - obs_mean) / obs_std
 
         # If conditioning on reward, calculate it once per episode
         if cond_type == "reward":
@@ -129,6 +127,10 @@ def create_normalized_chunks(batch, horizon, stats, cond_type=None):
                 start_obs = obs_chunk[0]
                 norm_cond = (start_obs - obs_mean) / obs_std
                 all_conds.append(norm_cond)
+            if cond_type == "start_obs+goal":
+                start_obs = obs_chunk[0]
+                norm_start = (start_obs - obs_mean) / obs_std
+                norm_cond = torch.cat([norm_start, norm_end])
             elif cond_type == "reward":
                 all_conds.append(norm_cond)
 
@@ -143,4 +145,5 @@ def create_normalized_chunks(batch, horizon, stats, cond_type=None):
             stacked_conds = stacked_conds.unsqueeze(1)
         return stacked_chunks, stacked_conds
     else:
+        # for unconditional case
         return stacked_chunks
