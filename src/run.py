@@ -156,7 +156,7 @@ def train(config, args, dataset, logger):
     return model, stats, input_dim
 
 
-def evaluate_open_loop(env, model, stats, input_dim, args, logger):
+def evaluate_open_loop(env, model, stats, input_dim, args, logger=None):
     if args.condition_on == "start_obs":
         start_observation, _ = env.reset()
         condition_dict = {"start_obs": torch.from_numpy(start_observation)}
@@ -183,7 +183,8 @@ def evaluate_open_loop(env, model, stats, input_dim, args, logger):
         return_intermediates=False,
     )
     fig, ax = visualize_trajectories(trajectory_fn=trajectory_fn, num_trajectories=5)
-    logger.log({"trajectory plot": wandb.Image(fig)})
+    if logger is not None:
+        logger.log({"trajectory plot": wandb.Image(fig)})
     plt.close(fig)
 
 
