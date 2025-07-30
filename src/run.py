@@ -76,6 +76,8 @@ def train(config, args, dataset, logger):
             cond_dim = 1
         elif args.condition_on == "start_obs":
             cond_dim = obs_dim
+        elif args.condition_on == "start_obs+goal":
+            cond_dim = obs_dim * 2
         model = ConditionalCNN(
             input_dim=input_dim,
             horizon=horizon,
