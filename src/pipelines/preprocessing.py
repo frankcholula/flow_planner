@@ -5,11 +5,13 @@ from torch.utils.data import DataLoader
 
 
 def collate_fn(batch):
-    observations = [torch.as_tensor(x.observations) for x in batch]
-    actions = [torch.as_tensor(x.actions) for x in batch]
-    rewards = [torch.as_tensor(x.rewards) for x in batch]
-    terminations = [torch.as_tensor(x.terminations) for x in batch]
-    truncations = [torch.as_tensor(x.truncations) for x in batch]
+    observations = [torch.as_tensor(x.observations, dtype=torch.float32) for x in batch]
+    actions = [torch.as_tensor(x.actions, dtype=torch.float32) for x in batch]
+    rewards = [torch.as_tensor(x.rewards, dtype=torch.float32) for x in batch]
+    terminations = [torch.as_tensor(x.terminations, dtype=torch.float32) for x in batch]
+    truncations = [torch.as_tensor(x.truncations, dtype=torch.float32) for x in batch]
+
+    # custom episode lengths and total rewards
     episode_lengths = torch.tensor([len(x.actions) for x in batch], dtype=torch.long)
     total_rewards = torch.tensor(
         [np.sum(x.rewards) for x in batch], dtype=torch.float32
