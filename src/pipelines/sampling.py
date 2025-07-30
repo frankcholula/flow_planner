@@ -17,7 +17,17 @@ def unnormalize_trajectory(chunk, stats, horizon, obs_dim, action_dim):
 
 
 def generate_trajectory(
-    stats, solver, T, input_dim, args, horizon, condition: dict, batch_size: int = 1
+    stats,
+    solver,
+    solver_method: str,
+    T,
+    input_dim,
+    args,
+    horizon,
+    condition: dict,
+    batch_size: int = 1,
+    step_size: float = 0.05,
+    return_intermediates: bool = False,
 ):
     # infer obs and action dim from stats
     obs_dim = stats["obs_mean"].shape[0]
@@ -48,7 +58,11 @@ def generate_trajectory(
         norm_c = torch.cat([norm_start, norm_goal])
         c_tensor = norm_c.unsqueeze(0).expand(batch_size, -1)
     else:
-        raise ValueError("Condition dictionary must contain 'reward' or 'start_obs'")
+        c_tensor = None
+        if args.model_type == "ccnn":
+            raise ValueError(
+                "A condition dictionary must be provided for ConditionalCNN."
+            )
 
     x_init = torch.randn(
         (batch_size, input_dim), dtype=torch.float32, device=args.device
@@ -58,9 +72,9 @@ def generate_trajectory(
         time_grid=T,
         x_init=x_init,
         c=c_tensor,
-        method="midpoint",
-        step_size=0.05,
-        return_intermediates=False,
+        method=solver_method,
+        step_size=step_size,
+        return_intermediates=return_intermediates,
     )
     obs, act = unnormalize_trajectory(
         sol[0].flatten().detach(), stats, horizon, obs_dim, action_dim
