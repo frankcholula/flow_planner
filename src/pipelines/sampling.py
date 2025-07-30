@@ -19,12 +19,11 @@ def unnormalize_trajectory(chunk, stats, horizon, obs_dim, action_dim):
 def generate_trajectory(
     stats,
     solver,
-    solver_method: str,
     T,
-    input_dim,
-    args,
-    horizon,
-    condition: dict,
+    input_dim: int,
+    horizon: int = 100,
+    condition: dict = None,
+    solver_method: str = "midpoint",
     batch_size: int = 1,
     step_size: float = 0.05,
     return_intermediates: bool = False,
@@ -32,41 +31,37 @@ def generate_trajectory(
     # infer obs and action dim from stats
     obs_dim = stats["obs_mean"].shape[0]
     action_dim = stats["act_mean"].shape[0]
+    device = "cuda" if torch.cuda.is_available() else "cpu"
 
     if "reward" in condition:
-        rew_mean = stats["rew_mean"].to(args.device)
-        rew_std = stats["rew_std"].to(args.device)
+        rew_mean = stats["rew_mean"].to(device)
+        rew_std = stats["rew_std"].to(device)
         norm_c = (
-            torch.tensor([condition["reward"]], device=args.device) - rew_mean
+            torch.tensor([condition["reward"]], device=device) - rew_mean
         ) / rew_std
         c_tensor = norm_c.view(1, 1).expand(batch_size, -1)
 
     elif "start_obs" in condition:
-        obs_mean = stats["obs_mean"].to(args.device)
-        obs_std = stats["obs_std"].to(args.device)
-        start_obs_tensor = condition["start_obs"].float().to(args.device)
+        obs_mean = stats["obs_mean"].to(device)
+        obs_std = stats["obs_std"].to(device)
+        start_obs_tensor = condition["start_obs"].float().to(device)
         norm_c = (start_obs_tensor - obs_mean) / obs_std
         c_tensor = norm_c.unsqueeze(0).expand(batch_size, -1)
     elif "start_obs+goal" in condition:
-        obs_mean = stats["obs_mean"].to(args.device)
-        obs_std = stats["obs_std"].to(args.device)
+        obs_mean = stats["obs_mean"].to(device)
+        obs_std = stats["obs_std"].to(device)
         start_obs, goal_obs = condition["start_obs+goal"]
-        start_obs_tensor = start_obs.float().to(args.device)
-        goal_obs_tensor = goal_obs.float().to(args.device)
+        start_obs_tensor = start_obs.float().to(device)
+        goal_obs_tensor = goal_obs.float().to(device)
         norm_start = (start_obs_tensor - obs_mean) / obs_std
         norm_goal = (goal_obs_tensor - obs_mean) / obs_std
         norm_c = torch.cat([norm_start, norm_goal])
         c_tensor = norm_c.unsqueeze(0).expand(batch_size, -1)
     else:
         c_tensor = None
-        if args.model_type == "ccnn":
-            raise ValueError(
-                "A condition dictionary must be provided for ConditionalCNN."
-            )
+        raise ValueError("Condition type not recognized.")
 
-    x_init = torch.randn(
-        (batch_size, input_dim), dtype=torch.float32, device=args.device
-    )
+    x_init = torch.randn((batch_size, input_dim), dtype=torch.float32, device=device)
 
     sol = solver.sample(
         time_grid=T,

@@ -163,14 +163,14 @@ def evaluate_open_loop(env, model, stats, input_dim, args, logger):
     trajectory_fn = lambda: generate_trajectory(
         stats=stats,
         solver=solver,
-        solver_method=args.solver_method,
         T=T,
         input_dim=input_dim,
-        args=args,
         horizon=args.horizon,
         condition={args.condition_on: cond_tensor},
+        solver_method=args.solver_method,
         batch_size=args.inference_batch_size,
-        step_size=step_size
+        step_size=step_size,
+        return_intermediates=False,
     )
     fig, ax = visualize_trajectories(trajectory_fn=trajectory_fn, num_trajectories=5)
     logger.log({"trajectory plot": wandb.Image(fig)})
