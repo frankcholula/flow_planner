@@ -47,10 +47,10 @@ def generate_trajectory(
         start_obs_tensor = condition["start_obs"].float().to(device)
         norm_c = (start_obs_tensor - obs_mean) / obs_std
         c_tensor = norm_c.unsqueeze(0).expand(batch_size, -1)
-    elif "start_obs+goal" in condition:
+    elif "start_obs_goal" in condition:
         obs_mean = stats["obs_mean"].to(device)
         obs_std = stats["obs_std"].to(device)
-        start_obs, goal_obs = condition["start_obs+goal"]
+        start_obs, goal_obs = condition["start_obs_goal"]
         start_obs_tensor = start_obs.float().to(device)
         goal_obs_tensor = goal_obs.float().to(device)
         norm_start = (start_obs_tensor - obs_mean) / obs_std

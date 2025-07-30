@@ -117,7 +117,7 @@ def create_normalized_chunks(batch, horizon, stats, cond_type=None):
                 start_obs = obs_chunk[0]
                 norm_cond = (start_obs - obs_mean) / obs_std
                 all_conds.append(norm_cond)
-            if cond_type == "start_obs+goal":
+            if cond_type == "start_obs_goal":
                 start_obs = obs_chunk[0]
                 end_obs = obs[length - 1]
                 norm_start = (start_obs - obs_mean) / obs_std
