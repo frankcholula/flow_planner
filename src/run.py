@@ -76,6 +76,13 @@ def train(config, args, dataset, logger):
             cond_dim = 1
         elif args.condition_on == "start_obs":
             cond_dim = obs_dim
+        elif args.condition_on == "start_obs+goal":
+            cond_dim = obs_dim * 2
+        else:
+            raise ValueError(
+                f"ConditionalCNN requires a valid --condition-on argument ('reward', 'start_obs', 'start_obs+goal'), "
+                f"but got: {args.condition_on}"
+            )
         model = ConditionalCNN(
             input_dim=input_dim,
             horizon=horizon,
@@ -163,10 +170,12 @@ def evaluate_open_loop(env, model, stats, input_dim, args, logger):
         solver=solver,
         T=T,
         input_dim=input_dim,
-        args=args,
         horizon=args.horizon,
         condition={args.condition_on: cond_tensor},
+        solver_method=args.solver_method,
         batch_size=args.inference_batch_size,
+        step_size=step_size,
+        return_intermediates=False,
     )
     fig, ax = visualize_trajectories(trajectory_fn=trajectory_fn, num_trajectories=5)
     logger.log({"trajectory plot": wandb.Image(fig)})

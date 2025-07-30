@@ -58,6 +58,7 @@ def get_dataset_stats(dataset):
 
 
 def create_trajectory_chunks(batch, horizon):
+    """Create trajectory chunks from the batch data. Only use this for visualization purposes. For training, use `create_normalized_chunks`."""
     batch_size = batch["observations"].shape[0]
     all_chunks = []
 
@@ -83,13 +84,6 @@ def create_trajectory_chunks(batch, horizon):
 
 
 def create_normalized_chunks(batch, horizon, stats, cond_type=None):
-    """
-    Creates normalized chunks. Can be unconditional, or conditional on
-    total reward or the starting observation of the chunk.
-
-    Args:
-        cond_type (str, optional): Can be 'reward' or 'start_obs'. Defaults to None.
-    """
     obs_mean, obs_std = stats["obs_mean"], stats["obs_std"]
     act_mean, act_std = stats["act_mean"], stats["act_std"]
 
@@ -105,12 +99,6 @@ def create_normalized_chunks(batch, horizon, stats, cond_type=None):
 
         if length < horizon:
             continue
-
-        # If conditioning on reward, calculate it once per episode
-        if cond_type == "reward":
-            rew_mean, rew_std = stats["rew_mean"], stats["rew_std"]
-            total_reward = batch["total_rewards"][i]
-            norm_cond = (total_reward - rew_mean) / rew_std
 
         # Slide the window across the episode
         for start_idx in range(length - horizon + 1):
@@ -129,7 +117,17 @@ def create_normalized_chunks(batch, horizon, stats, cond_type=None):
                 start_obs = obs_chunk[0]
                 norm_cond = (start_obs - obs_mean) / obs_std
                 all_conds.append(norm_cond)
+            if cond_type == "start_obs+goal":
+                start_obs = obs_chunk[0]
+                end_obs = obs[length - 1]
+                norm_start = (start_obs - obs_mean) / obs_std
+                norm_end = (end_obs - obs_mean) / obs_std
+                norm_cond = torch.cat([norm_start, norm_end])
+                all_conds.append(norm_cond)
             elif cond_type == "reward":
+                rew_mean, rew_std = stats["rew_mean"], stats["rew_std"]
+                total_reward = batch["total_rewards"][i]
+                norm_cond = (total_reward - rew_mean) / rew_std
                 all_conds.append(norm_cond)
 
     if not all_chunks:
