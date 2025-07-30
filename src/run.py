@@ -160,7 +160,7 @@ def evaluate_open_loop(env, model, stats, input_dim, args, logger):
     if args.condition_on == "start_obs":
         start_observation, _ = env.reset()
         condition_dict = {"start_obs": torch.from_numpy(start_observation)}
-    elif args.condition_on == "start_obs_goal:
+    elif args.condition_on == "start_obs_goal":
         start_observation, _ = env.reset()
         goal_observation = torch.tensor([0, 0, 0, 0, 0, 0, 1, 1], dtype=torch.float32)
         condition_dict = {args.condition_on: (torch.from_numpy(start_observation), goal_observation)}
