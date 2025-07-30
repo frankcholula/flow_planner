@@ -64,7 +64,7 @@ def generate_trajectory(
     x_init = torch.randn((batch_size, input_dim), dtype=torch.float32, device=device)
 
     solver_kwargs = {
-        "time_grid": T,
+        "time_grid": T.to(device),
         "x_init": x_init,
         "c": c_tensor,
         "method": solver_method,
