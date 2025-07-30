@@ -63,14 +63,15 @@ def generate_trajectory(
 
     x_init = torch.randn((batch_size, input_dim), dtype=torch.float32, device=device)
 
-    sol = solver.sample(
-        time_grid=T,
-        x_init=x_init,
-        c=c_tensor,
-        method=solver_method,
-        step_size=step_size,
-        return_intermediates=return_intermediates,
-    )
+    solver_kwargs = {
+        "time_grid": T,
+        "x_init": x_init,
+        "c": c_tensor,
+        "method": solver_method,
+        "step_size": step_size,
+        "return_intermediates": return_intermediates
+    }
+    sol = solver.sample(**solver_kwargs)
     obs, act = unnormalize_trajectory(
         sol[0].flatten().detach(), stats, horizon, obs_dim, action_dim
     )
