@@ -1,8 +1,8 @@
 python -m src.run \
-    --environment "LunarLander-v3" \
+    --environment "hopper-v5" \
     --horizon 100 \
     --batch-size 32 \
-    --num-epochs 100 \
+    --num-epochs 1000 \
     --print-every 10 \
     --lr 1e-3 \
     --model-type "ccnn" \

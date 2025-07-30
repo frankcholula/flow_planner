@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 from src.models.backbone import MLP, CNN, ConditionalCNN
 from src.utils.args import parse_args
 from src.utils.loggers import WandBLogger
-from src.utils.visualizers import visualize_trajectories
+from src.pipelines.lunarlander.visualizers import visualize_trajectories
 
 from flow_matching.path.scheduler import CondOTScheduler
 from flow_matching.path import AffineProbPath
@@ -189,7 +189,7 @@ def main():
     if args.environment == "LunarLander-v3":
         config = LunarLanderConfig()
     dataset = minari.load_dataset(dataset_id=config.dataset_name)
-    run_name = f"{args.model_type}_h{args.horizon}_e{args.num_epochs}_k{args.kernel_size}_start_obs"
+    run_name = f"{args.environment}_{args.model_type}_h{args.horizon}_e{args.num_epochs}_k{args.kernel_size}_start_obs"
     logger = WandBLogger(
         config={
             "environment": args.environment,
