@@ -78,6 +78,11 @@ def train(config, args, dataset, logger):
             cond_dim = obs_dim
         elif args.condition_on == "start_obs+goal":
             cond_dim = obs_dim * 2
+        else:
+            raise ValueError(
+                f"ConditionalCNN requires a valid --condition-on argument ('reward', 'start_obs', 'start_obs+goal'), "
+                f"but got: {args.condition_on}"
+            )
         model = ConditionalCNN(
             input_dim=input_dim,
             horizon=horizon,
