@@ -58,6 +58,7 @@ def get_dataset_stats(dataset):
 
 
 def create_trajectory_chunks(batch, horizon):
+    """Create trajectory chunks from the batch data. Only use this for visualization purposes. For training, use `create_normalized_chunks`."""
     batch_size = batch["observations"].shape[0]
     all_chunks = []
 
@@ -131,6 +132,7 @@ def create_normalized_chunks(batch, horizon, stats, cond_type=None):
                 start_obs = obs_chunk[0]
                 norm_start = (start_obs - obs_mean) / obs_std
                 norm_cond = torch.cat([norm_start, norm_end])
+                all_conds.append(norm_cond)
             elif cond_type == "reward":
                 all_conds.append(norm_cond)
 
