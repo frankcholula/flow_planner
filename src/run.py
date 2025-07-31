@@ -12,12 +12,9 @@ from torch.utils.data import DataLoader
 from src.models.backbone import MLP, CNN, ConditionalCNN
 from src.utils.args import parse_args
 from src.utils.loggers import WandBLogger
-from src.pipelines.lunarlander.visualizers import visualize_trajectories
 
 from flow_matching.path.scheduler import CondOTScheduler
 from flow_matching.path import AffineProbPath
-from flow_matching.utils import ModelWrapper
-from flow_matching.solver import ODESolver
 
 from src.conf.environment import LunarLanderConfig
 from src.pipelines.preprocessing import (
@@ -25,18 +22,11 @@ from src.pipelines.preprocessing import (
     get_dataset_stats,
     create_normalized_chunks,
 )
-from src.pipelines.sampling import generate_trajectory
+from src.pipelines.eval import evaluate_open_loop, evaluate_policy_mpc
 from matplotlib import pyplot as plt
 
 
-class WrappedModel(ModelWrapper):
-    def forward(self, x: torch.Tensor, t: torch.Tensor, **extras):
-        return self.model(x, t)
 
-
-class WrappedConditionalModel(ModelWrapper):
-    def forward(self, x: torch.Tensor, t: torch.Tensor, c: torch.Tensor, **extras):
-        return self.model(x, t, c)
 
 
 def train(config, args, dataset, logger):
@@ -154,38 +144,6 @@ def train(config, args, dataset, logger):
     logger.save_model(model_save_path)
     print(f"Model saved to {model_save_path}, training complete.")
     return model, stats, input_dim
-
-
-def evaluate_open_loop(env, model, stats, input_dim, args, logger=None):
-    if args.condition_on == "start_obs":
-        start_observation, _ = env.reset()
-        condition_dict = {"start_obs": torch.from_numpy(start_observation)}
-    elif args.condition_on == "start_obs_goal":
-        start_observation, _ = env.reset()
-        goal_observation = torch.tensor([0, 0, 0, 0, 0, 0, 1, 1], dtype=torch.float32)
-        condition_dict = {args.condition_on: (torch.from_numpy(start_observation), goal_observation)}
-    elif args.condition_on == "reward":
-        # TODO: implement reward conditioning
-        pass
-    wrapped_vf = WrappedConditionalModel(model)
-    T = torch.linspace(0, 1, 10)
-    solver = ODESolver(velocity_model=wrapped_vf)
-    trajectory_fn = lambda: generate_trajectory(
-        stats=stats,
-        solver=solver,
-        T=T,
-        input_dim=input_dim,
-        horizon=args.horizon,
-        condition=condition_dict if args.condition_on else None,
-        solver_method=args.solver_method,
-        batch_size=args.inference_batch_size,
-        step_size=args.step_size,
-        return_intermediates=False,
-    )
-    fig, ax = visualize_trajectories(trajectory_fn=trajectory_fn, num_trajectories=5)
-    if logger is not None:
-        logger.log({"trajectory plot": wandb.Image(fig)})
-    return fig, ax
 
 
 def main():
