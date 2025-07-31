@@ -3,7 +3,9 @@ from src.pipelines.sampling import generate_trajectory
 from flow_matching.utils import ModelWrapper
 from flow_matching.solver import ODESolver
 from src.pipelines.lunarlander.visualizers import visualize_trajectories as lvt
+from src.pipelines.hopper.visualizers import visualize_trajectory as hvt
 import wandb
+
 
 class WrappedModel(ModelWrapper):
     def forward(self, x: torch.Tensor, t: torch.Tensor, **extras):
