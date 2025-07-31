@@ -4,8 +4,6 @@ import time
 import random
 import numpy as np
 import pprint
-import wandb
-from matplotlib import pyplot as plt
 
 import torch
 from torch.utils.data import DataLoader
@@ -13,12 +11,9 @@ from torch.utils.data import DataLoader
 from src.models.backbone import MLP, CNN, ConditionalCNN
 from src.utils.args import parse_args
 from src.utils.loggers import WandBLogger
-from src.pipelines.lunarlander.visualizers import visualize_trajectories
 
 from flow_matching.path.scheduler import CondOTScheduler
 from flow_matching.path import AffineProbPath
-from flow_matching.utils import ModelWrapper
-from flow_matching.solver import ODESolver
 
 from src.conf.environment import LunarLanderConfig
 from src.pipelines.preprocessing import (
@@ -26,17 +21,8 @@ from src.pipelines.preprocessing import (
     get_dataset_stats,
     create_normalized_chunks,
 )
-from src.pipelines.sampling import generate_trajectory
-
-
-class WrappedModel(ModelWrapper):
-    def forward(self, x: torch.Tensor, t: torch.Tensor, **extras):
-        return self.model(x, t)
-
-
-class WrappedConditionalModel(ModelWrapper):
-    def forward(self, x: torch.Tensor, t: torch.Tensor, c: torch.Tensor, **extras):
-        return self.model(x, t, c)
+from src.pipelines.eval import evaluate_open_loop, evaluate_policy_mpc
+from matplotlib import pyplot as plt
 
 
 def train(config, args, dataset, logger):
@@ -76,6 +62,13 @@ def train(config, args, dataset, logger):
             cond_dim = 1
         elif args.condition_on == "start_obs":
             cond_dim = obs_dim
+        elif args.condition_on == "start_obs_goal":
+            cond_dim = obs_dim * 2
+        else:
+            raise ValueError(
+                f"ConditionalCNN requires a valid --condition-on argument ('reward', 'start_obs', 'start_obs_goal'), "
+                f"but got: {args.condition_on}"
+            )
         model = ConditionalCNN(
             input_dim=input_dim,
             horizon=horizon,
@@ -149,30 +142,6 @@ def train(config, args, dataset, logger):
     return model, stats, input_dim
 
 
-def evaluate_open_loop(env, model, stats, input_dim, args, logger):
-    if args.condition_on == "start_obs":
-        start_observation, _ = env.reset()
-        cond_tensor = torch.from_numpy(start_observation)
-    wrapped_vf = WrappedConditionalModel(model)
-    step_size = args.step_size
-    T = torch.linspace(0, 1, 10)
-    T = T.to(device=args.device)
-    solver = ODESolver(velocity_model=wrapped_vf)
-    trajectory_fn = lambda: generate_trajectory(
-        stats=stats,
-        solver=solver,
-        T=T,
-        input_dim=input_dim,
-        args=args,
-        horizon=args.horizon,
-        condition={args.condition_on: cond_tensor},
-        batch_size=args.inference_batch_size,
-    )
-    fig, ax = visualize_trajectories(trajectory_fn=trajectory_fn, num_trajectories=5)
-    logger.log({"trajectory plot": wandb.Image(fig)})
-    plt.close(fig)
-
-
 def main():
     args = parse_args()
 
@@ -211,7 +180,8 @@ def main():
         config=config, args=args, dataset=dataset, logger=logger
     )
     env = dataset.recover_environment()
-    evaluate_open_loop(env, model, stats, input_dim, args, logger=logger)
+    fig, ax = evaluate_open_loop(env, model, stats, input_dim, args, logger=logger)
+    plt.close(fig)
     logger.finish()
 
 
