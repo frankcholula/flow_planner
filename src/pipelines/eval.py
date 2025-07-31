@@ -52,26 +52,42 @@ def evaluate_open_loop(env, model, stats, input_dim, args, logger=None):
 
 
 def evaluate_policy_mpc(
-    env, planner_fn, num_episodes, max_episode_length=300, replan_freq=1, render=False
+    env,
+    planner_fn,
+    num_episodes,
+    condition_type: str,
+    goal_obs=None,
+    max_episode_length=300,
+    replan_freq=1,
+    render=False,
 ):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     rewards = []
     print(
-        "\n--- Starting MPC Evaluation (Replanning frequency: {} steps) ---".format(
-            replan_freq
-        )
+        f"\n--- Starting MPC Evaluation (Condition Type: {condition_type}) and Replan Frequency: {replan_freq} ---"
     )
     for eps in range(num_episodes):
         obs, _ = env.reset()
         total_rew = 0
+        actions_plan = None
 
         for t in range(max_episode_length):
             if render:
                 env.render()
 
             if t % replan_freq == 0:
-                start_obs_tensor = torch.from_numpy(obs).to(device)
-                _, actions_plan = planner_fn(start_obs_tensor)
+                start_obs_tensor = torch.from_numpy(obs)
+
+                condition_dict = {}
+                if condition_type == "start_obs":
+                    condition_dict = {"start_obs": start_obs_tensor}
+                elif condition_type == "start_obs_goal":
+                    if goal_obs is None:
+                        raise ValueError(
+                            "goal_obs must be provided for start_obs_goal conditioning"
+                        )
+                    condition_dict = {"start_obs_goal": (start_obs_tensor, goal_obs)}
+
+                _, actions_plan = planner_fn(condition_dict)
 
             action_index_in_plan = t % replan_freq
             action_to_take = actions_plan[action_index_in_plan].cpu().numpy()

@@ -4,7 +4,6 @@ import time
 import random
 import numpy as np
 import pprint
-import wandb
 
 import torch
 from torch.utils.data import DataLoader
@@ -24,9 +23,6 @@ from src.pipelines.preprocessing import (
 )
 from src.pipelines.eval import evaluate_open_loop, evaluate_policy_mpc
 from matplotlib import pyplot as plt
-
-
-
 
 
 def train(config, args, dataset, logger):
