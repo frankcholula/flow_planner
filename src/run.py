@@ -5,7 +5,6 @@ import random
 import numpy as np
 import pprint
 import wandb
-from matplotlib import pyplot as plt
 
 import torch
 from torch.utils.data import DataLoader
@@ -27,6 +26,7 @@ from src.pipelines.preprocessing import (
     create_normalized_chunks,
 )
 from src.pipelines.sampling import generate_trajectory
+from matplotlib import pyplot as plt
 
 
 class WrappedModel(ModelWrapper):
@@ -185,7 +185,7 @@ def evaluate_open_loop(env, model, stats, input_dim, args, logger=None):
     fig, ax = visualize_trajectories(trajectory_fn=trajectory_fn, num_trajectories=5)
     if logger is not None:
         logger.log({"trajectory plot": wandb.Image(fig)})
-    plt.close(fig)
+    return fig, ax
 
 
 def main():
@@ -226,7 +226,8 @@ def main():
         config=config, args=args, dataset=dataset, logger=logger
     )
     env = dataset.recover_environment()
-    evaluate_open_loop(env, model, stats, input_dim, args, logger=logger)
+    fig, ax = evaluate_open_loop(env, model, stats, input_dim, args, logger=logger)
+    plt.close(fig)
     logger.finish()
 
 
