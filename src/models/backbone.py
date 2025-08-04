@@ -1,6 +1,11 @@
 import torch
 from torch import nn, Tensor
-from src.models.activation_fns import Swish
+from einops import rearrange, repeat
+
+
+class Swish(nn.Module):
+    def forward(self, x: Tensor) -> Tensor:
+        return torch.sigmoid(x) * x
 
 
 class MLP(nn.Module):
@@ -32,10 +37,6 @@ class MLP(nn.Module):
 
 
 class CNN(nn.Module):
-    """
-    An unconditional 1D Temporal CNN, refactored to align with the MLP's convention.
-    """
-
     def __init__(
         self,
         input_dim: int,
@@ -123,9 +124,117 @@ class ConditionalCNN(torch.nn.Module):
         return output_reshaped.permute(0, 2, 1).reshape(x.shape)
 
 
-# TODO: Implement UNet
-class UNet(nn.Module):
-    pass
+# diffusers doesn't have a conditional Unet1D, so we implement our own.
+class ResidualBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size=5):
+        super().__init__()
+        self.conv1 = nn.Conv1d(in_channels, out_channels, kernel_size, padding="same")
+        self.conv2 = nn.Conv1d(out_channels, out_channels, kernel_size, padding="same")
+        self.activation = Swish()
+        self.residual_conv = (
+            nn.Conv1d(in_channels, out_channels, 1)
+            if in_channels != out_channels
+            else nn.Identity()
+        )
+
+    def forward(self, x):
+        residual = self.residual_conv(x)
+        x = self.activation(self.conv1(x))
+        x = self.conv2(x)
+        return x + residual
+
+
+class DownBlock(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+        self.res_block = ResidualBlock(in_channels, out_channels)
+        self.downsample = nn.MaxPool1d(2)
+
+    def forward(self, x):
+        x = self.res_block(x)
+        return x, self.downsample(x)
+
+
+class UpBlock(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+        self.upsample = nn.ConvTranspose1d(
+            in_channels, out_channels, kernel_size=2, stride=2
+        )
+        self.res_block = ResidualBlock(out_channels * 2, out_channels)
+
+    def forward(self, x, skip_connection):
+        x = self.upsample(x)
+        x = torch.cat([x, skip_connection], dim=1)
+        return self.res_block(x)
+
+
+class ConditionalUNet1D(nn.Module):
+    def __init__(
+        self,
+        input_dim: int,
+        horizon: int,
+        cond_dim: int = 1,
+        hidden_dim: int = 128,
+    ):
+        super().__init__()
+        self.horizon = horizon
+        self.cond_dim = cond_dim
+
+        # Internally calculate the transition_dim (channels)
+        assert input_dim % horizon == 0, "input_dim must be divisible by horizon"
+        self.transition_dim = input_dim // horizon
+
+        # Embeddings for time and condition
+        self.time_embedding = nn.Linear(1, hidden_dim)
+        self.cond_embedding = nn.Linear(cond_dim, hidden_dim)
+
+        # Initial convolution to map input to hidden dimension
+        self.initial_conv = nn.Conv1d(self.transition_dim, hidden_dim, kernel_size=1)
+
+        # Downsampling Path
+        self.down1 = DownBlock(hidden_dim, hidden_dim * 2)
+        self.down2 = DownBlock(hidden_dim * 2, hidden_dim * 4)
+
+        # Bottleneck
+        self.bottleneck = ResidualBlock(hidden_dim * 4, hidden_dim * 4)
+
+        # Upsampling Path
+        self.up1 = UpBlock(hidden_dim * 4, hidden_dim * 2)
+        self.up2 = UpBlock(hidden_dim * 2, hidden_dim)
+
+        # Final convolution to map back to the original transition dimension
+        self.final_conv = nn.Conv1d(hidden_dim, self.transition_dim, kernel_size=1)
+
+    def forward(self, x: Tensor, t: Tensor, c: Tensor) -> Tensor:
+        # 1. Reshape and Initial Convolution
+        # x: (batch, horizon * transition_dim) -> (batch, transition_dim, horizon)
+        x_reshaped = rearrange(x, "b (h d) -> b d h", h=self.horizon)
+        x_initial = self.initial_conv(x_reshaped)
+
+        # 2. Embed time and condition
+        t_emb = self.time_embedding(t.float().unsqueeze(1))  # (b, h_dim)
+        c_emb = self.cond_embedding(c.float())  # (b, h_dim)
+
+        # Add embeddings to the initial feature map
+        # We repeat them to match the horizon length
+        time_cond_emb = repeat(t_emb + c_emb, "b d -> b d h", h=self.horizon)
+        h = x_initial + time_cond_emb
+
+        # 3. U-Net Path
+        skip1, h = self.down1(h)
+        skip2, h = self.down2(h)
+
+        h = self.bottleneck(h)
+
+        h = self.up1(h, skip2)
+        h = self.up2(h, skip1)
+
+        # 4. Final Layer and Reshape
+        output_reshaped = self.final_conv(h)
+        output_flat = rearrange(output_reshaped, "b d h -> b (h d)")
+
+        return output_flat
 
 
 # TODO: Implement ControlNet for conditioning case.
