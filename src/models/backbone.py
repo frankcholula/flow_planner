@@ -125,6 +125,7 @@ class ConditionalCNN(torch.nn.Module):
 
 
 # diffusers doesn't have a conditional Unet1D, so we implement our own.
+
 class ResidualBlock(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size=5):
         super().__init__()
@@ -148,7 +149,8 @@ class DownBlock(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
         self.res_block = ResidualBlock(in_channels, out_channels)
-        self.downsample = nn.MaxPool1d(2)
+        self.downsample = nn.Conv1d(out_channels, out_channels, kernel_size=3, stride=2, padding=1)
+
 
     def forward(self, x):
         x = self.res_block(x)
