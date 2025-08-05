@@ -9,6 +9,11 @@ class Swish(nn.Module):
         return torch.sigmoid(x) * x
 
 
+class Mish(nn.Module):
+    def forward(self, x: Tensor) -> Tensor:
+        return x * torch.tanh(torch.nn.functional.softplus(x))
+
+
 class MLP(nn.Module):
     def __init__(self, input_dim: int, time_dim: int = 1, hidden_dim: int = 128):
         super().__init__()
@@ -180,31 +185,37 @@ class ConditionalUNet1D(nn.Module):
         cond_dim: int = 1,
         hidden_dim: int = 128,
         fusion_strategy: str = "concat",
+        use_mlp_embedding: bool = False,
     ):
         super().__init__()
         self.horizon = horizon
         self.cond_dim = cond_dim
+        self.fusion_strategy = fusion_strategy
 
-        # Internally calculate the transition_dim (channels)
         assert input_dim % horizon == 0, "input_dim must be divisible by horizon"
         self.transition_dim = input_dim // horizon
 
-        # Embeddings for flow time
-        time_embed_dim = hidden_dim * 4
-        self.time_embedding = nn.Sequential(
-            SinusoidalPosEmb(hidden_dim),
-            nn.Linear(hidden_dim, time_embed_dim),
-            nn.Mish(),
-            nn.Linear(time_embed_dim, hidden_dim),
-        )
+        if use_mlp_embedding:
+            time_embed_dim = hidden_dim * 4
+            self.time_embedding = nn.Sequential(
+                SinusoidalPosEmb(hidden_dim),
+                nn.Linear(hidden_dim, time_embed_dim),
+                Mish(),
+                nn.Linear(time_embed_dim, hidden_dim),
+            )
+            cond_embed_dim = hidden_dim * 4
+            self.cond_embedding = nn.Sequential(
+                nn.Linear(cond_dim, cond_embed_dim),
+                Mish(),
+                nn.Linear(cond_embed_dim, hidden_dim),
+            )
+        else:
+            self.time_embedding = SinusoidalPosEmb(hidden_dim)
+            self.cond_embedding = nn.Linear(cond_dim, hidden_dim)
 
-        # Embedding for condition, just something easy for now
-        # TODO: can do something more sophisticated later.
-        self.cond_embedding = nn.Linear(cond_dim, hidden_dim)
-
-        if fusion_strategy == "concat":
+        if self.fusion_strategy == "concat":
+            # need to project back to hidden_dim
             self.feature_projection = nn.Linear(hidden_dim * 2, hidden_dim)
-            pass
 
         # Initial convolution to map input to hidden dimension
         self.initial_conv = nn.Conv1d(self.transition_dim, hidden_dim, kernel_size=1)
@@ -224,11 +235,9 @@ class ConditionalUNet1D(nn.Module):
         self.final_conv = nn.Conv1d(hidden_dim, self.transition_dim, kernel_size=1)
 
     def forward(self, x: Tensor, t: Tensor, c: Tensor) -> Tensor:
-        x_reshaped = rearrange(x, "b (h d) -> b d h", h=self.horizon)
-        x_initial = self.initial_conv(x_reshaped)
+        x_initial = self.initial_conv(rearrange(x, "b (h d) -> b d h", h=self.horizon))
 
-        # embed time and condition
-        t_emb = self.time_embedding(t.float().unsqueeze(1))
+        t_emb = self.time_embedding(t.float())
         c_emb = self.cond_embedding(c.float())
 
         if self.fusion_strategy == "concat":
@@ -238,12 +247,10 @@ class ConditionalUNet1D(nn.Module):
             final_emb = t_emb + c_emb
         else:
             raise ValueError(f"Unknown fusion strategy: {self.fusion_strategy}")
-        
 
-        time_cond_emb = repeat(t_emb + c_emb, "b d -> b d h", h=self.horizon)
+        time_cond_emb = repeat(final_emb, "b d -> b d h", h=self.horizon)
         h = x_initial + time_cond_emb
 
-        # 3. U-Net Path
         skip1, h = self.down1(h)
         skip2, h = self.down2(h)
 
@@ -255,7 +262,6 @@ class ConditionalUNet1D(nn.Module):
         # 4. Final Layer and Reshape
         output_reshaped = self.final_conv(h)
         output_flat = rearrange(output_reshaped, "b d h -> b (h d)")
-
         return output_flat
 
 
