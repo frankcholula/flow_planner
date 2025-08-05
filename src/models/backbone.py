@@ -179,6 +179,7 @@ class ConditionalUNet1D(nn.Module):
         horizon: int,
         cond_dim: int = 1,
         hidden_dim: int = 128,
+        fusion_strategy: str = "concat",
     ):
         super().__init__()
         self.horizon = horizon
@@ -201,7 +202,9 @@ class ConditionalUNet1D(nn.Module):
         # TODO: can do something more sophisticated later.
         self.cond_embedding = nn.Linear(cond_dim, hidden_dim)
 
-        # Fusion strategy
+        if fusion_strategy == "concat":
+            self.feature_projection = nn.Linear(hidden_dim * 2, hidden_dim)
+            pass
 
         # Initial convolution to map input to hidden dimension
         self.initial_conv = nn.Conv1d(self.transition_dim, hidden_dim, kernel_size=1)
@@ -221,17 +224,22 @@ class ConditionalUNet1D(nn.Module):
         self.final_conv = nn.Conv1d(hidden_dim, self.transition_dim, kernel_size=1)
 
     def forward(self, x: Tensor, t: Tensor, c: Tensor) -> Tensor:
-        # 1. Reshape and Initial Convolution
-        # x: (batch, horizon * transition_dim) -> (batch, transition_dim, horizon)
         x_reshaped = rearrange(x, "b (h d) -> b d h", h=self.horizon)
         x_initial = self.initial_conv(x_reshaped)
 
-        # 2. Embed time and condition
-        t_emb = self.time_embedding(t.float().unsqueeze(1))  # (b, h_dim)
-        c_emb = self.cond_embedding(c.float())  # (b, h_dim)
+        # embed time and condition
+        t_emb = self.time_embedding(t.float().unsqueeze(1))
+        c_emb = self.cond_embedding(c.float())
 
-        # Add embeddings to the initial feature map
-        # We repeat them to match the horizon length
+        if self.fusion_strategy == "concat":
+            combined_emb = torch.cat([t_emb, c_emb], dim=-1)
+            final_emb = self.feature_projection(combined_emb)
+        elif self.fusion_strategy == "add":
+            final_emb = t_emb + c_emb
+        else:
+            raise ValueError(f"Unknown fusion strategy: {self.fusion_strategy}")
+        
+
         time_cond_emb = repeat(t_emb + c_emb, "b d -> b d h", h=self.horizon)
         h = x_initial + time_cond_emb
 
