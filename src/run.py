@@ -8,7 +8,7 @@ import pprint
 import torch
 from torch.utils.data import DataLoader
 
-from src.models.backbone import MLP, CNN, ConditionalCNN
+from src.models.backbone import MLP, CNN, ConditionalCNN, ConditionalUNet1D
 from src.utils.args import parse_args
 from src.utils.loggers import WandBLogger
 
@@ -76,7 +76,15 @@ def train(config, args, dataset, logger):
             kernel_size=args.kernel_size,
             cond_dim=cond_dim,
         ).to(args.device)
-
+    elif args.model_type == "unet":
+        model = ConditionalUNet1D(
+            input_dim=input_dim,
+            horizon=horizon,
+            hidden_dim=args.hidden_dim,
+            cond_dim=8,
+            fusion_strategy="concat",
+            use_mlp_embedding=False,
+        )
     path = AffineProbPath(scheduler=CondOTScheduler())
     optim = torch.optim.Adam(model.parameters(), lr=args.lr)
 

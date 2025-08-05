@@ -182,7 +182,7 @@ class ConditionalUNet1D(nn.Module):
         self,
         input_dim: int,
         horizon: int,
-        cond_dim: int = 1,
+        cond_dim: int = 8,
         hidden_dim: int = 128,
         fusion_strategy: str = "concat",
         use_mlp_embedding: bool = False,
