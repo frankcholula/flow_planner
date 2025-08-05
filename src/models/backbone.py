@@ -164,15 +164,21 @@ class DownBlock(nn.Module):
 
 
 class UpBlock(nn.Module):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_channels, skip_channels, out_channels):
         super().__init__()
+        # The upsample layer should reduce the channels to match the desired output level
         self.upsample = nn.ConvTranspose1d(
             in_channels, out_channels, kernel_size=2, stride=2
         )
-        self.res_block = ResidualBlock(out_channels * 2, out_channels)
+        # The res_block takes the upsampled channels + the skip connection channels
+        self.res_block = ResidualBlock(out_channels + skip_channels, out_channels)
 
     def forward(self, x, skip_connection):
         x = self.upsample(x)
+        # Pad if necessary to handle potential off-by-one errors from strided conv
+        if x.shape[-1] != skip_connection.shape[-1]:
+            padding = skip_connection.shape[-1] - x.shape[-1]
+            x = nn.functional.pad(x, (padding, 0))
         x = torch.cat([x, skip_connection], dim=1)
         return self.res_block(x)
 
@@ -228,8 +234,16 @@ class ConditionalUNet1D(nn.Module):
         self.bottleneck = ResidualBlock(hidden_dim * 4, hidden_dim * 4)
 
         # Upsampling Path
-        self.up1 = UpBlock(hidden_dim * 4, hidden_dim * 2)
-        self.up2 = UpBlock(hidden_dim * 2, hidden_dim)
+        self.up1 = UpBlock(
+            in_channels=hidden_dim * 4,
+            skip_channels=hidden_dim * 4,
+            out_channels=hidden_dim * 2,
+        )
+        self.up2 = UpBlock(
+            in_channels=hidden_dim * 2,
+            skip_channels=hidden_dim * 2,
+            out_channels=hidden_dim,
+        )
 
         # Final convolution to map back to the original transition dimension
         self.final_conv = nn.Conv1d(hidden_dim, self.transition_dim, kernel_size=1)
