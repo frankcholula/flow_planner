@@ -77,6 +77,18 @@ def train(config, args, dataset, logger):
             cond_dim=cond_dim,
         ).to(args.device)
     elif args.model_type == "unet":
+        print("Using UNet1D model for training.")
+        if args.condition_on == "reward":
+            cond_dim = 1
+        elif args.condition_on == "start_obs":
+            cond_dim = obs_dim
+        elif args.condition_on == "start_obs_goal":
+            cond_dim = obs_dim * 2
+        else:
+            raise ValueError(
+                f"UNet1D requires a valid --condition-on argument ('reward', 'start_obs', 'start_obs_goal'), "
+                f"but got: {args.condition_on}"
+            )
         model = ConditionalUNet1D(
             input_dim=input_dim,
             horizon=horizon,
@@ -84,7 +96,7 @@ def train(config, args, dataset, logger):
             cond_dim=8,
             fusion_strategy="concat",
             use_mlp_embedding=False,
-        )
+        ).to(args.device)
     path = AffineProbPath(scheduler=CondOTScheduler())
     optim = torch.optim.Adam(model.parameters(), lr=args.lr)
 
