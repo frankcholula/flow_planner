@@ -149,7 +149,6 @@ class ResidualBlock(nn.Module):
         x = self.conv2(x)
         return x + residual
 
-
 class DownBlock(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
@@ -159,20 +158,25 @@ class DownBlock(nn.Module):
         )
 
     def forward(self, x):
-        x = self.res_block(x)
-        return x, self.downsample(x)
-
+        skip_connection = self.res_block(x)
+        downsampled_x = self.downsample(skip_connection)
+        return skip_connection, downsampled_x
 
 class UpBlock(nn.Module):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_channels, skip_channels, out_channels):
         super().__init__()
         self.upsample = nn.ConvTranspose1d(
-            in_channels, out_channels, kernel_size=2, stride=2
+            in_channels, in_channels // 2, kernel_size=2, stride=2
         )
-        self.res_block = ResidualBlock(out_channels * 2, out_channels)
+        # The input to the residual block is the upsampled channels + the skip connection channels
+        self.res_block = ResidualBlock(in_channels // 2 + skip_channels, out_channels)
 
     def forward(self, x, skip_connection):
         x = self.upsample(x)
+        # Pad skip connection if there's a size mismatch from downsampling
+        if x.shape[-1] != skip_connection.shape[-1]:
+            padding = skip_connection.shape[-1] - x.shape[-1]
+            x = nn.functional.pad(x, (padding, 0))
         x = torch.cat([x, skip_connection], dim=1)
         return self.res_block(x)
 
