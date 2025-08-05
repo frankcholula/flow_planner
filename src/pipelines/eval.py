@@ -14,6 +14,9 @@ class WrappedModel(ModelWrapper):
 
 class WrappedConditionalModel(ModelWrapper):
     def forward(self, x: torch.Tensor, t: torch.Tensor, c: torch.Tensor, **extras):
+        # using time embedding
+        if t.ndim == 0:
+            t = t.repeat(x.shape[0])
         return self.model(x, t, c)
 
 

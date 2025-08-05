@@ -141,6 +141,8 @@ def train(config, args, dataset, logger):
                 pred = model(sample.x_t, sample.t)
 
             loss = torch.pow(pred - sample.dx_t, 2).mean()
+            # for debugging
+            # print(f"Epoch {epoch+1}, Batch Loss: {loss.item():.4f}")
             loss.backward()
             optim.step()
             total_loss += loss.item()
