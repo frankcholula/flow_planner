@@ -1,16 +1,12 @@
 import torch
 from torch import nn, Tensor
 from einops import rearrange, repeat
+from src.models.positional_embedding import SinusoidalPosEmb
 
 
 class Swish(nn.Module):
     def forward(self, x: Tensor) -> Tensor:
         return torch.sigmoid(x) * x
-
-
-class Mish(nn.Module):
-    def forward(self, x: Tensor) -> Tensor:
-        return x * torch.tanh(torch.nn.functional.softplus(x))
 
 
 class MLP(nn.Module):
@@ -192,9 +188,20 @@ class ConditionalUNet1D(nn.Module):
         assert input_dim % horizon == 0, "input_dim must be divisible by horizon"
         self.transition_dim = input_dim // horizon
 
-        # Embeddings for time and condition
-        self.time_embedding = nn.Linear(1, hidden_dim)
+        # Embeddings for flow time
+        time_embed_dim = hidden_dim * 4
+        self.time_embedding = nn.Sequential(
+            SinusoidalPosEmb(hidden_dim),
+            nn.Linear(hidden_dim, time_embed_dim),
+            nn.Mish(),
+            nn.Linear(time_embed_dim, hidden_dim),
+        )
+
+        # Embedding for condition, just something easy for now
+        # TODO: can do something more sophisticated later.
         self.cond_embedding = nn.Linear(cond_dim, hidden_dim)
+
+        # Fusion strategy
 
         # Initial convolution to map input to hidden dimension
         self.initial_conv = nn.Conv1d(self.transition_dim, hidden_dim, kernel_size=1)
