@@ -8,6 +8,11 @@ class Swish(nn.Module):
         return torch.sigmoid(x) * x
 
 
+class Mish(nn.Module):
+    def forward(self, x: Tensor) -> Tensor:
+        return x * torch.tanh(torch.nn.functional.softplus(x))
+
+
 class MLP(nn.Module):
     def __init__(self, input_dim: int, time_dim: int = 1, hidden_dim: int = 128):
         super().__init__()
@@ -125,7 +130,6 @@ class ConditionalCNN(torch.nn.Module):
 
 
 # diffusers doesn't have a conditional Unet1D, so we implement our own.
-
 class ResidualBlock(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size=5):
         super().__init__()
@@ -149,8 +153,9 @@ class DownBlock(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
         self.res_block = ResidualBlock(in_channels, out_channels)
-        self.downsample = nn.Conv1d(out_channels, out_channels, kernel_size=3, stride=2, padding=1)
-
+        self.downsample = nn.Conv1d(
+            out_channels, out_channels, kernel_size=3, stride=2, padding=1
+        )
 
     def forward(self, x):
         x = self.res_block(x)
