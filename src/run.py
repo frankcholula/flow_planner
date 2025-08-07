@@ -101,7 +101,7 @@ def train(config, args, dataset, logger):
             input_dim=input_dim,
             horizon=horizon,
             hidden_dim=args.hidden_dim,
-            cond_dim=8,
+            cond_dim=cond_dim,
             fusion_strategy="concat",
             use_mlp_embedding=False,
         ).to(args.device)
