@@ -132,7 +132,10 @@ def create_normalized_chunks(
 
                 elif cond_type == "start_obs_goal":
                     start_obs = obs_chunk[0]
-                    end_obs = obs[length - 1]
+                    if chunk_type == "obs_act" or chunk_type == "obs_only":
+                        end_obs = obs[length - 1]
+                    elif chunk_type == "act_only":
+                        end_obs = obs_chunk[-1]
                     norm_start = (start_obs - obs_mean) / obs_std
                     norm_end = (end_obs - obs_mean) / obs_std
                     norm_cond = torch.cat([norm_start, norm_end])
