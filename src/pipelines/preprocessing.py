@@ -83,7 +83,13 @@ def create_trajectory_chunks(batch, horizon):
     return torch.stack(all_chunks)
 
 
-def create_normalized_chunks(batch, horizon, stats, cond_type=None):
+def create_normalized_chunks(
+    batch, horizon, stats, cond_type=None, chunk_type="obs_act"
+):
+    """
+    Creates normalized chunks of a specified type (obs_act, obs_only, act_only).
+    Can also be conditional on reward, starting observation, or start+goal.
+    """
     obs_mean, obs_std = stats["obs_mean"], stats["obs_std"]
     act_mean, act_std = stats["act_mean"], stats["act_std"]
 
@@ -100,35 +106,43 @@ def create_normalized_chunks(batch, horizon, stats, cond_type=None):
         if length < horizon:
             continue
 
-        # Slide the window across the episode
         for start_idx in range(length - horizon + 1):
             end_idx = start_idx + horizon
             obs_chunk = obs[start_idx:end_idx]
             act_chunk = act[start_idx:end_idx]
 
-            # Normalize the main trajectory chunk
             norm_obs_chunk = (obs_chunk - obs_mean) / obs_std
             norm_act_chunk = (act_chunk - act_mean) / act_std
-            chunk = torch.cat([norm_obs_chunk, norm_act_chunk], dim=-1)
+
+            if chunk_type == "obs_act":
+                chunk = torch.cat([norm_obs_chunk, norm_act_chunk], dim=-1)
+            elif chunk_type == "obs_only":
+                chunk = norm_obs_chunk
+            elif chunk_type == "act_only":
+                chunk = norm_act_chunk
+            else:
+                raise ValueError(f"Invalid chunk_type: {chunk_type}")
             all_chunks.append(chunk.flatten())
 
-            # If conditional, prepare the corresponding condition
-            if cond_type == "start_obs":
-                start_obs = obs_chunk[0]
-                norm_cond = (start_obs - obs_mean) / obs_std
-                all_conds.append(norm_cond)
-            if cond_type == "start_obs_goal":
-                start_obs = obs_chunk[0]
-                end_obs = obs[length - 1]
-                norm_start = (start_obs - obs_mean) / obs_std
-                norm_end = (end_obs - obs_mean) / obs_std
-                norm_cond = torch.cat([norm_start, norm_end])
-                all_conds.append(norm_cond)
-            elif cond_type == "reward":
-                rew_mean, rew_std = stats["rew_mean"], stats["rew_std"]
-                total_reward = batch["total_rewards"][i]
-                norm_cond = (total_reward - rew_mean) / rew_std
-                all_conds.append(norm_cond)
+            if cond_type:
+                if cond_type == "start_obs":
+                    start_obs = obs_chunk[0]
+                    norm_cond = (start_obs - obs_mean) / obs_std
+                    all_conds.append(norm_cond)
+
+                elif cond_type == "start_obs_goal":
+                    start_obs = obs_chunk[0]
+                    end_obs = obs[length - 1]
+                    norm_start = (start_obs - obs_mean) / obs_std
+                    norm_end = (end_obs - obs_mean) / obs_std
+                    norm_cond = torch.cat([norm_start, norm_end])
+                    all_conds.append(norm_cond)
+
+                elif cond_type == "reward":
+                    rew_mean, rew_std = stats["rew_mean"], stats["rew_std"]
+                    total_reward = batch["total_rewards"][i]
+                    norm_cond = (total_reward - rew_mean) / rew_std
+                    all_conds.append(norm_cond)
 
     if not all_chunks:
         return (None, None) if cond_type else None
@@ -136,6 +150,7 @@ def create_normalized_chunks(batch, horizon, stats, cond_type=None):
     stacked_chunks = torch.stack(all_chunks)
 
     if cond_type:
+        assert len(all_chunks) == len(all_conds)
         stacked_conds = torch.stack(all_conds)
         if cond_type == "reward":
             stacked_conds = stacked_conds.unsqueeze(1)
