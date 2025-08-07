@@ -30,6 +30,14 @@ def train(config, args, dataset, logger):
     obs_dim = config.obs_dim
     action_dim = config.action_dim
     horizon = args.horizon
+    if args.chunk_type == "obs_act":
+        input_dim = (obs_dim + action_dim) * horizon
+    elif args.chunk_type == "obs_only":
+        input_dim = obs_dim * horizon
+    elif args.chunk_type == "act_only":
+        input_dim = action_dim * horizon
+    else:
+        raise ValueError(f"Invalid chunk_type: {args.chunk_type}")
     input_dim = horizon * (obs_dim + action_dim)
 
     # load the dataset and stats based on config
