@@ -8,7 +8,7 @@ import pprint
 import torch
 from torch.utils.data import DataLoader
 
-from src.models.backbone import MLP, CNN, ConditionalCNN
+from src.models.backbone import MLP, CNN, ConditionalCNN, ConditionalUNet1D
 from src.utils.args import parse_args
 from src.utils.loggers import WandBLogger
 
@@ -76,7 +76,27 @@ def train(config, args, dataset, logger):
             kernel_size=args.kernel_size,
             cond_dim=cond_dim,
         ).to(args.device)
-
+    elif args.model_type == "unet":
+        print("Using UNet1D model for training.")
+        if args.condition_on == "reward":
+            cond_dim = 1
+        elif args.condition_on == "start_obs":
+            cond_dim = obs_dim
+        elif args.condition_on == "start_obs_goal":
+            cond_dim = obs_dim * 2
+        else:
+            raise ValueError(
+                f"UNet1D requires a valid --condition-on argument ('reward', 'start_obs', 'start_obs_goal'), "
+                f"but got: {args.condition_on}"
+            )
+        model = ConditionalUNet1D(
+            input_dim=input_dim,
+            horizon=horizon,
+            hidden_dim=args.hidden_dim,
+            cond_dim=8,
+            fusion_strategy="concat",
+            use_mlp_embedding=False,
+        ).to(args.device)
     path = AffineProbPath(scheduler=CondOTScheduler())
     optim = torch.optim.Adam(model.parameters(), lr=args.lr)
 
@@ -121,6 +141,8 @@ def train(config, args, dataset, logger):
                 pred = model(sample.x_t, sample.t)
 
             loss = torch.pow(pred - sample.dx_t, 2).mean()
+            # for debugging
+            # print(f"Epoch {epoch+1}, Batch Loss: {loss.item():.4f}")
             loss.backward()
             optim.step()
             total_loss += loss.item()
