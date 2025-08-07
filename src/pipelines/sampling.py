@@ -42,6 +42,7 @@ def generate_trajectory(
     batch_size: int = 1,
     step_size: float = 0.05,
     return_intermediates: bool = False,
+    chunk_type: str = "obs_act",
 ):
     # infer obs and action dim from stats
     obs_dim = stats["obs_mean"].shape[0]
@@ -88,6 +89,6 @@ def generate_trajectory(
     }
     sol = solver.sample(**solver_kwargs)
     obs, act = unnormalize_trajectory(
-        sol[0].flatten().detach(), stats, horizon, obs_dim, action_dim
+        sol[0].flatten().detach(), stats, horizon, obs_dim, action_dim, chunk_type=chunk_type
     )
     return obs, act

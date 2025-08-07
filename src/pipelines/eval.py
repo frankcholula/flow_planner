@@ -47,6 +47,7 @@ def evaluate_open_loop(env, model, stats, input_dim, args, logger=None):
         batch_size=args.inference_batch_size,
         step_size=args.step_size,
         return_intermediates=False,
+        chunk_type=args.chunk_type,
     )
     fig, ax = lvt(trajectory_fn=trajectory_fn, num_trajectories=5)
     if logger is not None:
