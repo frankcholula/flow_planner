@@ -120,13 +120,19 @@ def train(config, args, dataset, logger):
 
             if args.condition_on:
                 x1, c = create_normalized_chunks(
-                    batch, args.horizon, stats, cond_type=args.condition_on
+                    batch,
+                    args.horizon,
+                    stats,
+                    cond_type=args.condition_on,
+                    chunk_type=args.chunk_type,
                 )
                 if x1 is None:
                     continue
                 x1, c = x1.to(args.device), c.to(args.device)
             else:
-                x1 = create_normalized_chunks(batch, args.horizon, stats)
+                x1 = create_normalized_chunks(
+                    batch, args.horizon, stats, chunk_type=args.chunk_type
+                )
                 if x1 is None:
                     continue
                 x1 = x1.to(args.device)
