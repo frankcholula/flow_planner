@@ -10,6 +10,7 @@ def visualize_trajectories(trajectory_fn, num_trajectories=5):
         visualize_chunk(ax, obs, color=colors[_ % len(colors)], mode="line")
     return fig, ax
 
+
 def visualize_chunk(
     ax, chunk, color, x_limits=(-0.6, 0.6), y_limits=(-0.2, 1.6), mode="line"
 ):
