@@ -1,6 +1,28 @@
 # Flow Planner 👾
 Guided trajectory synthesis via flow matching.
 
+## Repository Layout
+```
+flow_planner
+├── LICENSE
+├── Makefile
+├── paper
+├── README.md
+├── setup
+│   ├── environment_arm.yml
+│   └── environment_x86.yml
+├── src
+│   ├── checkpoints
+│   ├── conf
+│   ├── experiments
+│   ├── models
+│   ├── notebooks
+│   ├── pipelines
+│   ├── run.py
+│   └── utils
+└── wandb
+```
+
 ## Setup
 Create the conda environment and activate it:
 
@@ -15,3 +37,5 @@ The Makefile in `src` exposes several commands:
 - `make clean` – remove models, runs and temporary files.
 - `make datasets` – download and prepare all datasets.
 Run these commands from the `src` directory.
+
+
