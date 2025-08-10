@@ -53,3 +53,5 @@ clean:
 	rm -rf runs/*
 	@echo "Cleaning up wandb files..."
 	rm -rf wandb/*
+	@echo "Cleaning up pretrained models..."
+	rm -rf logs/*
