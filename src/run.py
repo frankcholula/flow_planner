@@ -30,7 +30,15 @@ def train(config, args, dataset, logger):
     obs_dim = config.obs_dim
     action_dim = config.action_dim
     horizon = args.horizon
-    input_dim = horizon * (obs_dim + action_dim)
+    if args.chunk_type == "obs_act":        
+        input_dim = (obs_dim + action_dim) * horizon
+    elif args.chunk_type == "obs_only":
+        input_dim = obs_dim * horizon
+    elif args.chunk_type == "act_only":
+        input_dim = action_dim * horizon
+    else:
+        raise ValueError(f"Invalid chunk_type: {args.chunk_type}")
+    print(f"Input dimension for the model: {input_dim}")
 
     # load the dataset and stats based on config
     generator = None
@@ -93,7 +101,7 @@ def train(config, args, dataset, logger):
             input_dim=input_dim,
             horizon=horizon,
             hidden_dim=args.hidden_dim,
-            cond_dim=8,
+            cond_dim=cond_dim,
             fusion_strategy="concat",
             use_mlp_embedding=False,
         ).to(args.device)
@@ -120,13 +128,19 @@ def train(config, args, dataset, logger):
 
             if args.condition_on:
                 x1, c = create_normalized_chunks(
-                    batch, args.horizon, stats, cond_type=args.condition_on
+                    batch,
+                    args.horizon,
+                    stats,
+                    cond_type=args.condition_on,
+                    chunk_type=args.chunk_type,
                 )
                 if x1 is None:
                     continue
                 x1, c = x1.to(args.device), c.to(args.device)
             else:
-                x1 = create_normalized_chunks(batch, args.horizon, stats)
+                x1 = create_normalized_chunks(
+                    batch, args.horizon, stats, chunk_type=args.chunk_type
+                )
                 if x1 is None:
                     continue
                 x1 = x1.to(args.device)

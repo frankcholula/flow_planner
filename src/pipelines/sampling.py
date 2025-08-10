@@ -1,18 +1,33 @@
 import torch
 
 
-def unnormalize_trajectory(chunk, stats, horizon, obs_dim, action_dim):
+def unnormalize_trajectory(
+    chunk, stats, horizon, obs_dim, action_dim, chunk_type="obs_act"
+):
     obs_mean, obs_std = stats["obs_mean"].to(chunk.device), stats["obs_std"].to(
         chunk.device
     )
     act_mean, act_std = stats["act_mean"].to(chunk.device), stats["act_std"].to(
         chunk.device
     )
-    reshaped = chunk.reshape(horizon, obs_dim + action_dim)
-    norm_obs = reshaped[:, :obs_dim]
-    norm_act = reshaped[:, obs_dim:]
-    obs = norm_obs * obs_std + obs_mean
-    act = norm_act * act_std + act_mean
+
+    obs, act = None, None
+
+    if chunk_type == "obs_act":
+        reshaped = chunk.reshape(horizon, obs_dim + action_dim)
+        norm_obs = reshaped[:, :obs_dim]
+        norm_act = reshaped[:, obs_dim:]
+        obs = norm_obs * obs_std + obs_mean
+        act = norm_act * act_std + act_mean
+    elif chunk_type == "obs_only":
+        reshaped = chunk.reshape(horizon, obs_dim)
+        obs = reshaped * obs_std + obs_mean
+        act = None
+    elif chunk_type == "act_only":
+        reshaped = chunk.reshape(horizon, action_dim)
+        act = reshaped * act_std + act_mean
+        obs = None
+
     return obs, act
 
 
@@ -27,6 +42,7 @@ def generate_trajectory(
     batch_size: int = 1,
     step_size: float = 0.05,
     return_intermediates: bool = False,
+    chunk_type: str = "obs_act",
 ):
     # infer obs and action dim from stats
     obs_dim = stats["obs_mean"].shape[0]
@@ -69,10 +85,10 @@ def generate_trajectory(
         "c": c_tensor,
         "method": solver_method,
         "step_size": step_size,
-        "return_intermediates": return_intermediates
+        "return_intermediates": return_intermediates,
     }
     sol = solver.sample(**solver_kwargs)
     obs, act = unnormalize_trajectory(
-        sol[0].flatten().detach(), stats, horizon, obs_dim, action_dim
+        sol[0].flatten().detach(), stats, horizon, obs_dim, action_dim, chunk_type=chunk_type
     )
     return obs, act
