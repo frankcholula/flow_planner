@@ -7,5 +7,4 @@ python -m rl_zoo3.train \
     --track \
     --wandb-project-name "Flow Planner" \
     --wandb-entity frankcholula \
-    --device auto
-
+    --device cpu
