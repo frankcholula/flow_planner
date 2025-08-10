@@ -43,6 +43,9 @@ kitchen_data:
 
 .PHONY: clean
 clean:
+	@echo "Cleaning up video files..."
 	rm -rf videos/*
+	@echo "Cleaning up experiment runs..."
 	rm -rf runs/*
+	@echo "Cleaning up wandb files..."
 	rm -rf wandb/*
