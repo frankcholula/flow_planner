@@ -3,7 +3,7 @@
 
 python -m rl_zoo3.train \
     --algo ppo \
-    --env CarRacing-v2 \
+    --env CarRacing-v3 \
     --track \
     --wandb-project-name "Flow Planner" \
     --wandb-entity frankcholula \
