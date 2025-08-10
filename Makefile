@@ -26,7 +26,11 @@ lunarlander:
 
 # Dataset targets
 .PHONY: datasets
-datasets: mujoco_data kitchen_data
+datasets: box2d_data
+
+.PHONY: box2d_data
+box2d_data:
+	@echo "Generating Box2D dataset..."
 
 .PHONY: mujoco_data
 mujoco_data:
