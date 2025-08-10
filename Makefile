@@ -11,6 +11,13 @@ setup:
 	@echo "Setting up ${ARCH} environment..."
 	conda env create -f $(SETUP_FILE) --prefix ./.fp
 
+.PHONY: train_zoo
+train_zoo:
+	@echo "Running RL Zoo Training..."
+# 	@src/experiments/lunarlander/train_zoo.sh
+	@src/experiments/bipedalwalker/train_zoo.sh
+# 	@src/experiments/carracing/train_zoo.sh
+
 .PHONY: lunarlander
 lunarlander:
 	@echo "Running LunarLander Experiments..."

@@ -1,7 +1,7 @@
 #!/bin/bash
 python -m rl_zoo3.train \
     --algo ppo \
-    --env LunarLanderContinuous-v3 \
+    --env BipedalWalker-v3 \
     --n-timesteps 1000000 \
     --track \
     --wandb-project-name FRL \

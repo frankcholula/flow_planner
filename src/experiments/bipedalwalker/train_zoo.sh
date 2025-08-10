@@ -1,17 +1,20 @@
 #!/bin/bash
 python -m rl_zoo3.train \
     --algo ppo \
-    --env LunarLanderContinuous-v3 \
-    --n-timesteps 1000000 \
+    --env BipedalWalker-v3 \
+    --n-timesteps 5000000 \
     --track \
     --wandb-project-name FRL \
     --wandb-entity frankcholula \
     --device cpu \
     --hyperparams \
-    n_envs:16 \
-    n_steps:1024 \
+    normalize:True \
+    n_envs:32 \
+    n_steps:2048 \
     batch_size:64 \
-    n_epochs:4 \
-    gae_lambda:0.98 \
+    gae_lambda:0.95 \
     gamma:0.999 \
-    ent_coef:0.01
+    n_epochs:10 \
+    ent_coef:0.0 \
+    learning_rate:3e-4 \
+    clip_range:0.18
