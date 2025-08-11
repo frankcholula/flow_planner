@@ -27,15 +27,26 @@ endif
 help:
 	@echo "Usage: make <target>"
 	@echo ""
-	@echo "Common Targets:"
-	@echo "  setup              Create the Conda environment"
+	@echo "------------------ Environment Management ------------------"
+	@echo "  setup              Create the Conda environment from file"
+	@echo "  clean              Remove generated logs, models, and data"
+	@echo ""
+	@echo "------------------ Training & Evaluation ------------------"
 	@echo "  train-lunar        Train the LunarLander agent"
 	@echo "  train-bipedal      Train the BipedalWalker agent"
 	@echo "  train-car          Train the CarRacing agent"
+	@echo "  enjoy-lunar        Watch the trained LunarLander agent"
 	@echo "  enjoy-bipedal      Watch the trained BipedalWalker agent"
+	@echo "  enjoy-car          Watch the trained CarRacing agent"
+	@echo ""
+	@echo "------------------ Hugging Face Hub -----------------------"
+	@echo "  push-lunar         Push the LunarLander model to the Hub"
+	@echo "  push-bipedal       Push the BipedalWalker model to the Hub"
 	@echo "  push-car           Push the CarRacing model to the Hub"
-	@echo "  download-datasets  Download all external datasets"
-	@echo "  clean              Remove generated files and directories"
+	@echo ""
+	@echo "------------------ Dataset Management ---------------------"
+	@echo "  download-datasets  Download all external datasets (MuJoCo, Kitchen)"
+
 
 # --- Environment Management ---
 setup:
