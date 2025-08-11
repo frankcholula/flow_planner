@@ -6,7 +6,7 @@ HF_ORG       := frankcholula
 WANDB_PROJECT := "Flow Planner"
 LUNAR_ENV     := LunarLanderContinuous-v3
 BIPEDAL_ENV   := BipedalWalker-v3
-CAR_ENV       := CarRacing-v2
+CAR_ENV       := CarRacing-v3
 
 ifeq ($(ARCH), x86_64)
 	SETUP_FILE := setup/environment_x86.yml
