@@ -1,52 +1,62 @@
 SHELL := /bin/bash
 
-# --- Variables ---
-ARCH         := $(shell uname -m)
-HF_ORG       := frankcholula
-WANDB_PROJECT := "Flow Planner"
-LUNAR_ENV     := LunarLanderContinuous-v3
-BIPEDAL_ENV   := BipedalWalker-v3
-CAR_ENV       := CarRacing-v3
-ALGO 		:= ppo
+ALGO ?= ppo
+HF_ORG ?= frankcholula
+WANDB_PROJECT ?= "Flow Planner"
+LUNAR_ENV   := LunarLanderContinuous-v3
+BIPEDAL_ENV := BIPEDALWALKER-V3 # Corrected name to match rl-zoo3
+CAR_ENV     := CarRacing-v2 # v2 is the standard ID in the latest zoo/gymnasium
 
+ARCH := $(shell uname -m)
 ifeq ($(ARCH), x86_64)
 	SETUP_FILE := setup/environment_x86.yml
 else ifeq ($(ARCH), arm64)
 	SETUP_FILE := setup/environment_arm.yml
 endif
 
-# Default target when running just "make" is to show help
-.DEFAULT_GOAL := help
 
 .PHONY: help setup clean \
-	train-lunar train-bipedal train-car \
-	enjoy-lunar enjoy-bipedal enjoy-car \
-	push-lunar push-bipedal push-car \
+	train train-all train-lunar train-bipedal train-car \
+	enjoy enjoy-lunar enjoy-bipedal enjoy-car \
+	push-hub push-all push-lunar push-bipedal push-car \
 	download-datasets download-mujoco download-kitchen
 
+.DEFAULT_GOAL := help
 
 help:
-	@echo "Usage: make <target>"
+	@echo "Usage: make <target> [VAR=value]"
+	@echo "Example: make train-car ALGO=a2c"
 	@echo ""
 	@echo "------------------ Environment Management ------------------"
 	@echo "  setup              Create the Conda environment from file"
 	@echo "  clean              Remove generated logs, models, and data"
 	@echo ""
 	@echo "------------------ Training & Evaluation ------------------"
+	@echo "  train-all          Train all agents sequentially"
 	@echo "  train-lunar        Train the LunarLander agent"
 	@echo "  train-bipedal      Train the BipedalWalker agent"
 	@echo "  train-car          Train the CarRacing agent"
-	@echo "  enjoy-lunar        Watch the trained LunarLander agent"
-	@echo "  enjoy-bipedal      Watch the trained BipedalWalker agent"
-	@echo "  enjoy-car          Watch the trained CarRacing agent"
+	@echo "  enjoy-[lunar|bipedal|car] Watch a trained agent"
 	@echo ""
 	@echo "------------------ Hugging Face Hub -----------------------"
-	@echo "  push-lunar         Push the LunarLander model to the Hub"
-	@echo "  push-bipedal       Push the BipedalWalker model to the Hub"
-	@echo "  push-car           Push the CarRacing model to the Hub"
+	@echo "  push-all           Push all models to the Hub"
+	@echo "  push-[lunar|bipedal|car]  Push a specific model to the Hub"
 	@echo ""
 	@echo "------------------ Dataset Management ---------------------"
-	@echo "  download-datasets  Download all external datasets (MuJoCo, Kitchen)"
+	@echo "  download-datasets  Download all external datasets"
+
+train:
+	@echo "Training $(ENV) with $(ALGO)..."
+	python -m rl_zoo3.train --algo $(ALGO) --env $(ENV) --track --wandb-project-name "$(WANDB_PROJECT)" --wandb-entity $(HF_ORG)
+
+enjoy:
+	@echo "Watching $(ENV) agent..."
+	python -m rl_zoo3.enjoy --algo $(ALGO) --env $(ENV) -f logs/ --load-best
+
+push-hub:
+	@echo "--> Pushing $(ALGO)-$(ENV) to $(HF_ORG)..."
+	python -m rl_zoo3.push_to_hub --algo $(ALGO) --env $(ENV) -f logs/ -orga $(HF_ORG) --repo-name $(ALGO)-$(ENV)
+
 
 
 # --- Environment Management ---
@@ -59,40 +69,39 @@ clean:
 	rm -rf videos/ runs/ wandb/* logs/*
 
 # --- Training ---
-train-lunar:
-	@echo "Training LunarLander..."
-	@src/experiments/lunarlander/train_zoo.sh
+train-lunar:   ENV=$(LUNAR_ENV)
+train-lunar:   train
 
-train-bipedal:
-	@echo "Training BipedalWalker..."
-	@src/experiments/bipedalwalker/train_zoo.sh	
+train-bipedal: ENV=$(BIPEDAL_ENV)
+train-bipedal: train
 
-train-car:
-	@echo "Training CarRacing..."
-	@src/experiments/carracing/train_zoo.sh
+train-car:     ENV=$(CAR_ENV)
+train-car:     train
+
+train-all: train-lunar train-bipedal train-car
 
 # --- Evaluation ---
-enjoy-lunar:
-	python -m rl_zoo3.enjoy --algo $(ALGO) --env $(LUNAR_ENV) -f logs/
+enjoy-lunar:   ENV=$(LUNAR_ENV)
+enjoy-lunar:   enjoy
 
-enjoy-bipedal:
-	python -m rl_zoo3.enjoy --algo $(ALGO) --env $(BIPEDAL_ENV) -f logs/
+enjoy-bipedal: ENV=$(BIPEDAL_ENV)
+enjoy-bipedal: enjoy
 
-enjoy-car:
-	python -m rl_zoo3.enjoy --algo $(ALGO) --env $(CAR_ENV) -f logs/
+enjoy-car:     ENV=$(CAR_ENV)
+enjoy-car:     enjoy
 
 # --- Hugging Face Hub ---
-push-lunar:
-	@echo "--> Pushing $(LUNAR_ENV) to Hub..."
-	python -m rl_zoo3.push_to_hub --algo $(ALGO) --env $(LUNAR_ENV) -f logs/ -orga $(HF_ORG) --repo-name $(ALGO)-$(LUNAR_ENV)
+push-lunar:    ENV=$(LUNAR_ENV)
+push-lunar:    push-hub
 
-push-bipedal:
-	@echo "--> Pushing $(BIPEDAL_ENV) to Hub..."
-	python -m rl_zoo3.push_to_hub --algo $(ALGO) --env $(BIPEDAL_ENV) -f logs/ -orga $(HF_ORG) --repo-name $(ALGO)-$(BIPEDAL_ENV)
+push-bipedal:  ENV=$(BIPEDAL_ENV)
+push-bipedal:  push-hub
 
-push-car:
-	@echo "--> Pushing $(CAR_ENV) to Hub..."
-	python -m rl_zoo3.push_to_hub --algo $(ALGO) --env $(CAR_ENV) -f logs/ -orga $(HF_ORG) --repo-name $(ALGO)-$(CAR_ENV)
+push-car:      ENV=$(CAR_ENV)
+push-car:      push-hub
+
+push-all: push-lunar push-bipedal push-car
+
 
 # --- Dataset Download ---
 download-mujoco:
