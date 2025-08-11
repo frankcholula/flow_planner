@@ -4,8 +4,8 @@ ALGO ?= ppo
 HF_ORG ?= frankcholula
 WANDB_PROJECT ?= "Flow Planner"
 LUNAR_ENV   := LunarLanderContinuous-v3
-BIPEDAL_ENV := BIPEDALWALKER-V3 # Corrected name to match rl-zoo3
-CAR_ENV     := CarRacing-v2 # v2 is the standard ID in the latest zoo/gymnasium
+BIPEDAL_ENV := BipedalWalker-v3
+CAR_ENV     := CarRacing-v3
 
 ARCH := $(shell uname -m)
 ifeq ($(ARCH), x86_64)
