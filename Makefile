@@ -18,20 +18,18 @@ train_zoo:
 	@src/experiments/bipedalwalker/train_zoo.sh
 	@src/experiments/carracing/train_zoo.sh
 
-.PHONY: load_pretrained_bipedal
-load_pretrained_bipedal:
+.PHONY: load_pretrained
+load_pretrained:
 	@echo "Downloading pretrained models from Hugging Face..."
-	python -m rl_zoo3.load_from_hub --algo ppo --env BipedalWalker-v3 -orga sb3 -f logs/
-	python -m rl_zoo3.load_from_hub --algo td3 --env BipedalWalker-v3 -orga sb3 -f logs/
-	python -m rl_zoo3.load_from_hub --algo a2c --env BipedalWalker-v3 -orga sb3 -f logs/
-	python -m rl_zoo3.load_from_hub --algo a2c --env BipedalWalkerHardcore-v3 -orga sb3 -f logs/
+# 	python -m rl_zoo3.load_from_hub --algo ppo --env BipedalWalker-v3 -orga frankcholula -f logs/
+	python -m rl_zoo3.load_from_hub --algo ppo --env CarRacing-v3 -orga frankcholula -f logs/
+# 	python -m rl_zoo3.load_from_hub --algo ppo --env LunarLanderContinuous-v3 -orga frankcholula -f logs/
 
 .PHONY: enjoy
 enjoy:
-	python -m rl_zoo3.enjoy --algo ppo --env BipedalWalker-v3 -f logs/
-	python -m rl_zoo3.enjoy --algo td3 --env BipedalWalker-v3 -f logs/
-	python -m rl_zoo3.load_from_hub --algo a2c --env BipedalWalker-v3 -orga sb3 -f logs/
-	python -m rl_zoo3.enjoy --algo a2c --env BipedalWalkerHardcore-v3 -f logs/
+# 	python -m rl_zoo3.enjoy --algo ppo --env BipedalWalker-v3 -f logs/
+	python -m rl_zoo3.enjoy --algo ppo --env CarRacing-v3 -f logs/
+# 	python -m rl_zoo3.enjoy --algo ppo --env LunarLanderContinuous-v3 -f logs/
 
 .PHONY: push_to_hub
 push_to_hub:
