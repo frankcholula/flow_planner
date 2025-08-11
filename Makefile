@@ -14,9 +14,29 @@ setup:
 .PHONY: train_zoo
 train_zoo:
 	@echo "Running RL Zoo Training..."
-	@src/experiments/carracing/train_zoo.sh
-	@src/experiments/bipedalwalker/train_zoo.sh
 	@src/experiments/lunarlander/train_zoo.sh
+	@src/experiments/bipedalwalker/train_zoo.sh
+	@src/experiments/carracing/train_zoo.sh
+
+.PHONY: load_pretrained_bipedal
+load_pretrained_bipedal:
+	@echo "Downloading pretrained models from Hugging Face..."
+	python -m rl_zoo3.load_from_hub --algo ppo --env BipedalWalker-v3 -orga sb3 -f logs/
+	python -m rl_zoo3.load_from_hub --algo td3 --env BipedalWalker-v3 -orga sb3 -f logs/
+	python -m rl_zoo3.load_from_hub --algo a2c --env BipedalWalker-v3 -orga sb3 -f logs/
+	python -m rl_zoo3.load_from_hub --algo a2c --env BipedalWalkerHardcore-v3 -orga sb3 -f logs/
+
+.PHONY: enjoy
+enjoy:
+	python -m rl_zoo3.enjoy --algo ppo --env BipedalWalker-v3 -f logs/
+	python -m rl_zoo3.enjoy --algo td3 --env BipedalWalker-v3 -f logs/
+	python -m rl_zoo3.load_from_hub --algo a2c --env BipedalWalker-v3 -orga sb3 -f logs/
+	python -m rl_zoo3.enjoy --algo a2c --env BipedalWalkerHardcore-v3 -f logs/
+
+.PHONY: push_to_hub
+push_to_hub:
+	@echo "Pushing models to Hugging Face Hub..."
+	python -m rl_zoo3.push_to_hub --algo a2c --env BipedalWalker-v3 -f logs/ -orga frankcholula --repo-name a2c-BipedalWalker-v3
 
 .PHONY: lunarlander
 lunarlander:
