@@ -1,4 +1,4 @@
-# Flow Planner 👾
+# Flow Planner 👾🦿🏎️
 Guided trajectory synthesis via flow matching.
 This repository runs on all three Box2D environments: LunarLander, BipedalWalker, and CarRacing.
 
