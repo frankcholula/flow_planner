@@ -36,7 +36,7 @@ enjoy:
 .PHONY: push_to_hub
 push_to_hub:
 	@echo "Pushing models to Hugging Face Hub..."
-	python -m rl_zoo3.push_to_hub --algo a2c --env BipedalWalker-v3 -f logs/ -orga frankcholula --repo-name a2c-BipedalWalker-v3
+	python -m rl_zoo3.push_to_hub --algo ppo --env BipedalWalker-v3 -f logs/ -orga frankcholula --repo-name ppo-BipedalWalker-v3
 
 .PHONY: lunarlander
 lunarlander:
