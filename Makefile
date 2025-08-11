@@ -7,6 +7,7 @@ WANDB_PROJECT := "Flow Planner"
 LUNAR_ENV     := LunarLanderContinuous-v3
 BIPEDAL_ENV   := BipedalWalker-v3
 CAR_ENV       := CarRacing-v3
+ALGO 		:= ppo
 
 ifeq ($(ARCH), x86_64)
 	SETUP_FILE := setup/environment_x86.yml
@@ -60,38 +61,38 @@ clean:
 # --- Training ---
 train-lunar:
 	@echo "Training LunarLander..."
-	python -m rl_zoo3.train --algo ppo --env $(LUNAR_ENV) --track --wandb-project-name $(WANDB_PROJECT) --wandb-entity $(HF_ORG)
+	@src/experiments/lunarlander/train_zoo.sh
 
 train-bipedal:
 	@echo "Training BipedalWalker..."
-	python -m rl_zoo3.train --algo ppo --env $(BIPEDAL_ENV) --device cpu --track --wandb-project-name $(WANDB_PROJECT) --wandb-entity $(HF_ORG)
+	@src/experiments/bipedalwalker/train_zoo.sh	
 
 train-car:
 	@echo "Training CarRacing..."
-	python -m rl_zoo3.train --algo ppo --env $(CAR_ENV) --track --wandb-project-name $(WANDB_PROJECT) --wandb-entity $(HF_ORG)
+	@src/experiments/carracing/train_zoo.sh
 
 # --- Evaluation ---
 enjoy-lunar:
-	python -m rl_zoo3.enjoy --algo ppo --env $(LUNAR_ENV) -f logs/
+	python -m rl_zoo3.enjoy --algo $(ALGO) --env $(LUNAR_ENV) -f logs/
 
 enjoy-bipedal:
-	python -m rl_zoo3.enjoy --algo ppo --env $(BIPEDAL_ENV) -f logs/
+	python -m rl_zoo3.enjoy --algo $(ALGO) --env $(BIPEDAL_ENV) -f logs/
 
 enjoy-car:
-	python -m rl_zoo3.enjoy --algo ppo --env $(CAR_ENV) -f logs/
+	python -m rl_zoo3.enjoy --algo $(ALGO) --env $(CAR_ENV) -f logs/
 
 # --- Hugging Face Hub ---
 push-lunar:
 	@echo "--> Pushing $(LUNAR_ENV) to Hub..."
-	python -m rl_zoo3.push_to_hub --algo ppo --env $(LUNAR_ENV) -f logs/ -orga $(HF_ORG) --repo-name ppo-$(LUNAR_ENV)
+	python -m rl_zoo3.push_to_hub --algo $(ALGO) --env $(LUNAR_ENV) -f logs/ -orga $(HF_ORG) --repo-name $(ALGO)-$(LUNAR_ENV)
 
 push-bipedal:
 	@echo "--> Pushing $(BIPEDAL_ENV) to Hub..."
-	python -m rl_zoo3.push_to_hub --algo ppo --env $(BIPEDAL_ENV) -f logs/ -orga $(HF_ORG) --repo-name ppo-$(BIPEDAL_ENV)
+	python -m rl_zoo3.push_to_hub --algo $(ALGO) --env $(BIPEDAL_ENV) -f logs/ -orga $(HF_ORG) --repo-name $(ALGO)-$(BIPEDAL_ENV)
 
 push-car:
 	@echo "--> Pushing $(CAR_ENV) to Hub..."
-	python -m rl_zoo3.push_to_hub --algo ppo --env $(CAR_ENV) -f logs/ -orga $(HF_ORG) --repo-name ppo-$(CAR_ENV)
+	python -m rl_zoo3.push_to_hub --algo $(ALGO) --env $(CAR_ENV) -f logs/ -orga $(HF_ORG) --repo-name $(ALGO)-$(CAR_ENV)
 
 # --- Dataset Download ---
 download-mujoco:
