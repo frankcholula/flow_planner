@@ -1,5 +1,4 @@
 SHELL := /bin/bash
-
 ALGO ?= ppo
 HF_ORG ?= frankcholula
 WANDB_PROJECT ?= "Flow Planner"
@@ -13,7 +12,6 @@ ifeq ($(ARCH), x86_64)
 else ifeq ($(ARCH), arm64)
 	SETUP_FILE := setup/environment_arm.yml
 endif
-
 
 .PHONY: help setup clean \
 	train train-all train-lunar train-bipedal train-car \
@@ -56,8 +54,6 @@ enjoy:
 push-hub:
 	@echo "--> Pushing $(ALGO)-$(ENV) to $(HF_ORG)..."
 	python -m rl_zoo3.push_to_hub --algo $(ALGO) --env $(ENV) -f logs/ -orga $(HF_ORG) --repo-name $(ALGO)-$(ENV)
-
-
 
 # --- Environment Management ---
 setup:
