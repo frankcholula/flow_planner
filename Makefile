@@ -66,8 +66,7 @@ push-model:
 
 push-dataset:
 	@echo "--> Pushing dataset $(ENV) to the Hub..."
-	DATASET_ID   := Box2D/$(ENV)-$(LEVEL)-v0
-	@minari upload $(DATASET_ID) --key-path $(HF_TOKEN)
+	@minari upload Box2D/$(ENV)/$(LEVEL)-v0 --key-path $(HF_TOKEN)
 
 # --- Environment Management ---
 setup:
