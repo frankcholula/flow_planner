@@ -1,6 +1,7 @@
 SHELL := /bin/bash
 
-ALGO ?= ppo
+# Edit the variables here
+ALGO ?= a2c
 HF_ORG ?= frankcholula
 WANDB_PROJECT ?= "Flow Planner"
 LUNAR_ENV   := LunarLanderContinuous-v3
@@ -47,7 +48,7 @@ help:
 
 train:
 	@echo "Training $(ENV) with $(ALGO)..."
-	python -m rl_zoo3.train --algo $(ALGO) --env $(ENV) --track --wandb-project-name "$(WANDB_PROJECT)" --wandb-entity $(HF_ORG)
+	python -m rl_zoo3.train --algo $(ALGO) --env $(ENV) --track --wandb-project-name $(WANDB_PROJECT) --wandb-entity $(HF_ORG)
 
 enjoy:
 	@echo "Watching $(ENV) agent..."
