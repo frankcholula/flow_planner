@@ -1,13 +1,8 @@
-# Flow Planner 👾
+# Flow Planner 👾🦿🏎️
 Guided trajectory synthesis via flow matching.
+This repository runs on all three Box2D environments: LunarLander, BipedalWalker, and CarRacing.
 
-## Environments
-This repository runs on all the Box2D environments.
-
-[](LunarLander)
-[](BipedalWalker)
-[](CarRacing)
-
+![Replay](assets/replay.gif)
 
 ## Repository Layout
 ```
@@ -46,12 +41,3 @@ There is an ongoing ticket to implement a GCS bucket to store all these datasets
 - [LunarLander](https://huggingface.co/frankcholula/ppo-LunarLanderContinuous-v3)
 - [BipedalWalker](https://huggingface.co/frankcholula/ppo-BipedalWalker-v3)
 - [CarRacing](https://huggingface.co/frankcholula/ppo-CarRacing-v3)
-
-## Makefile Targets
-The Makefile in `src` exposes several commands:
-- `make setup` – create a conda environment with the required dependencies.
-- `make clean` – remove models, runs and temporary files.
-- `make datasets` – download and prepare all datasets.
-Run these commands from the `src` directory.
-
-
