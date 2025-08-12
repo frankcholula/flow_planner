@@ -1,10 +1,18 @@
+-include .env
+export HF_TOKEN
+
 SHELL := /bin/bash
 ALGO ?= ppo
 HF_ORG ?= frankcholula
+MINARI_REMOTE := hf://$(HF_ORG)
 WANDB_PROJECT ?= "Flow Planner"
 LUNAR_ENV   := LunarLanderContinuous-v3
 BIPEDAL_ENV := BipedalWalker-v3
 CAR_ENV     := CarRacing-v3
+
+# Dataset specific params
+LEVEL ?= expert
+
 
 ARCH := $(shell uname -m)
 ifeq ($(ARCH), x86_64)
@@ -13,10 +21,11 @@ else ifeq ($(ARCH), arm64)
 	SETUP_FILE := setup/environment_arm.yml
 endif
 
+	
 .PHONY: help setup clean \
 	train train-all train-lunar train-bipedal train-car \
 	enjoy enjoy-lunar enjoy-bipedal enjoy-car \
-	push-hub push-all push-lunar push-bipedal push-car \
+	push-model push-all-models push-car-model push-bipedal-model push-lunar-model \
 	download-datasets download-mujoco download-kitchen
 
 .DEFAULT_GOAL := help
@@ -51,9 +60,14 @@ enjoy:
 	@echo "Watching $(ENV) agent..."
 	python -m rl_zoo3.enjoy --algo $(ALGO) --env $(ENV) -f logs/ --load-best
 
-push-hub:
+push-model:
 	@echo "--> Pushing $(ALGO)-$(ENV) to $(HF_ORG)..."
 	python -m rl_zoo3.push_to_hub --algo $(ALGO) --env $(ENV) -f logs/ -orga $(HF_ORG) --repo-name $(ALGO)-$(ENV)
+
+push-dataset:
+	@echo "--> Pushing dataset $(ENV) to the Hub..."
+	DATASET_ID   := Box2D/$(ENV)-$(LEVEL)-v0
+	@minari upload $(DATASET_ID) --key-path $(HF_TOKEN)
 
 # --- Environment Management ---
 setup:
@@ -86,17 +100,30 @@ enjoy-bipedal: enjoy
 enjoy-car:     ENV=$(CAR_ENV)
 enjoy-car:     enjoy
 
-# --- Hugging Face Hub ---
-push-lunar:    ENV=$(LUNAR_ENV)
-push-lunar:    push-hub
+# --- Model pushing ---
+push-lunar-model:    ENV=$(LUNAR_ENV)
+push-lunar-model:    push-model
 
-push-bipedal:  ENV=$(BIPEDAL_ENV)
-push-bipedal:  push-hub
+push-bipedal-model:  ENV=$(BIPEDAL_ENV)
+push-bipedal-model:  push-model
 
-push-car:      ENV=$(CAR_ENV)
-push-car:      push-hub
+push-car-model:      ENV=$(CAR_ENV)
+push-car-model:      push-model
 
-push-all: push-lunar push-bipedal push-car
+push-all-models: push-lunar-model push-bipedal-model push-car-model
+
+
+# --- Dataset pushing ---
+push-lunar-dataset:    ENV=$(LUNAR_ENV)
+push-lunar-dataset:    push-dataset
+
+push-bipedal-dataset:  ENV=$(BIPEDAL_ENV)
+push-bipedal-dataset:  push-dataset
+
+push-car-dataset:      ENV=$(CAR_ENV)
+push-car-dataset:      push-dataset
+
+push-all-datasets: push-lunar-dataset push-bipedal-dataset push-car-dataset
 
 
 # --- Dataset Download ---
