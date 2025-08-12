@@ -126,15 +126,7 @@ push-all-datasets: push-lunar-dataset push-bipedal-dataset push-car-dataset
 
 
 # --- Dataset Download ---
-download-mujoco:
-	@echo "Downloading MuJoCo datasets..."
-	minari download mujoco/hopper/expert-v0
-	minari download mujoco/walker2d/expert-v0
+download-box2d:
+	@echo "Downloading Box2D datasets..."
+	minari download Box2D/$(ENV)/$(LEVEL)-v0
 
-download-kitchen:
-	@echo "Downloading kitchen datasets..."
-	minari download D4RL/kitchen/partial-v2
-	minari download D4RL/kitchen/complete-v2
-	minari download D4RL/kitchen/mixed-v2
-
-download-datasets: download-mujoco download-kitchen
