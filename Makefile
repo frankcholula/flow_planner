@@ -65,16 +65,16 @@ push-model:
 	python -m rl_zoo3.push_to_hub --algo $(ALGO) --env $(ENV) -f logs/ -orga $(HF_ORG) --repo-name $(ALGO)-$(ENV)
 
 push-dataset:
-# 	@echo "--> Collecting $(LEVEL) dataset for $(ENV)..."
-# 	python -m src.pipelines.collect_dataset \
-# 		   --env $(ENV) \
-# 		   --total_episodes 1_000 \
-# 		   --seed 42 \
-# 		   --algo $(ALGO) \
-# 		   --version 0 \
-# 		   --level $(LEVEL)
-	@echo "--> Pushing dataset $(ENV) to the Hub..."
-	@minari upload Box2D/$(ENV)/$(LEVEL)-v0 --key-path $(HF_TOKEN)
+	@echo "--> Collecting $(LEVEL) dataset for $(ENV)..."
+	python -m src.pipelines.collect_dataset \
+		   --env $(ENV) \
+		   --total_episodes 1_000 \
+		   --seed 42 \
+		   --algo $(ALGO) \
+		   --version 0 \
+		   --level $(LEVEL)
+# 	@echo "--> Pushing dataset $(ENV) to the Hub..."
+# 	@minari upload Box2D/$(ENV)/$(LEVEL)-v0 --key-path $(HF_TOKEN)
 
 # --- Environment Management ---
 setup:
