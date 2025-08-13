@@ -6,6 +6,8 @@ from rl_zoo3.utils import (
     get_latest_run_id,
     get_saved_hyperparams,
     get_wrapper_class,
+    get_model_path,
+    get_trained_models
 )
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 import os
