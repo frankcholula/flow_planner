@@ -73,8 +73,8 @@ push-dataset:
 		   --algo ppo \
 		   --version 0 \
 		   --level $(LEVEL)
-	@echo "--> Pushing dataset $(ENV) to the Hub..."
-	@minari upload Box2D/$(ENV)/$(LEVEL)-v0 --key-path $(HF_TOKEN)
+# 	@echo "--> Pushing dataset $(ENV) to the Hub..."
+# 	@minari upload Box2D/$(ENV)/$(LEVEL)-v0 --key-path $(HF_TOKEN)
 
 # --- Environment Management ---
 setup:
