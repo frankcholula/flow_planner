@@ -33,20 +33,19 @@ def generate_dataset(args):
     pprint(hyperparams)
 
     minari_env = gym.make(args.env, **hyperparams.get("env_kwargs", {}))
+    agent = ALGO_DICT[args.algo].load(model_path)
 
-    print("Before:", minari_env.observation_space._shape)
+    print("Before:", minari_env.observation_space.shape)
     if "env_wrapper" in hyperparams:
         wrapper_class = get_wrapper_class(hyperparams=hyperparams, key="env_wrapper")
         minari_env = wrapper_class(minari_env)
-        print("During:", minari_env.observation_space._shape)
-
-    # minari_env = gym.wrappers.GrayscaleObservation(minari_env, keep_dim=True)
+        print("During:", minari_env.observation_space.shape)
 
     if "frame_stack" in hyperparams:
         n_stack = hyperparams["frame_stack"]
         minari_env = FrameStackObservation(minari_env, n_stack)
-    print("After:", minari_env.observation_space._shape)
-    # agent = ALGO_DICT[args.algo].load(model_path, minari_env)
+    print("After:", minari_env.observation_space.shape)
+    print("Agent observation space:", agent.observation_space.shape)
     # env = DataCollector(minari_env)
 
     # for i in tqdm(range(args.total_episodes)):
