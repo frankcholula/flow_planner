@@ -17,7 +17,7 @@ def generate_dataset(args):
     latest_run_id = get_latest_run_id(log_path=log_path, env_name=args.env)
     model_path = os.path.join(log_path, f"{args.env}_{latest_run_id}/{args.env}.zip")
     agent = ALGO_DICT[args.algo].load(model_path)
-    env_kwargs = {"rgb_array": True}
+    env_kwargs = {"render_mode": "rgb_array"}
     if args.env == "LunarLanderContinuous-v3":
         env_kwargs.update({"continuous": True})
     elif args.env == "BipedalWalkerHardcore-v3":
