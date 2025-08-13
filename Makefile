@@ -1,10 +1,10 @@
 -include .env
 export HF_TOKEN
+export MINARI_REMOTE
 
 SHELL := /bin/bash
 ALGO ?= ppo
 HF_ORG ?= frankcholula
-MINARI_REMOTE := hf://$(HF_ORG)
 WANDB_PROJECT ?= "Flow Planner"
 LUNAR_ENV   := LunarLanderContinuous-v3
 BIPEDAL_ENV := BipedalWalker-v3
@@ -133,7 +133,11 @@ push-car-dataset:      push-dataset
 push-all-datasets: push-lunar-dataset push-bipedal-dataset push-car-dataset
 
 
+
 # --- Dataset Download ---
+list:
+	minari list remote
+	
 download-box2d:
 	@echo "Downloading Box2D datasets..."
 	minari download Box2D/$(ENV)/$(LEVEL)-v0
