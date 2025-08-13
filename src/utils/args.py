@@ -10,6 +10,7 @@ def parse_agent_args() -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--algo", type=str, default="ppo")
     parser.add_argument("--version", type=int, default=0)
+    parser.add_argument("--level", type=str, default="expert")
     return parser.parse_args()
 
 

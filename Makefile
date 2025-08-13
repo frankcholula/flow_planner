@@ -71,7 +71,8 @@ push-dataset:
 		   --total_episodes 1_000 \
 		   --seed 42 \
 		   --algo ppo \
-		   --version 0
+		   --version 0 \
+		   --level $(LEVEL)
 	@echo "--> Pushing dataset $(ENV) to the Hub..."
 	@minari upload Box2D/$(ENV)/$(LEVEL)-v0 --key-path $(HF_TOKEN)
 
