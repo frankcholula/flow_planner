@@ -50,6 +50,7 @@ help:
 	@echo "  push-[lunar|bipedal|car]  Push a specific model to the Hub"
 	@echo ""
 	@echo "------------------ Dataset & Agent Management ---------------------"
+	@echo "  generate_dataset   Generate a dataset for the specified environment"
 	@echo "  download-datasets  Download all external datasets"
 	@echo "  download-agents    Download all trained agents"
 	@echo "  list-datasets	    List datasets from the Minari remote"
@@ -63,8 +64,8 @@ push-model:
 	@echo "--> Pushing $(ALGO)-$(ENV) to $(HF_ORG)..."
 	python -m rl_zoo3.push_to_hub --algo $(ALGO) --env $(ENV) -f logs/ -orga $(HF_ORG) --repo-name $(ALGO)-$(ENV)
 
-push-dataset:
-	@echo "--> Collecting $(LEVEL) dataset for $(ENV)..."
+generate-dataset:
+	@echo "--> Generating $(LEVEL) dataset for $(ENV)..."
 	python -m src.pipelines.collect_dataset \
 		   --env $(ENV) \
 		   --total_episodes 1_000 \
@@ -72,6 +73,8 @@ push-dataset:
 		   --algo $(ALGO) \
 		   --version 0 \
 		   --level $(LEVEL)
+
+push-dataset:
 	@echo "--> Pushing dataset $(ENV) to the Hub..."
 	@minari upload Box2D/$(ENV)/$(LEVEL)-v0 --key-path $(HF_TOKEN)
 
@@ -124,6 +127,16 @@ push-car-model:      push-model
 
 push-all-models: push-lunar-model push-bipedal-model push-car-model
 
+# --- Dataset generation ---
+generate-lunar-dataset: ENV=$(LUNAR_ENV)
+generate-lunar-dataset: generate-dataset
+
+generate-bipedal-dataset: ENV=$(BIPEDAL_ENV)
+generate-bipedal-dataset: generate-dataset	
+
+generate-car-dataset: ENV=$(CAR_ENV)
+generate-car-dataset: generate-dataset
+
 # --- Dataset pushing ---
 push-lunar-dataset:    ENV=$(LUNAR_ENV)
 push-lunar-dataset:    push-dataset
@@ -141,10 +154,11 @@ list-datasets:
 	@echo "Listing dataset from $(MINARI_REMOTE)..."
 	@minari list remote
 
-
 download-datasets:
-	@echo "Downloading Box2D datasets..."
-	minari download Box2D/$(ENV)/$(LEVEL)-v0
+	@echo "Downloading all Box2D datasets..."
+	minari download Box2D/$(LUNAR_ENV)/$(LEVEL)-v0
+	minari download Box2D/$(BIPEDAL_ENV)/$(LEVEL)-v0
+	minari download Box2D/$(CAR_ENV)/$(LEVEL)-v0
 
 download-agents:
 	@echo "Downloading trained-agents..."

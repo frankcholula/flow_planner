@@ -36,7 +36,7 @@ def generate_dataset(args):
     minari_env = gym.make(
         args.env,
         **hyperparams.get("env_kwargs", {}),
-        render_mode="human",
+        render_mode="rgb_array",  # change to human for debugging.
         continuous=True,
     )
     if "env_wrapper" in hyperparams:
@@ -73,15 +73,15 @@ def generate_dataset(args):
                 print("Episode finished.")
                 break
 
-    # dataset = env.create_dataset(
-    #     dataset_id=f"Box2D/{args.env}/{args.level}-v{args.version}",
-    #     algorithm_name=args.algo,
-    #     code_permalink="https://github.com/frankcholula/flow_planner",
-    #     author="Frank Lu",
-    #     author_email="lu.phrank@gmail.com",
-    #     description=f"Behavioral cloning dataset for {args.env} using {args.algo}",
-    #     eval_env=args.env,
-    # )
+    dataset = env.create_dataset(
+        dataset_id=f"Box2D/{args.env}/{args.level}-v{args.version}",
+        algorithm_name=args.algo,
+        code_permalink="https://github.com/frankcholula/flow_planner",
+        author="Frank Lu",
+        author_email="lu.phrank@gmail.com",
+        description=f"Behavioral cloning dataset for {args.env} using {args.algo}",
+        eval_env=args.env,
+    )
 
 
 def main():
