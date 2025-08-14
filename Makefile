@@ -137,6 +137,7 @@ generate-bipedal-dataset: generate-dataset
 generate-car-dataset: ENV=$(CAR_ENV)
 generate-car-dataset: generate-dataset
 
+generate-all-datasets: generate-lunar-dataset generate-bipedal-dataset generate-car-dataset
 # --- Dataset pushing ---
 push-lunar-dataset:    ENV=$(LUNAR_ENV)
 push-lunar-dataset:    push-dataset
