@@ -23,7 +23,7 @@ endif
 
 	
 .PHONY: help setup clean \
-	train train-all train-lunar train-bipedal train-car \
+	train-all train-lunar train-bipedal train-car \
 	enjoy enjoy-lunar enjoy-bipedal enjoy-car \
 	push-model push-all-models push-car-model push-bipedal-model push-lunar-model \
 	download-datasets download-mujoco download-kitchen
@@ -52,9 +52,6 @@ help:
 	@echo "------------------ Dataset Management ---------------------"
 	@echo "  download-datasets  Download all external datasets"
 
-train:
-	@echo "Training $(ENV) with $(ALGO)..."
-	python -m rl_zoo3.train --algo $(ALGO) --env $(ENV) --track --wandb-project-name $(WANDB_PROJECT) --wandb-entity $(HF_ORG)
 
 enjoy:
 	@echo "Watching $(ENV) agent..."
@@ -87,14 +84,19 @@ clean:
 
 # --- Training ---
 train-lunar:   ENV=$(LUNAR_ENV)
-train-lunar:   train
+train-lunar:
+	@echo "Training $(ENV) with $(ALGO)..."
+	python -m rl_zoo3.train --algo $(ALGO) --env $(ENV) --track --wandb-project-name $(WANDB_PROJECT) --wandb-entity $(HF_ORG)
 
 train-bipedal: ENV=$(BIPEDAL_ENV)
-train-bipedal: train
+train-bipedal:
+	@echo "Training $(ENV) with $(ALGO)..."
+	python -m rl_zoo3.train --algo $(ALGO) --env $(ENV) --track --wandb-project-name $(WANDB_PROJECT) --wandb-entity $(HF_ORG)
 
 train-car:     ENV=$(CAR_ENV)
-train-car:     train
-
+train-car:
+	@echo "Training $(ENV) with $(ALGO)..."
+	python -m rl_zoo3.train --algo $(ALGO) --env $(ENV) --track --wandb-project-name $(WANDB_PROJECT) --wandb-entity $(HF_ORG) --hyperparams frame_stack:3 n_timesteps:1e5
 train-all: train-lunar train-bipedal train-car
 
 # --- Evaluation ---
