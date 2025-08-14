@@ -26,7 +26,7 @@ endif
 	train-all train-lunar train-bipedal train-car \
 	enjoy enjoy-lunar enjoy-bipedal enjoy-car \
 	push-model push-all-models push-car-model push-bipedal-model push-lunar-model \
-	download-datasets download-mujoco download-kitchen
+	download-datasets download-datasets list-datasets
 
 .DEFAULT_GOAL := help
 
@@ -49,13 +49,15 @@ help:
 	@echo "  push-all           Push all models to the Hub"
 	@echo "  push-[lunar|bipedal|car]  Push a specific model to the Hub"
 	@echo ""
-	@echo "------------------ Dataset Management ---------------------"
+	@echo "------------------ Dataset & Agent Management ---------------------"
 	@echo "  download-datasets  Download all external datasets"
+	@echo "  download-agents    Download all trained agents"
+	@echo "  list-datasets	    List datasets from the Minari remote"
 
 
 enjoy:
 	@echo "Watching $(ENV) agent..."
-	python -m rl_zoo3.enjoy --algo $(ALGO) --env $(ENV) -f logs/ --load-best
+	python -m rl_zoo3.enjoy --algo $(ALGO) --env $(ENV) -f logs/
 
 push-model:
 	@echo "--> Pushing $(ALGO)-$(ENV) to $(HF_ORG)..."
@@ -122,7 +124,6 @@ push-car-model:      push-model
 
 push-all-models: push-lunar-model push-bipedal-model push-car-model
 
-
 # --- Dataset pushing ---
 push-lunar-dataset:    ENV=$(LUNAR_ENV)
 push-lunar-dataset:    push-dataset
@@ -135,21 +136,18 @@ push-car-dataset:      push-dataset
 
 push-all-datasets: push-lunar-dataset push-bipedal-dataset push-car-dataset
 
-
-
 # --- Dataset Download ---
-list:
+list-datasets:
 	@echo "Listing dataset from $(MINARI_REMOTE)..."
 	@minari list remote
 
 
-download-box2d:
+download-datasets:
 	@echo "Downloading Box2D datasets..."
 	minari download Box2D/$(ENV)/$(LEVEL)-v0
 
 download-agents:
 	@echo "Downloading trained-agents..."
-# 	python -m rl_zoo3.load_from_hub --algo ppo --env LunarLanderContinuous-v3 -orga frankcholula -f logs/
-	python -m rl_zoo3.load_from_hub --algo ppo --env CarRacing-v3 -orga frankcholula -f logs/
-# 	python -m rl_zoo3.load_from_hub --algo ppo_lstm --env CarRacing-v3 -orga frankcholula -f logs/
-# 	python -m rl_zoo3.load_from_hub --algo ppo --env BipedalWalker-v3 -orga frankcholula -f logs/
+	python -m rl_zoo3.load_from_hub --algo ${ALGO} --env ${LUNAR_ENV} -orga frankcholula -f logs/
+	python -m rl_zoo3.load_from_hub --algo ${ALGO} --env ${BIPEDAL_ENV} -orga frankcholula -f logs/
+	python -m rl_zoo3.load_from_hub --algo ${ALGO} --env ${CAR_ENV} -orga frankcholula -f logs/
