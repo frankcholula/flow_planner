@@ -18,7 +18,6 @@ from gymnasium.wrappers import (
 
 import os
 import torch
-from pprint import pprint
 import numpy as np
 
 ALGOS = {"ppo": PPO, "ppo_lstm": PPO, "a2c": A2C, "td3": TD3}
