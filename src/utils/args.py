@@ -2,6 +2,18 @@ import argparse
 import torch
 
 
+def parse_agent_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Dataset collection")
+
+    parser.add_argument("--env", type=str, default="LunarLanderContinous-v3")
+    parser.add_argument("--total_episodes", type=int, default=1_000)
+    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--algo", type=str, default="ppo")
+    parser.add_argument("--version", type=int, default=0)
+    parser.add_argument("--level", type=str, default="expert")
+    return parser.parse_args()
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Flow matching trajectory generation.")
 

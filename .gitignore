@@ -208,3 +208,6 @@ logs/
 
 #conda environment
 .fp/
+
+# hugging face
+hub/
