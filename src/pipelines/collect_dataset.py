@@ -31,8 +31,7 @@ def generate_dataset(args):
     torch.manual_seed(args.seed)
 
     # load hyperparams
-    # latest_run_id = get_latest_run_id(log_path="logs", env_name=args.env)
-    latest_run_id = 3
+    latest_run_id = get_latest_run_id(log_path="logs", env_name=args.env)
     _, model_path, log_path = get_model_path(
         exp_id=latest_run_id, folder="logs", algo=args.algo, env_name=args.env
     )
