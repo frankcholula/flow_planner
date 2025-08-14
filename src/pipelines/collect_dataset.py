@@ -13,7 +13,6 @@ from rl_zoo3.utils import (
 import gymnasium as gym
 from gymnasium.wrappers import (
     FrameStackObservation,
-    TransformObservation,
 )
 
 import os
@@ -38,6 +37,7 @@ def generate_dataset(args):
         render_mode="rgb_array",  # change to human for debugging.
         continuous=True,
     )
+    env = DataCollector(minari_env)
     if "env_wrapper" in hyperparams:
         for wrapper_config in hyperparams["env_wrapper"]:
             wrapper_name = list(wrapper_config.keys())[0]
@@ -50,25 +50,14 @@ def generate_dataset(args):
     if "frame_stack" in hyperparams:
         n_stack = hyperparams["frame_stack"]
         minari_env = FrameStackObservation(minari_env, n_stack)
-        # TODO: This is to avoid the stupid image compression by minari
-        new_obs_space = gym.spaces.Box(
-            low=0, high=255, shape=minari_env.observation_space.shape, dtype=np.float32
-        )
-        minari_env = TransformObservation(
-            env=minari_env,
-            func=lambda obs: obs.astype(np.float32),
-            observation_space=new_obs_space,
-        )
 
-    agent = ALGOS[args.algo].load(model_path)
-    env = DataCollector(minari_env)
-    for i in tqdm(range(args.total_episodes)):
-        obs, _ = env.reset(seed=args.seed)
+    agent = ALGOS[args.algo].load(model_path, env=minari_env)
+    for i in tqdm(range(args.total_episodes), desc="Collecting episodes"):
+        obs, _ = minari_env.reset()
         while True:
             action, _ = agent.predict(obs, deterministic=True)
-            obs, rew, terminated, truncated, info = env.step(action)
+            obs, rew, terminated, truncated, info = minari_env.step(action)
             if terminated or truncated:
-                print(obs, rew, terminated, truncated, info)
                 print("Episode finished.")
                 break
 
