@@ -101,7 +101,7 @@ train-bipedal:
 train-car:     ENV=$(CAR_ENV)
 train-car:
 	@echo "Training $(ENV) with $(ALGO)..."
-	python -m rl_zoo3.train --algo $(ALGO) --env $(ENV) --track --wandb-project-name $(WANDB_PROJECT) --wandb-entity $(HF_ORG) --hyperparams frame_stack:3 n_timesteps:1e5
+	python -m rl_zoo3.train --algo $(ALGO) --env $(ENV) --track --wandb-project-name $(WANDB_PROJECT) --wandb-entity $(HF_ORG)
 train-all: train-lunar train-bipedal train-car
 
 # --- Evaluation ---

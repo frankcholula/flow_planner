@@ -37,7 +37,7 @@ def generate_dataset(args):
         render_mode="rgb_array",  # change to human for debugging.
         continuous=True,
     )
-    env = DataCollector(minari_env)
+    data_collector = DataCollector(minari_env)
     if "env_wrapper" in hyperparams:
         for wrapper_config in hyperparams["env_wrapper"]:
             wrapper_name = list(wrapper_config.keys())[0]
@@ -45,7 +45,7 @@ def generate_dataset(args):
             if "grayscaleobservation" in wrapper_name.lower():
                 wrapper_config[wrapper_name]["keep_dim"] = False
         wrapper_class = get_wrapper_class(hyperparams=hyperparams, key="env_wrapper")
-        minari_env = wrapper_class(minari_env)
+        minari_env = wrapper_class(data_collector)
 
     if "frame_stack" in hyperparams:
         n_stack = hyperparams["frame_stack"]
@@ -58,17 +58,16 @@ def generate_dataset(args):
             action, _ = agent.predict(obs, deterministic=True)
             obs, rew, terminated, truncated, info = minari_env.step(action)
             if terminated or truncated:
-                print("Episode finished.")
                 break
 
-    dataset = env.create_dataset(
+    dataset = data_collector.create_dataset(
         dataset_id=f"Box2D/{args.env}/{args.level}-v{args.version}",
         algorithm_name=args.algo,
         code_permalink="https://github.com/frankcholula/flow_planner",
         author="Frank Lu",
         author_email="lu.phrank@gmail.com",
         description=f"Behavioral cloning dataset for {args.env} using {args.algo}",
-        eval_env=args.env,
+        eval_env=minari_env,
     )
 
 
