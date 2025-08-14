@@ -61,7 +61,7 @@ def generate_dataset(args):
     # print("After:", minari_env.observation_space.shape)
 
 
-    minari_env = gym.make("CarRacing-v3", render_mode="human", continuous=True)
+    minari_env = gym.make("CarRacing-v3", render_mode="human", continuous=True, max_episode_steps=500)
     minari_env = FrameSkip(minari_env, skip=2)
     minari_env = ResizeObservation(minari_env, shape=(64, 64))
     minari_env = GrayscaleObservation(minari_env, keep_dim=False)
@@ -80,17 +80,11 @@ def generate_dataset(args):
         while True:
             action, _ = agent.predict(obs, deterministic=True)
             print("Action shape:", action.shape)
-            try:
-                obs, rew, terminated, truncated, info = env.step(action)
-                if terminated or truncated:
-                    break
-            except Exception as e:
-                print(action)
-                print(rew)
-                print(terminated)
-                print(truncated)
-                print(info)
-                raise e
+            obs, rew, terminated, truncated, info= env.step(action)
+            print("Reward:", rew)
+            if terminated or truncated:
+                print("Episode finished.")
+                break
 
     # dataset = env.create_dataset(
     #     dataset_id=f"Box2D/{args.env}/{args.level}-v{args.version}",
