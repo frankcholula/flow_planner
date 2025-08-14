@@ -148,6 +148,6 @@ download-box2d:
 download-agents:
 	@echo "Downloading trained-agents..."
 # 	python -m rl_zoo3.load_from_hub --algo ppo --env LunarLanderContinuous-v3 -orga frankcholula -f logs/
-# 	python -m rl_zoo3.load_from_hub --algo ppo --env CarRacing-v3 -orga frankcholula -f logs/
+	python -m rl_zoo3.load_from_hub --algo ppo --env CarRacing-v3 -orga frankcholula -f logs/
 # 	python -m rl_zoo3.load_from_hub --algo ppo_lstm --env CarRacing-v3 -orga frankcholula -f logs/
 # 	python -m rl_zoo3.load_from_hub --algo ppo --env BipedalWalker-v3 -orga frankcholula -f logs/

@@ -1,6 +1,5 @@
 from tqdm.auto import tqdm
 from minari import DataCollector
-from minari.serialization import serialize_space, deserialize_space
 
 from stable_baselines3 import PPO, A2C, TD3
 from src.utils.args import parse_agent_args
@@ -9,9 +8,7 @@ from rl_zoo3.utils import (
     get_saved_hyperparams,
     get_wrapper_class,
     get_model_path,
-    create_test_env,
 )
-from rl_zoo3.wrappers import FrameSkip
 
 import gymnasium as gym
 from gymnasium.wrappers import (
@@ -29,7 +26,6 @@ ALGOS = {"ppo": PPO, "ppo_lstm": PPO, "a2c": A2C, "td3": TD3}
 
 def generate_dataset(args):
     torch.manual_seed(args.seed)
-
     # load hyperparams
     latest_run_id = get_latest_run_id(log_path="logs", env_name=args.env)
     _, model_path, log_path = get_model_path(
@@ -40,9 +36,8 @@ def generate_dataset(args):
     minari_env = gym.make(
         args.env,
         **hyperparams.get("env_kwargs", {}),
-        render_mode="rgb_array",
+        render_mode="human",
         continuous=True,
-        max_episode_steps=100,
     )
     if "env_wrapper" in hyperparams:
         for wrapper_config in hyperparams["env_wrapper"]:
@@ -68,27 +63,25 @@ def generate_dataset(args):
 
     agent = ALGOS[args.algo].load(model_path)
     env = DataCollector(minari_env)
-    print(env.observation_space)
-    print(env.action_space.shape)
-
     for i in tqdm(range(args.total_episodes)):
-        obs, _ = env.reset()
+        obs, _ = env.reset(seed=args.seed)
         while True:
             action, _ = agent.predict(obs, deterministic=True)
             obs, rew, terminated, truncated, info = env.step(action)
             if terminated or truncated:
+                print(obs, rew, terminated, truncated, info)
                 print("Episode finished.")
                 break
 
-    dataset = env.create_dataset(
-        dataset_id=f"Box2D/{args.env}/{args.level}-v{args.version}",
-        algorithm_name=args.algo,
-        code_permalink="https://github.com/frankcholula/flow_planner",
-        author="Frank Lu",
-        author_email="lu.phrank@gmail.com",
-        description=f"Behavioral cloning dataset for {args.env} using {args.algo}",
-        eval_env=args.env,
-    )
+    # dataset = env.create_dataset(
+    #     dataset_id=f"Box2D/{args.env}/{args.level}-v{args.version}",
+    #     algorithm_name=args.algo,
+    #     code_permalink="https://github.com/frankcholula/flow_planner",
+    #     author="Frank Lu",
+    #     author_email="lu.phrank@gmail.com",
+    #     description=f"Behavioral cloning dataset for {args.env} using {args.algo}",
+    #     eval_env=args.env,
+    # )
 
 
 def main():
