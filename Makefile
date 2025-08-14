@@ -70,8 +70,8 @@ push-dataset:
 		   --algo $(ALGO) \
 		   --version 0 \
 		   --level $(LEVEL)
-# 	@echo "--> Pushing dataset $(ENV) to the Hub..."
-# 	@minari upload Box2D/$(ENV)/$(LEVEL)-v0 --key-path $(HF_TOKEN)
+	@echo "--> Pushing dataset $(ENV) to the Hub..."
+	@minari upload Box2D/$(ENV)/$(LEVEL)-v0 --key-path $(HF_TOKEN)
 
 # --- Environment Management ---
 setup:
@@ -139,8 +139,10 @@ push-all-datasets: push-lunar-dataset push-bipedal-dataset push-car-dataset
 
 # --- Dataset Download ---
 list:
-	minari list remote
-	
+	@echo "Listing dataset from $(MINARI_REMOTE)..."
+	@minari list remote
+
+
 download-box2d:
 	@echo "Downloading Box2D datasets..."
 	minari download Box2D/$(ENV)/$(LEVEL)-v0
