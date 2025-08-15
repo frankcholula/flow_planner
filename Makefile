@@ -9,6 +9,7 @@ WANDB_PROJECT ?= "Flow Planner"
 LUNAR_ENV   := LunarLanderContinuous-v3
 BIPEDAL_ENV := BipedalWalker-v3
 CAR_ENV     := CarRacing-v3
+TOTAL_EPISODES := 1_000
 
 # Dataset specific params
 LEVEL ?= expert
@@ -65,10 +66,10 @@ push-model:
 	python -m rl_zoo3.push_to_hub --algo $(ALGO) --env $(ENV) -f logs/ -orga $(HF_ORG) --repo-name $(ALGO)-$(ENV)
 
 generate-dataset:
-	@echo "--> Generating $(LEVEL) dataset for $(ENV)..."
+	@echo "--> Generating $(TOTAL_EPISODES) of $(LEVEL) dataset for $(ENV)..."
 	python -m src.pipelines.collect_dataset \
 		   --env $(ENV) \
-		   --total_episodes 1_000 \
+		   --total_episodes $(TOTAL_EPISODES) \
 		   --seed 42 \
 		   --algo $(ALGO) \
 		   --version 0 \
