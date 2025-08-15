@@ -22,11 +22,12 @@ ALGOS = {"ppo": PPO, "ppo_lstm": PPO, "a2c": A2C, "td3": TD3}
 
 
 def make_env(env_name, hyperparams):
-    env_kwargs = {"render_mode": "rgb_array"}
+    env_kwargs = {"render_mode": "rgb_array"} #change this to debug
     if env_name in ["LunarLanderContinuous-v3", "CarRacing-v3"]:
         env_kwargs.update({"continuous": True})
-    env = gym.make(env_name, **env_kwargs)
-    data_collector = DataCollector(env)
+    base_env = gym.make(env_name, **env_kwargs)
+    data_collector = DataCollector(base_env)
+    processed_env = data_collector
     if "env_wrapper" in hyperparams:
         print("Wrapping environment with custom wrappers")
         for wrapper_config in hyperparams["env_wrapper"]:
@@ -35,13 +36,13 @@ def make_env(env_name, hyperparams):
             if "grayscaleobservation" in wrapper_name.lower():
                 wrapper_config[wrapper_name]["keep_dim"] = False
         wrapper_class = get_wrapper_class(hyperparams=hyperparams, key="env_wrapper")
-        env = wrapper_class(data_collector)
+        processed_env = wrapper_class(processed_env)
 
     if "frame_stack" in hyperparams:
         print("Wrapping environment with FrameStackObservation")
         n_stack = hyperparams["frame_stack"]
-        env = FrameStackObservation(env, n_stack)
-    return env, data_collector
+        processed_env = FrameStackObservation(processed_env, n_stack)
+    return processed_env, data_collector
 
 
 def generate_dataset(args):
