@@ -9,6 +9,7 @@ WANDB_PROJECT ?= "Flow Planner"
 LUNAR_ENV   := LunarLanderContinuous-v3
 BIPEDAL_ENV := BipedalWalker-v3
 CAR_ENV     := CarRacing-v3
+TOTAL_EPISODES := 1_000
 
 # Dataset specific params
 LEVEL ?= expert
@@ -65,10 +66,10 @@ push-model:
 	python -m rl_zoo3.push_to_hub --algo $(ALGO) --env $(ENV) -f logs/ -orga $(HF_ORG) --repo-name $(ALGO)-$(ENV)
 
 generate-dataset:
-	@echo "--> Generating $(LEVEL) dataset for $(ENV)..."
+	@echo "--> Generating $(TOTAL_EPISODES) of $(LEVEL) dataset for $(ENV)..."
 	python -m src.pipelines.collect_dataset \
 		   --env $(ENV) \
-		   --total_episodes 1_000 \
+		   --total_episodes $(TOTAL_EPISODES) \
 		   --seed 42 \
 		   --algo $(ALGO) \
 		   --version 0 \
@@ -101,7 +102,7 @@ train-bipedal:
 train-car:     ENV=$(CAR_ENV)
 train-car:
 	@echo "Training $(ENV) with $(ALGO)..."
-	python -m rl_zoo3.train --algo $(ALGO) --env $(ENV) --track --wandb-project-name $(WANDB_PROJECT) --wandb-entity $(HF_ORG) --hyperparams frame_stack:3 n_timesteps:1e5
+	python -m rl_zoo3.train --algo $(ALGO) --env $(ENV) --track --wandb-project-name $(WANDB_PROJECT) --wandb-entity $(HF_ORG)
 train-all: train-lunar train-bipedal train-car
 
 # --- Evaluation ---
@@ -137,6 +138,7 @@ generate-bipedal-dataset: generate-dataset
 generate-car-dataset: ENV=$(CAR_ENV)
 generate-car-dataset: generate-dataset
 
+generate-all-datasets: generate-lunar-dataset generate-bipedal-dataset generate-car-dataset
 # --- Dataset pushing ---
 push-lunar-dataset:    ENV=$(LUNAR_ENV)
 push-lunar-dataset:    push-dataset

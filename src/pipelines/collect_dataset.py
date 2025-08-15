@@ -13,14 +13,36 @@ from rl_zoo3.utils import (
 import gymnasium as gym
 from gymnasium.wrappers import (
     FrameStackObservation,
-    TransformObservation,
 )
 
 import os
 import torch
-import numpy as np
 
 ALGOS = {"ppo": PPO, "ppo_lstm": PPO, "a2c": A2C, "td3": TD3}
+
+
+def make_env(env_name, hyperparams):
+    env_kwargs = {"render_mode": "rgb_array"}  # change this to debug
+    if env_name in ["LunarLanderContinuous-v3", "CarRacing-v3"]:
+        env_kwargs.update({"continuous": True})
+    base_env = gym.make(env_name, **env_kwargs)
+    data_collector = DataCollector(base_env)
+    processed_env = data_collector
+    if "env_wrapper" in hyperparams:
+        print("Wrapping environment with custom wrappers")
+        for wrapper_config in hyperparams["env_wrapper"]:
+            wrapper_name = list(wrapper_config.keys())[0]
+            # some janky replacement because of the gymnasium implementation of FrameStack
+            if "grayscaleobservation" in wrapper_name.lower():
+                wrapper_config[wrapper_name]["keep_dim"] = False
+        wrapper_class = get_wrapper_class(hyperparams=hyperparams, key="env_wrapper")
+        processed_env = wrapper_class(processed_env)
+
+    if "frame_stack" in hyperparams:
+        print("Wrapping environment with FrameStackObservation")
+        n_stack = hyperparams["frame_stack"]
+        processed_env = FrameStackObservation(processed_env, n_stack)
+    return processed_env, data_collector
 
 
 def generate_dataset(args):
@@ -32,54 +54,24 @@ def generate_dataset(args):
     )
     stats_path = os.path.join(log_path, f"{args.env}")
     hyperparams, _ = get_saved_hyperparams(stats_path=stats_path, test_mode=True)
-    minari_env = gym.make(
-        args.env,
-        **hyperparams.get("env_kwargs", {}),
-        render_mode="rgb_array",  # change to human for debugging.
-        continuous=True,
-    )
-    if "env_wrapper" in hyperparams:
-        for wrapper_config in hyperparams["env_wrapper"]:
-            wrapper_name = list(wrapper_config.keys())[0]
-            # some janky replacement because of the gymnasium implementation of FrameStack
-            if "grayscaleobservation" in wrapper_name.lower():
-                wrapper_config[wrapper_name]["keep_dim"] = False
-        wrapper_class = get_wrapper_class(hyperparams=hyperparams, key="env_wrapper")
-        minari_env = wrapper_class(minari_env)
-
-    if "frame_stack" in hyperparams:
-        n_stack = hyperparams["frame_stack"]
-        minari_env = FrameStackObservation(minari_env, n_stack)
-        # TODO: This is to avoid the stupid image compression by minari
-        new_obs_space = gym.spaces.Box(
-            low=0, high=255, shape=minari_env.observation_space.shape, dtype=np.float32
-        )
-        minari_env = TransformObservation(
-            env=minari_env,
-            func=lambda obs: obs.astype(np.float32),
-            observation_space=new_obs_space,
-        )
-
-    agent = ALGOS[args.algo].load(model_path)
-    env = DataCollector(minari_env)
-    for i in tqdm(range(args.total_episodes)):
-        obs, _ = env.reset(seed=args.seed)
+    minari_env, data_collector = make_env(args.env, hyperparams)
+    agent = ALGOS[args.algo].load(model_path, env=minari_env)
+    for i in tqdm(range(args.total_episodes), desc="Collecting episodes"):
+        obs, _ = minari_env.reset()
         while True:
             action, _ = agent.predict(obs, deterministic=True)
-            obs, rew, terminated, truncated, info = env.step(action)
+            obs, rew, terminated, truncated, info = minari_env.step(action)
             if terminated or truncated:
-                print(obs, rew, terminated, truncated, info)
-                print("Episode finished.")
                 break
 
-    dataset = env.create_dataset(
+    dataset = data_collector.create_dataset(
         dataset_id=f"Box2D/{args.env}/{args.level}-v{args.version}",
         algorithm_name=args.algo,
         code_permalink="https://github.com/frankcholula/flow_planner",
         author="Frank Lu",
         author_email="lu.phrank@gmail.com",
         description=f"Behavioral cloning dataset for {args.env} using {args.algo}",
-        eval_env=args.env,
+        eval_env=minari_env,
     )
 
 
