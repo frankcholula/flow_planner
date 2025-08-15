@@ -22,7 +22,7 @@ ALGOS = {"ppo": PPO, "ppo_lstm": PPO, "a2c": A2C, "td3": TD3}
 
 
 def make_env(env_name, hyperparams):
-    env_kwargs = {"render_mode": "rgb_array"} #change this to debug
+    env_kwargs = {"render_mode": "rgb_array"} # change this to debug
     if env_name in ["LunarLanderContinuous-v3", "CarRacing-v3"]:
         env_kwargs.update({"continuous": True})
     base_env = gym.make(env_name, **env_kwargs)
