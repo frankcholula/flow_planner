@@ -17,9 +17,31 @@ from gymnasium.wrappers import (
 
 import os
 import torch
-import numpy as np
 
 ALGOS = {"ppo": PPO, "ppo_lstm": PPO, "a2c": A2C, "td3": TD3}
+
+
+def make_env(env_name, hyperparams):
+    env_kwargs = {"render_mode": "rgb_array"}
+    if env_name in ["LunarLanderContinuous-v3", "CarRacing-v3"]:
+        env_kwargs.update({"continuous": True})
+    env = gym.make(env_name, **env_kwargs)
+    data_collector = DataCollector(env)
+    if "env_wrapper" in hyperparams:
+        print("Wrapping environment with custom wrappers")
+        for wrapper_config in hyperparams["env_wrapper"]:
+            wrapper_name = list(wrapper_config.keys())[0]
+            # some janky replacement because of the gymnasium implementation of FrameStack
+            if "grayscaleobservation" in wrapper_name.lower():
+                wrapper_config[wrapper_name]["keep_dim"] = False
+        wrapper_class = get_wrapper_class(hyperparams=hyperparams, key="env_wrapper")
+        env = wrapper_class(data_collector)
+
+    if "frame_stack" in hyperparams:
+        print("Wrapping environment with FrameStackObservation")
+        n_stack = hyperparams["frame_stack"]
+        env = FrameStackObservation(env, n_stack)
+    return env, data_collector
 
 
 def generate_dataset(args):
@@ -31,26 +53,7 @@ def generate_dataset(args):
     )
     stats_path = os.path.join(log_path, f"{args.env}")
     hyperparams, _ = get_saved_hyperparams(stats_path=stats_path, test_mode=True)
-    minari_env = gym.make(
-        args.env,
-        **hyperparams.get("env_kwargs", {}),
-        render_mode="rgb_array",  # change to human for debugging.
-        continuous=True,
-    )
-    data_collector = DataCollector(minari_env)
-    if "env_wrapper" in hyperparams:
-        for wrapper_config in hyperparams["env_wrapper"]:
-            wrapper_name = list(wrapper_config.keys())[0]
-            # some janky replacement because of the gymnasium implementation of FrameStack
-            if "grayscaleobservation" in wrapper_name.lower():
-                wrapper_config[wrapper_name]["keep_dim"] = False
-        wrapper_class = get_wrapper_class(hyperparams=hyperparams, key="env_wrapper")
-        minari_env = wrapper_class(data_collector)
-
-    if "frame_stack" in hyperparams:
-        n_stack = hyperparams["frame_stack"]
-        minari_env = FrameStackObservation(minari_env, n_stack)
-
+    minari_env, data_collector = make_env(args.env, hyperparams)
     agent = ALGOS[args.algo].load(model_path, env=minari_env)
     for i in tqdm(range(args.total_episodes), desc="Collecting episodes"):
         obs, _ = minari_env.reset()
