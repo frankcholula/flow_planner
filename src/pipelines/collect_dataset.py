@@ -71,7 +71,7 @@ def generate_dataset(args):
         author="Frank Lu",
         author_email="lu.phrank@gmail.com",
         description=f"Behavioral cloning dataset for {args.env} using {args.algo}",
-        eval_env=args.env,
+        eval_env=minari_env,
     )
 
 
