@@ -80,7 +80,7 @@ def train(
     beta = config.beta
 
     # Setup
-    run_name = f"CarRacing-v3_vae_e{epochs}_l{latent_dim}"
+    run_name = f"CarRacing-v3_vae_e{epochs}_l{latent_dim}_mixed"
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = VAE(latent_dim=latent_dim).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
@@ -185,7 +185,7 @@ def eval(config, dataset, logger, model: VAE = None, model_path=None):
 
 def main():
     vae_args = parse_vae_args()
-    train_loader, val_loader, dataset = load_dataset(vae_args.dataset)
+    train_loader, val_loader, dataset = load_dataset(vae_args.dataset_name)
     print(vae_args)
     train(train_loader, val_loader, dataset, vae_args)
 
