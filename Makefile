@@ -142,7 +142,10 @@ generate-bipedal-dataset: generate-dataset
 generate-car-dataset: ENV=$(CAR_ENV)
 generate-car-dataset: generate-dataset
 
-generate-all-datasets: generate-lunar-dataset generate-bipedal-dataset generate-car-dataset
+generate-mountain-dataset: ENV=$(MOUNTAIN_ENV)
+generate-mountain-dataset: generate-dataset
+
+generate-all-datasets: generate-lunar-dataset generate-bipedal-dataset generate-car-dataset generate-mountain-dataset
 # --- Dataset pushing ---
 push-dataset:
 	@echo "--> Pushing $(ENV) to the $(CATEGORY) category..."
