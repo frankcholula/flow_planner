@@ -5,7 +5,7 @@ import torch
 def parse_vae_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="VAE training arguments")
     parser.add_argument("--epochs", type=int, default=20)
-    parser.add_argument("--learning-rate", type=float, default=1e-3)
+    parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--latent-dim", type=int, default=32)
     parser.add_argument("--beta", type=float, default=1.0)
     return parser.parse_args()

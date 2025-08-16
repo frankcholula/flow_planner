@@ -73,7 +73,7 @@ def train(
 ):
     # hyperparams
     epochs = config.epochs
-    learning_rate = config.learning_rate
+    lr = config.lr
     latent_dim = config.latent_dim
     beta = config.beta
 
@@ -81,7 +81,7 @@ def train(
     run_name = f"CarRacing-v3_vae_e{epochs}_l{latent_dim}"
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = VAE(latent_dim=latent_dim).to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     logger = WandBLogger(config=config, run_name=run_name)
     MODEL_SAVE_PATH = os.path.join("src/checkpoints", f"{run_name}.pth")
 
