@@ -32,14 +32,14 @@ class MinariDataset(Dataset):
 
 
 def load_dataset(dataset_name: str):
-    full_dataset = MinariDataset(dataset_name)
-    print(f"Total observations: {len(full_dataset)}")
-    print(f"Observation shape: {full_dataset[0].shape}")
+    minari_dataset = MinariDataset(dataset_name)
+    print(f"Total observations: {len(minari_dataset)}")
+    print(f"Observation shape: {minari_dataset[0].shape}")
 
     # train test split
-    train_size = int(0.9 * len(full_dataset))
-    val_size = len(full_dataset) - train_size
-    train_dataset, val_dataset = random_split(full_dataset, [train_size, val_size])
+    train_size = int(0.9 * len(minari_dataset))
+    val_size = len(minari_dataset) - train_size
+    train_dataset, val_dataset = random_split(minari_dataset, [train_size, val_size])
 
     print(f"Training set size: {len(train_dataset)}")
     print(f"Validation set size: {len(val_dataset)}")
@@ -60,10 +60,12 @@ def load_dataset(dataset_name: str):
     print(
         f"Validation DataLoader ready with {len(val_loader)} batches of size {batch_size}."
     )
-    return train_loader, val_loader, full_dataset
+    return train_loader, val_loader, minari_dataset
 
 
-def train(train_loader: DataLoader, val_loader: DataLoader, config: dict):
+def train(
+    train_loader: DataLoader, val_loader: DataLoader, dataset: Dataset,config: dict, eval_freq: int = 5
+):
     # hyperparams
     epochs = config.epochs
     learning_rate = config.learning_rate
@@ -101,7 +103,7 @@ def train(train_loader: DataLoader, val_loader: DataLoader, config: dict):
         avg_train_loss = train_loss / len(train_loader.dataset)
         logger.log({"training_loss": avg_train_loss})
 
-        # evaluation
+        # validation
         model.eval()
         val_loss = 0
         pbar_val = tqdm(val_loader, desc=f"Epoch {epoch+1}/{epochs} [Val]", leave=False)
@@ -125,61 +127,63 @@ def train(train_loader: DataLoader, val_loader: DataLoader, config: dict):
 
             print(f"✨ New best model saved with validation loss: {best_val_loss:.4f}")
 
+        if (epoch +1) % eval_freq == 0 or (epochs + 1) == config.epochs:
+            print("Evaluating model...")
+            eval(config = config,
+                 dataset=
     print("\nModel training complete.")
     print(
         f"Best model saved to carracing_vae_best.pth with validation loss: {best_val_loss:.4f}"
     )
 
 
-def evaluate(model_path: str, config: dict, dataset: Dataset):
+def eval(config, dataset, logger, model: VAE = None, model_path=None):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = VAE(latent_dim=config.latent_dim)
-    model.load_state_dict(torch.load(model_path))
-    model.to(device)
-    model.eval()  # Set the model to evaluation mode
+
+    if model is None:
+        if model_path is None:
+            raise ValueError("Either model or model_path must be provided.")
+        print(f"Loading model from {model_path} for evaluation...")
+        model = VAE(latent_dim=config.latent_dim)
+        model.load_state_dict(torch.load(model_path))
+        model.to(device)
+
+    model.eval()
 
     sample_idx = random.choice(range(len(dataset)))
     sample_obs_np = dataset.observations[sample_idx]
     image_tensor = dataset[sample_idx]
     image = image_tensor.unsqueeze(0).to(device)
 
-    with torch.no_grad():  # No need to calculate gradients
-        mu, log_var = model.encode(image)
-    encoded_vector = mu.cpu().numpy().flatten()
-    print(f"Original image shape: {sample_obs_np.shape}")
-    print(f"Encoded vector shape: {encoded_vector.shape}")
-    print(f"Encoded vector (mu): \n{encoded_vector}")
-
     with torch.no_grad():
-        # We can use mu for a deterministic reconstruction
+        mu, _ = model.encode(image)
         reconstructed_image_tensor = model.decode(mu)
 
-    # Convert the output tensor back to a displayable image format (H, W, C)
     reconstructed_image_np = (
         reconstructed_image_tensor.cpu().squeeze(0).permute(1, 2, 0).numpy()
     )
 
-    # --- 5. Display the results ---
     fig, axes = plt.subplots(1, 2, figsize=(8, 4))
     axes[0].imshow(sample_obs_np)
-    axes[0].set_title("Original Image")
+    axes[0].set_title("Before")
     axes[0].axis("off")
 
     axes[1].imshow(reconstructed_image_np)
-    axes[1].set_title("Reconstructed Image")
+    axes[1].set_title("After")
     axes[1].axis("off")
 
-    plt.show()
+    logger.log({"Reconstruction Progress": fig})
+    plt.close(fig)
 
 
 def main():
-    train_loader, val_loader, full_dataset = load_dataset(
+    train_loader, val_loader, dataset = load_dataset(
         "Box2D/CarRacing-v3/expert-v0"
     )
     vae_args = parse_vae_args()
     print(vae_args)
-    train(train_loader, val_loader, vae_args)
-    evaluate("carracing_vae_best.pth", vae_args, full_dataset)
+    train(train_loader, val_loader, dataset, vae_args)
+
 
 if __name__ == "__main__":
     main()
