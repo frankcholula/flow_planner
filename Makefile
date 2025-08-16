@@ -185,3 +185,4 @@ download-agents:
 	python -m rl_zoo3.load_from_hub --algo ${ALGO} --env ${LUNAR_ENV} -orga frankcholula -f logs/
 	python -m rl_zoo3.load_from_hub --algo ${ALGO} --env ${BIPEDAL_ENV} -orga frankcholula -f logs/
 	python -m rl_zoo3.load_from_hub --algo ${ALGO} --env ${CAR_ENV} -orga frankcholula -f logs/
+	python -m rl_zoo3.load_from_hub --algo ${ALGO} --env ${MOUNTAIN_ENV} -orga frankcholula -f logs/
