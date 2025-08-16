@@ -1,7 +1,5 @@
 -include .env
 
-.PHONY: clean help setup
-
 export HF_TOKEN
 export MINARI_REMOTE
 
@@ -24,6 +22,7 @@ else ifeq ($(ARCH), arm64)
 	SETUP_FILE := setup/environment_arm.yml
 endif
 
+.PHONY: clean help setup \
 	train-all train-lunar train-bipedal train-car \
 	enjoy enjoy-lunar enjoy-bipedal enjoy-car enjoy-mountain \
 	push-model push-all-models push-car-model push-bipedal-model push-lunar-model push-mountain-model \
