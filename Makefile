@@ -9,6 +9,7 @@ WANDB_PROJECT ?= "Flow Planner"
 LUNAR_ENV   := LunarLanderContinuous-v3
 BIPEDAL_ENV := BipedalWalker-v3
 CAR_ENV     := CarRacing-v3
+MOUNTAIN_ENV := MountainCarContinuous-v0
 TOTAL_EPISODES := 1_000
 
 # Dataset specific params
@@ -103,7 +104,14 @@ train-car:     ENV=$(CAR_ENV)
 train-car:
 	@echo "Training $(ENV) with $(ALGO)..."
 	python -m rl_zoo3.train --algo $(ALGO) --env $(ENV) --track --wandb-project-name $(WANDB_PROJECT) --wandb-entity $(HF_ORG)
-train-all: train-lunar train-bipedal train-car
+
+train-mountain: ENV=$(MOUNTAIN_ENV)
+train-mountain:
+	@echo "Training $(ENV) with $(ALGO)..."
+	python -m rl_zoo3.train --algo $(ALGO) --env $(ENV) --track --wandb-project-name $(WANDB_PROJECT) --wandb-entity $(HF_ORG)
+
+train-all: train-lunar train-bipedal train-car train-mountain
+
 
 # --- Evaluation ---
 enjoy-lunar:   ENV=$(LUNAR_ENV)
