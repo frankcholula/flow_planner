@@ -161,7 +161,11 @@ push-bipedal-dataset: push-dataset
 push-car-dataset:      ENV=$(CAR_ENV)
 push-car-dataset: push-dataset
 
-push-all-datasets: push-lunar-dataset push-bipedal-dataset push-car-dataset
+push-mountain-dataset: ENV=$(MOUNTAIN_ENV)
+push-mountain-dataset: CATEGORY= ClassicControl
+push-mountain-dataset: push-dataset
+
+push-all-datasets: push-lunar-dataset push-bipedal-dataset push-car-dataset push-mountain-dataset
 
 # --- Dataset Download ---
 list-datasets:
