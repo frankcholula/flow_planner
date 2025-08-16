@@ -141,8 +141,8 @@ generate-bipedal-dataset: ENV=$(BIPEDAL_ENV)
 generate-bipedal-dataset: generate-dataset
 
 generate-vae-training-dataset:
-# 	@echo "--> Generating VAE training dataset for CarRacing using random policy..."
-# 	python -m src.pipelines.carracing.random_policy
+	@echo "--> Generating VAE training dataset for CarRacing using random policy..."
+	python -m src.pipelines.carracing.random_policy
 	@echo "--> Mixing random dataset with expert dataset..."
 	python -m src.pipelines.carracing.mix_datasets
 
