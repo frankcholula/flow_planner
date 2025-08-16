@@ -8,7 +8,9 @@ def parse_vae_args() -> argparse.Namespace:
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--latent_dim", type=int, default=32)
     parser.add_argument("--beta", type=float, default=1.0)
+    parser.add_argument("--dataset", type=str, default="Box2D/CarRacing-v3/mixed-v0")
     return parser.parse_args()
+
 
 def parse_agent_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Dataset collection")

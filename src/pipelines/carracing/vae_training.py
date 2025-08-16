@@ -184,8 +184,8 @@ def eval(config, dataset, logger, model: VAE = None, model_path=None):
 
 
 def main():
-    train_loader, val_loader, dataset = load_dataset("Box2D/CarRacing-v3/expert-v0")
     vae_args = parse_vae_args()
+    train_loader, val_loader, dataset = load_dataset(vae_args.dataset)
     print(vae_args)
     train(train_loader, val_loader, dataset, vae_args)
 
