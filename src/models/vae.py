@@ -5,27 +5,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
-from torch.utils.data import DataLoader
-from torch.utils.data import Dataset
-
-
-class VAE_DataSet(torch.utils.data.Dataset):
-
-    def __init__(self, data_dir):
-        self.data_dir = data_dir
-        self.data_files = os.listdir(data_dir)
-
-    def __len__(self):
-        return len(self.data_files)
-
-    def __getitem__(self, index):
-        f = open(self.data_dir + f"\\{index}", "rb")
-        data = pickle.load(f)
-        data["obs"] = torch.tensor(data["obs"] / 255, dtype=torch.float).permute(
-            0, 3, 1, 2
-        )
-        f.close()
-        return data
 
 
 class VAE(nn.Module):
