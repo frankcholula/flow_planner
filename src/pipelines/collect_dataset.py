@@ -19,7 +19,7 @@ import os
 import torch
 
 ALGOS = {"ppo": PPO, "ppo_lstm": PPO, "a2c": A2C, "td3": TD3}
-
+CATEGORY = {"LunarLanderContinuous-v3": "Box2D", "BipedalWalker-v3": "Box2D", "CarRacing-v3": "Box2D", "MountainCarContinuous-v0": "ClassicControl"}
 
 def make_env(env_name, hyperparams):
     env_kwargs = {"render_mode": "rgb_array"}  # change this to debug
@@ -65,7 +65,7 @@ def generate_dataset(args):
                 break
 
     dataset = data_collector.create_dataset(
-        dataset_id=f"Box2D/{args.env}/{args.level}-v{args.version}",
+        dataset_id=f"{CATEGORY[args.env]}/{args.env}/{args.level}-v{args.version}",
         algorithm_name=args.algo,
         code_permalink="https://github.com/frankcholula/flow_planner",
         author="Frank Lu",
