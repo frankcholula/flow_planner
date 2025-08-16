@@ -9,6 +9,7 @@ import torch
 import tqdm
 import minari
 import random
+import os
 
 
 class MinariDataset(Dataset):
@@ -64,7 +65,11 @@ def load_dataset(dataset_name: str):
 
 
 def train(
-    train_loader: DataLoader, val_loader: DataLoader, dataset: Dataset,config: dict, eval_freq: int = 5
+    train_loader: DataLoader,
+    val_loader: DataLoader,
+    dataset: Dataset,
+    config: dict,
+    eval_freq: int = 5,
 ):
     # hyperparams
     epochs = config.epochs
@@ -73,12 +78,12 @@ def train(
     beta = config.beta
 
     # Setup
+    run_name = f"CarRacing-v3_vae_e{epochs}_l{latent_dim}"
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = VAE(latent_dim=latent_dim).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    logger = WandBLogger(
-        config=config, run_name=f"CarRacing-v3_vae_e{epochs}_l{latent_dim}"
-    )
+    logger = WandBLogger(config=config, run_name=run_name)
+    MODEL_SAVE_PATH = os.path.join("src/checkpoints", f"{run_name}.pth")
 
     # MODIFICATION 1: Add a variable to track the best model
     best_val_loss = float("inf")
@@ -123,17 +128,17 @@ def train(
 
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
-            torch.save(model.state_dict(), "carracing_vae_best.pth")
+            torch.save(model.state_dict(), MODEL_SAVE_PATH)
 
             print(f"✨ New best model saved with validation loss: {best_val_loss:.4f}")
 
-        if (epoch +1) % eval_freq == 0 or (epochs + 1) == config.epochs:
+        if (epoch + 1) % eval_freq == 0 or (epochs + 1) == config.epochs:
             print("Evaluating model...")
-            eval(config = config,
-                 dataset=
+            eval(config=config, dataset=dataset, logger=logger, model=model)
     print("\nModel training complete.")
+    logger.save_model(MODEL_SAVE_PATH)
     print(
-        f"Best model saved to carracing_vae_best.pth with validation loss: {best_val_loss:.4f}"
+        f"Best model saved to {MODEL_SAVE_PATH} with validation loss: {best_val_loss:.4f}"
     )
 
 
@@ -177,9 +182,7 @@ def eval(config, dataset, logger, model: VAE = None, model_path=None):
 
 
 def main():
-    train_loader, val_loader, dataset = load_dataset(
-        "Box2D/CarRacing-v3/expert-v0"
-    )
+    train_loader, val_loader, dataset = load_dataset("Box2D/CarRacing-v3/expert-v0")
     vae_args = parse_vae_args()
     print(vae_args)
     train(train_loader, val_loader, dataset, vae_args)
