@@ -54,11 +54,6 @@ help:
 	@echo "  download-datasets  Download all external datasets"
 	@echo "  download-agents    Download all trained agents"
 	@echo "  list-datasets	    List datasets from the Minari remote"
-
-enjoy:
-	@echo "Watching $(ENV) agent..."
-	python -m rl_zoo3.enjoy --algo $(ALGO) --env $(ENV) -f logs/
-
 # --- Environment Management ---
 setup:
 	@echo "Setting up environment for $(ARCH)..."
@@ -92,6 +87,10 @@ train-mountain:
 train-all: train-lunar train-bipedal train-car train-mountain
 
 # --- Evaluation ---
+enjoy:
+	@echo "Watching $(ENV) agent..."
+	python -m rl_zoo3.enjoy --algo $(ALGO) --env $(ENV) -f logs/
+
 enjoy-lunar:   ENV=$(LUNAR_ENV)
 enjoy-lunar: enjoy
 
@@ -100,6 +99,9 @@ enjoy-bipedal: enjoy
 
 enjoy-car:     ENV=$(CAR_ENV)
 enjoy-car: enjoy
+
+enjoy-mountain: ENV=$(MOUNTAIN_ENV)
+enjoy-mountain: enjoy
 
 # --- Model pushing ---
 push-model:
