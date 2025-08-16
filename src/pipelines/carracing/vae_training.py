@@ -132,7 +132,7 @@ def train(
 
             print(f"✨ New best model saved with validation loss: {best_val_loss:.4f}")
 
-        if (epoch + 1) % eval_freq == 0 or (epochs + 1) == config.epochs:
+        if (epoch + 1) % eval_freq == 0 or (epoch + 1) == config.epochs:
             print("Evaluating model...")
             eval(config=config, dataset=dataset, logger=logger, model=model)
     print("\nModel training complete.")
@@ -177,7 +177,7 @@ def eval(config, dataset, logger, model: VAE = None, model_path=None):
     axes[1].set_title("After")
     axes[1].axis("off")
 
-    logger.log({"Reconstruction Progress": fig})
+    logger.log({"Reconstruction": fig})
     plt.close(fig)
 
 
