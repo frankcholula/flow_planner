@@ -116,7 +116,6 @@ push-car-model:      ENV=$(CAR_ENV)
 push-car-model: push-model
 
 push-mountain-model: ENV = $(MOUNTAIN_ENV)
-push-mountain-model: CATEGORY = ClassicControl
 push-mountain-model: push-model
 
 push-all-models: push-lunar-model push-bipedal-model push-car-model push-mountain-model
