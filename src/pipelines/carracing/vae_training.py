@@ -1,12 +1,12 @@
 from torch.utils.data import Dataset, DataLoader, random_split
 import numpy as np
 from torchvision import transforms
+from tqdm import tqdm
 from src.utils.args import parse_vae_args
 from src.utils.loggers import WandBLogger
 from src.models.encoder import VAE, vae_loss
 import matplotlib.pyplot as plt
 import torch
-import tqdm
 import minari
 import random
 import os
