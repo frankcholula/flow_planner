@@ -1,5 +1,7 @@
 -include .env
 
+.PHONY: clean help setup
+
 export HF_TOKEN
 export MINARI_REMOTE
 
@@ -22,11 +24,11 @@ else ifeq ($(ARCH), arm64)
 	SETUP_FILE := setup/environment_arm.yml
 endif
 
-.PHONY: clean help setup \
 	train-all train-lunar train-bipedal train-car \
-	enjoy enjoy-lunar enjoy-bipedal enjoy-car \
-	push-model push-all-models push-car-model push-bipedal-model push-lunar-model \
-	download-datasets download-Box2D download-BipedalWalker download-CarRacing download-MountainCar
+	enjoy enjoy-lunar enjoy-bipedal enjoy-car enjoy-mountain \
+	push-model push-all-models push-car-model push-bipedal-model push-lunar-model push-mountain-model \
+	generate-dataset generate-all-datasets \
+	download-datasets download-Box2D download-ClassicControl
 
 .DEFAULT_GOAL := help
 
@@ -51,7 +53,7 @@ help:
 	@echo ""
 	@echo "------------------ Dataset & Agent Management ---------------------"
 	@echo "  generate_dataset   Generate a dataset for the specified environment"
-	@echo "  download-datasets  Download all external datasets"
+	@echo "  download-Box2D  Download all Box2D datasets"
 	@echo "  download-agents    Download all trained agents"
 	@echo "  list-datasets	    List datasets from the Minari remote"
 # --- Environment Management ---
@@ -166,6 +168,11 @@ push-all-datasets: push-lunar-dataset push-bipedal-dataset push-car-dataset
 list-datasets:
 	@echo "Listing dataset from $(MINARI_REMOTE)..."
 	@minari list remote
+
+download-ClassicControl: CATEGORY=ClassicControl
+download-ClassicControl:
+	@echo "Downloading all $(CATEGORY) datasets..."
+	minari download $(CATEGORY)/$(MOUNTAIN_ENV)/$(LEVEL)-v0
 
 download-Box2D: CATEGORY=Box2D
 download-Box2D:
