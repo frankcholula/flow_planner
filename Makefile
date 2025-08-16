@@ -93,12 +93,12 @@ clean:
 train-lunar:   ENV=$(LUNAR_ENV)
 train-lunar:
 	@echo "Training $(ENV) with $(ALGO)..."
-	python -m rl_zoo3.train --algo $(ALGO) --env $(ENV) --track --wandb-project-name $(WANDB_PROJECT) --wandb-entity $(HF_ORG)
+	python -m rl_zoo3.train --algo $(ALGO) --env $(ENV) --track --wandb-project-name $(WANDB_PROJECT) --wandb-entity $(HF_ORG) --device cpu
 
 train-bipedal: ENV=$(BIPEDAL_ENV)
 train-bipedal:
-	@echo "Training $(ENV) with $(ALGO)..."
-	python -m rl_zoo3.train --algo $(ALGO) --env $(ENV) --track --wandb-project-name $(WANDB_PROJECT) --wandb-entity $(HF_ORG)
+	@echo "Training $(ENV) with $(ALGO)..." 
+	python -m rl_zoo3.train --algo $(ALGO) --env $(ENV) --track --wandb-project-name $(WANDB_PROJECT) --wandb-entity $(HF_ORG) --device cpu
 
 train-car:     ENV=$(CAR_ENV)
 train-car:
@@ -108,7 +108,7 @@ train-car:
 train-mountain: ENV=$(MOUNTAIN_ENV)
 train-mountain:
 	@echo "Training $(ENV) with $(ALGO)..."
-	python -m rl_zoo3.train --algo $(ALGO) --env $(ENV) --track --wandb-project-name $(WANDB_PROJECT) --wandb-entity $(HF_ORG)
+	python -m rl_zoo3.train --algo $(ALGO) --env $(ENV) --track --wandb-project-name $(WANDB_PROJECT) --wandb-entity $(HF_ORG) --device cpu
 
 train-all: train-lunar train-bipedal train-car train-mountain
 
