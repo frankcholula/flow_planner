@@ -8,6 +8,7 @@ SHELL := /bin/bash
 ALGO ?= ppo
 HF_ORG ?= frankcholula
 WANDB_PROJECT ?= "Flow Planner"
+CATEGORY ?= BOX2D
 LUNAR_ENV := LunarLanderContinuous-v3
 BIPEDAL_ENV := BipedalWalker-v3
 CAR_ENV := CarRacing-v3
@@ -15,6 +16,7 @@ MOUNTAIN_ENV := MountainCarContinuous-v0
 TOTAL_EPISODES := 1_000
 LEVEL ?= expert
 ARCH := $(shell uname -m)
+
 ifeq ($(ARCH), x86_64)
 	SETUP_FILE := setup/environment_x86.yml
 else ifeq ($(ARCH), arm64)
@@ -113,7 +115,11 @@ push-bipedal-model: push-model
 push-car-model:      ENV=$(CAR_ENV)
 push-car-model: push-model
 
-push-all-models: push-lunar-model push-bipedal-model push-car-model
+push-mountaincar-model: ENV = $(MOUNTAIN_ENV)
+push-mountaincar-model: CATEGORY = ClassicControl
+push-mountaincar-model: push-model
+
+push-all-models: push-lunar-model push-bipedal-model push-car-model push-mountaincar-model
 
 # --- Dataset generation ---
 generate-dataset:
@@ -138,8 +144,8 @@ generate-car-dataset: generate-dataset
 generate-all-datasets: generate-lunar-dataset generate-bipedal-dataset generate-car-dataset
 # --- Dataset pushing ---
 push-dataset:
-	@echo "--> Pushing dataset $(ENV) to the Hub..."
-	@minari upload Box2D/$(ENV)/$(LEVEL)-v0 --key-path $(HF_TOKEN)
+	@echo "--> Pushing $(ENV) to the $(CATEGORY) category..."
+	@minari upload $(CATEGORY)/$(ENV)/$(LEVEL)-v0 --key-path $(HF_TOKEN)
 
 push-lunar-dataset:    ENV=$(LUNAR_ENV)
 push-lunar-dataset: push-dataset
@@ -157,11 +163,12 @@ list-datasets:
 	@echo "Listing dataset from $(MINARI_REMOTE)..."
 	@minari list remote
 
-download-datasets:
-	@echo "Downloading all Box2D datasets..."
-	minari download Box2D/$(LUNAR_ENV)/$(LEVEL)-v0
-	minari download Box2D/$(BIPEDAL_ENV)/$(LEVEL)-v0
-	minari download Box2D/$(CAR_ENV)/$(LEVEL)-v0
+download-Box2D: CATEGORY=Box2D
+download-Box2D:
+	@echo "Downloading all $(CATEGORY) datasets..."
+	minari download $(CATEGORY)/$(LUNAR_ENV)/$(LEVEL)-v0
+	minari download $(CATEGORY)/$(BIPEDAL_ENV)/$(LEVEL)-v0
+	minari download $(CATEGORY)	/$(CAR_ENV)/$(LEVEL)-v0
 
 download-agents:
 	@echo "Downloading trained-agents..."
