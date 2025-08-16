@@ -1,6 +1,7 @@
 import gymnasium as gym
 import minari
 from src.conf.environment import CarRacingConfig
+from tqdm import tqdm
 
 config = CarRacingConfig()
 LEVEL = "simple"
@@ -14,13 +15,11 @@ data_collector = minari.DataCollector(env)
 
 print(f"Collecting data...")
 obs, info = data_collector.reset()
-episodes_collected = 0
-while episodes_collected < TOTAL_EPS:
+for i in tqdm(range(TOTAL_EPS), desc="Collecting episodes"):
     action = data_collector.action_space.sample()
     obs, reward, terminated, truncated, info = data_collector.step(action)
     if terminated or truncated:
         episodes_collected += 1
-        print(f"Episodes collected: {episodes_collected}/{TOTAL_EPS}")
         obs, info = data_collector.reset()
 
 print("\nData collection complete.")
