@@ -13,13 +13,15 @@ import os
 
 
 class MinariDataset(Dataset):
-    def __init__(self, dataset_name):
+    def __init__(self, dataset_name, num_episodes=250, seed=42):
         print(f"Loading Minari dataset '{dataset_name}'...")
-        dataset = minari.load_dataset(dataset_name)
+        full_dataset = minari.load_dataset(dataset_name)
+        dataset = minari.split_dataset(
+            dataset=full_dataset, sizes=(num_episodes,), seed=seed
+        )[0]
         self.observations = np.vstack(
             [e.observations for e in dataset.iterate_episodes()]
         )
-
         # The ToTensor transform handles scaling to [0,1] and dimension permutation (H,W,C -> C,H,W)
         self.transform = transforms.ToTensor()
         print("Dataset loaded and observations extracted.")
