@@ -65,13 +65,10 @@ class VAE(nn.Module):
         return reconstruction, mu, log_var
 
 
-# VAE Loss Function
 def vae_loss(recon_x, x, mu, log_var, beta=1.0):
-    # Reconstruction Loss (Binary Cross Entropy)
+    # simple reconstruction loss
     BCE = F.binary_cross_entropy(recon_x, x, reduction="sum")
-
     # KL Divergence
     # 0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)
     KLD = -0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
-
     return BCE + beta * KLD
