@@ -1,4 +1,6 @@
 -include .env
+.PHONY: clean help setup
+
 export HF_TOKEN
 export MINARI_REMOTE
 
@@ -6,16 +8,12 @@ SHELL := /bin/bash
 ALGO ?= ppo
 HF_ORG ?= frankcholula
 WANDB_PROJECT ?= "Flow Planner"
-LUNAR_ENV   := LunarLanderContinuous-v3
+LUNAR_ENV := LunarLanderContinuous-v3
 BIPEDAL_ENV := BipedalWalker-v3
-CAR_ENV     := CarRacing-v3
+CAR_ENV := CarRacing-v3
 MOUNTAIN_ENV := MountainCarContinuous-v0
 TOTAL_EPISODES := 1_000
-
-# Dataset specific params
 LEVEL ?= expert
-
-
 ARCH := $(shell uname -m)
 ifeq ($(ARCH), x86_64)
 	SETUP_FILE := setup/environment_x86.yml
@@ -23,8 +21,6 @@ else ifeq ($(ARCH), arm64)
 	SETUP_FILE := setup/environment_arm.yml
 endif
 
-	
-.PHONY: help setup clean \
 	train-all train-lunar train-bipedal train-car \
 	enjoy enjoy-lunar enjoy-bipedal enjoy-car \
 	push-model push-all-models push-car-model push-bipedal-model push-lunar-model \
@@ -57,28 +53,9 @@ help:
 	@echo "  download-agents    Download all trained agents"
 	@echo "  list-datasets	    List datasets from the Minari remote"
 
-
 enjoy:
 	@echo "Watching $(ENV) agent..."
 	python -m rl_zoo3.enjoy --algo $(ALGO) --env $(ENV) -f logs/
-
-push-model:
-	@echo "--> Pushing $(ALGO)-$(ENV) to $(HF_ORG)..."
-	python -m rl_zoo3.push_to_hub --algo $(ALGO) --env $(ENV) -f logs/ -orga $(HF_ORG) --repo-name $(ALGO)-$(ENV)
-
-generate-dataset:
-	@echo "--> Generating $(TOTAL_EPISODES) of $(LEVEL) dataset for $(ENV)..."
-	python -m src.pipelines.collect_dataset \
-		   --env $(ENV) \
-		   --total_episodes $(TOTAL_EPISODES) \
-		   --seed 42 \
-		   --algo $(ALGO) \
-		   --version 0 \
-		   --level $(LEVEL)
-
-push-dataset:
-	@echo "--> Pushing dataset $(ENV) to the Hub..."
-	@minari upload Box2D/$(ENV)/$(LEVEL)-v0 --key-path $(HF_TOKEN)
 
 # --- Environment Management ---
 setup:
@@ -97,7 +74,7 @@ train-lunar:
 
 train-bipedal: ENV=$(BIPEDAL_ENV)
 train-bipedal:
-	@echo "Training $(ENV) with $(ALGO)..." 
+	@echo "Training $(ENV) with $(ALGO)..."
 	python -m rl_zoo3.train --algo $(ALGO) --env $(ENV) --track --wandb-project-name $(WANDB_PROJECT) --wandb-entity $(HF_ORG) --device cpu
 
 train-car:     ENV=$(CAR_ENV)
@@ -112,50 +89,66 @@ train-mountain:
 
 train-all: train-lunar train-bipedal train-car train-mountain
 
-
 # --- Evaluation ---
 enjoy-lunar:   ENV=$(LUNAR_ENV)
-enjoy-lunar:   enjoy
+enjoy-lunar: enjoy
 
 enjoy-bipedal: ENV=$(BIPEDAL_ENV)
 enjoy-bipedal: enjoy
 
 enjoy-car:     ENV=$(CAR_ENV)
-enjoy-car:     enjoy
+enjoy-car: enjoy
 
 # --- Model pushing ---
-push-lunar-model:    ENV=$(LUNAR_ENV)
-push-lunar-model:    push-model
+push-model:
+	@echo "--> Pushing $(ALGO)-$(ENV) to $(HF_ORG)..."
+	python -m rl_zoo3.push_to_hub --algo $(ALGO) --env $(ENV) -f logs/ -orga $(HF_ORG) --repo-name $(ALGO)-$(ENV)
 
+push-lunar-model:    ENV=$(LUNAR_ENV)
+push-lunar-model: push-model
 
 push-bipedal-model:  ENV=$(BIPEDAL_ENV)
-push-bipedal-model:  push-model
+push-bipedal-model: push-model
 
 push-car-model:      ENV=$(CAR_ENV)
-push-car-model:      push-model
+push-car-model: push-model
 
 push-all-models: push-lunar-model push-bipedal-model push-car-model
 
 # --- Dataset generation ---
+generate-dataset:
+	@echo "--> Generating $(TOTAL_EPISODES) of $(LEVEL) dataset for $(ENV)..."
+	python -m src.pipelines.collect_dataset \
+		   --env $(ENV) \
+		   --total_episodes $(TOTAL_EPISODES) \
+		   --seed 42 \
+		   --algo $(ALGO) \
+		   --version 0 \
+		   --level $(LEVEL)
+
 generate-lunar-dataset: ENV=$(LUNAR_ENV)
 generate-lunar-dataset: generate-dataset
 
 generate-bipedal-dataset: ENV=$(BIPEDAL_ENV)
-generate-bipedal-dataset: generate-dataset	
+generate-bipedal-dataset: generate-dataset
 
 generate-car-dataset: ENV=$(CAR_ENV)
 generate-car-dataset: generate-dataset
 
 generate-all-datasets: generate-lunar-dataset generate-bipedal-dataset generate-car-dataset
 # --- Dataset pushing ---
+push-dataset:
+	@echo "--> Pushing dataset $(ENV) to the Hub..."
+	@minari upload Box2D/$(ENV)/$(LEVEL)-v0 --key-path $(HF_TOKEN)
+
 push-lunar-dataset:    ENV=$(LUNAR_ENV)
-push-lunar-dataset:    push-dataset
+push-lunar-dataset: push-dataset
 
 push-bipedal-dataset:  ENV=$(BIPEDAL_ENV)
-push-bipedal-dataset:  push-dataset
+push-bipedal-dataset: push-dataset
 
 push-car-dataset:      ENV=$(CAR_ENV)
-push-car-dataset:      push-dataset
+push-car-dataset: push-dataset
 
 push-all-datasets: push-lunar-dataset push-bipedal-dataset push-car-dataset
 
