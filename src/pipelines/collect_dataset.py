@@ -19,7 +19,13 @@ import os
 import torch
 
 ALGOS = {"ppo": PPO, "ppo_lstm": PPO, "a2c": A2C, "td3": TD3}
-CATEGORY = {"LunarLanderContinuous-v3": "Box2D", "BipedalWalker-v3": "Box2D", "CarRacing-v3": "Box2D", "MountainCarContinuous-v0": "ClassicControl"}
+CATEGORY = {
+    "LunarLanderContinuous-v3": "Box2D",
+    "BipedalWalker-v3": "Box2D",
+    "CarRacing-v3": "Box2D",
+    "MountainCarContinuous-v0": "ClassicControl",
+}
+
 
 def make_env(env_name, hyperparams):
     env_kwargs = {"render_mode": "rgb_array"}  # change this to debug
