@@ -56,7 +56,7 @@ def generate_dataset(args):
     hyperparams, _ = get_saved_hyperparams(stats_path=stats_path, test_mode=True)
     minari_env, data_collector = make_env(args.env, hyperparams)
     agent = ALGOS[args.algo].load(model_path, env=minari_env)
-    for i in tqdm(range(args.total_episodes), desc="Collecting episodes"):
+    for _ in tqdm(range(args.total_episodes), desc="Collecting episodes"):
         obs, _ = minari_env.reset()
         while True:
             action, _ = agent.predict(obs, deterministic=True)

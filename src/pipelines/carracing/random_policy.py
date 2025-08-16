@@ -14,14 +14,15 @@ env = gym.make(config.env_name, render_mode="rgb_array", continuous=True)
 data_collector = minari.DataCollector(env)
 
 print(f"Collecting data...")
-obs, info = data_collector.reset()
-for i in tqdm(range(TOTAL_EPS), desc="Collecting episodes"):
-    action = data_collector.action_space.sample()
-    obs, reward, terminated, truncated, info = data_collector.step(action)
-    if terminated or truncated:
-        episodes_collected += 1
-        obs, info = data_collector.reset()
+for _ in tqdm(range(TOTAL_EPS), desc="Collecting episodes"):
+    obs, _ = data_collector.reset()
 
+    while True:
+        action = data_collector.action_space.sample()
+        obs, reward, terminated, truncated, info = data_collector.step(action)
+
+        if terminated or truncated:
+            break
 print("\nData collection complete.")
 
 dataset = data_collector.create_dataset(
@@ -34,7 +35,5 @@ dataset = data_collector.create_dataset(
     eval_env=data_collector,
 )
 
-print(f"\nSuccessfully created and saved dataset:")
-print(dataset)
-
+print(f"\nSuccessfully created and saved dataset: {DATASET_NAME}")
 data_collector.close()
