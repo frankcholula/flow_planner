@@ -140,8 +140,14 @@ generate-lunar-dataset: generate-dataset
 generate-bipedal-dataset: ENV=$(BIPEDAL_ENV)
 generate-bipedal-dataset: generate-dataset
 
+generate-vae-training-dataset:
+# 	@echo "--> Generating VAE training dataset for CarRacing using random policy..."
+# 	python -m src.pipelines.carracing.random_policy
+	@echo "--> Mixing random dataset with expert dataset..."
+	python -m src.pipelines.carracing.mix_datasets
+
 generate-car-dataset: ENV=$(CAR_ENV)
-generate-car-dataset: generate-dataset
+generate-car-dataset: generate-dataset generate-vae-training-dataset
 
 generate-mountain-dataset: ENV=$(MOUNTAIN_ENV)
 generate-mountain-dataset: generate-dataset
