@@ -24,7 +24,7 @@ def parse_agent_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def parse_args() -> argparse.Namespace:
+def parse_fm_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Flow matching trajectory generation.")
 
     training_args = parser.add_argument_group("Training arguments")

@@ -9,13 +9,13 @@ import torch
 from torch.utils.data import DataLoader
 
 from src.models.backbone import MLP, CNN, ConditionalCNN, ConditionalUNet1D
-from src.utils.args import parse_args
+from src.utils.args import parse_fm_args
 from src.utils.loggers import WandBLogger
 
 from flow_matching.path.scheduler import CondOTScheduler
 from flow_matching.path import AffineProbPath
 
-from src.conf.environment import LunarLanderConfig
+from src.conf.environment import BipedalWalkerConfig, CarRacingConfig, LunarLanderConfig
 from src.pipelines.preprocessing import (
     collate_fn,
     get_dataset_stats,
@@ -24,13 +24,19 @@ from src.pipelines.preprocessing import (
 from src.pipelines.eval import evaluate_open_loop, evaluate_policy_mpc
 from matplotlib import pyplot as plt
 
+env_config_map = {
+    "LunarLander-v3": LunarLanderConfig,
+    "CarRacing-v3": CarRacingConfig,
+    "BipedalWalker-v3": BipedalWalkerConfig,
+}
+
 
 def train(config, args, dataset, logger):
     # parsing some configs
     obs_dim = config.obs_dim
     action_dim = config.action_dim
     horizon = args.horizon
-    if args.chunk_type == "obs_act":        
+    if args.chunk_type == "obs_act":
         input_dim = (obs_dim + action_dim) * horizon
     elif args.chunk_type == "obs_only":
         input_dim = obs_dim * horizon
@@ -44,6 +50,7 @@ def train(config, args, dataset, logger):
     generator = None
     if args.device == "cuda":
         generator = torch.Generator(device=args.device)
+
     dataloader = DataLoader(
         dataset,
         batch_size=args.batch_size,
@@ -179,22 +186,21 @@ def train(config, args, dataset, logger):
 
 
 def main():
-    args = parse_args()
-
-    # Set random seeds for reproducibility
+    args = parse_fm_args()
     torch.manual_seed(args.seed)
     random.seed(args.seed)
     np.random.seed(args.seed)
-    # set device
+
     if args.device:
         torch.set_default_device(args.device)
         print(f"Using device: {args.device}")
 
-    # Load configuration based on the environment
-    if args.environment == "LunarLander-v3":
-        config = LunarLanderConfig()
+    # Load configuration based on the environment using a mapping dictionary
+    if args.environment not in env_config_map:
+        raise ValueError(f"Unknown environment: {args.environment}")
+    config = env_config_map[args.environment]()
     dataset = minari.load_dataset(dataset_id=config.dataset_name)
-    run_name = f"{args.environment}_{args.model_type}_h{args.horizon}_e{args.num_epochs}_k{args.kernel_size}_start_obs"
+    run_name = f"{args.environment}_{args.model_type}_h{args.horizon}_e{args.num_epochs}_k{args.kernel_size}_{args.condition_on}"
     logger = WandBLogger(
         config={
             "environment": args.environment,
