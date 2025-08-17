@@ -7,6 +7,7 @@ from src.models.encoder import VAE
 from tqdm import tqdm
 import minari
 from minari import EpisodeData
+from rl_zoo3.wrappers import YAMLCompatResizeObservation
 
 
 class VAEObservationWrapper(gym.ObservationWrapper):
@@ -36,6 +37,18 @@ class VAEObservationWrapper(gym.ObservationWrapper):
 
             mu, _ = self.vae.encode(image_tensor)
             return mu.cpu().numpy().flatten()
+
+
+def create_env(vae_model_path, latent_dim, device, input_dim=64):
+    base_env = gym.make("CarRacing-v3", render_mode="rgb_array", continuous=True)
+    minari_env = YAMLCompatResizeObservation(env=base_env, shape=[input_dim, input_dim])
+    minari_env = VAEObservationWrapper(
+        env=minari_env,
+        vae_model_path=vae_model_path,
+        latent_dim=latent_dim,
+        device=device,
+    )
+    return minari_env
 
 
 def create_latent_dataset(vae_model_path, latent_dim=32):
@@ -75,14 +88,7 @@ def create_latent_dataset(vae_model_path, latent_dim=32):
         episode_data = EpisodeData(id=i, **episode_buffer_dict)
         episode_buffers.append(episode_data)
 
-    base_env = gym.make("CarRacing-v3", render_mode="rgb_array", continuous=True)
-    minari_env = VAEObservationWrapper(
-        env=base_env,
-        vae_model_path=vae_model_path,
-        latent_dim=latent_dim,
-        device=device,
-    )
-
+    minari_env = create_env(vae_model_path, latent_dim, device)
     latent_dataset_id = "Box2D/CarRacing-v3/latent-v0"
     print(f"Saving new latent dataset: {latent_dataset_id}")
     latent_dataset = minari.create_dataset_from_buffers(

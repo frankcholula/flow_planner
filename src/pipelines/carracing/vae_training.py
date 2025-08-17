@@ -13,7 +13,7 @@ import os
 
 
 class MinariDataset(Dataset):
-    def __init__(self, dataset_name, num_episodes=250, seed=42):
+    def __init__(self, dataset_name, num_episodes=250, seed=42, crop_size=64):
         print(f"Loading Minari dataset '{dataset_name}'...")
         full_dataset = minari.load_dataset(dataset_name)
         dataset = minari.split_dataset(
@@ -23,7 +23,9 @@ class MinariDataset(Dataset):
             [e.observations for e in dataset.iterate_episodes()]
         )
         # The ToTensor transform handles scaling to [0,1] and dimension permutation (H,W,C -> C,H,W)
-        self.transform = transforms.ToTensor()
+        self.transform = transforms.Compose(
+            [transforms.ToTensor(), transforms.CenterCrop(crop_size)]
+        )
         print("Dataset loaded and observations extracted.")
 
     def __len__(self):
@@ -85,7 +87,6 @@ def train(
     logger = WandBLogger(config=config, run_name=run_name)
     MODEL_SAVE_PATH = os.path.join("src/checkpoints", f"{run_name}.pth")
 
-    # MODIFICATION 1: Add a variable to track the best model
     best_val_loss = float("inf")
     for epoch in range(epochs):
         # training
