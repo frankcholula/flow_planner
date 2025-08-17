@@ -8,7 +8,9 @@ def parse_vae_args() -> argparse.Namespace:
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--latent_dim", type=int, default=32)
     parser.add_argument("--beta", type=float, default=1.0)
-    parser.add_argument("--dataset_name", type=str, default="Box2D/CarRacing-v3/mixed-v0")
+    parser.add_argument(
+        "--dataset_name", type=str, default="Box2D/CarRacing-v3/mixed-v0"
+    )
     return parser.parse_args()
 
 
@@ -75,4 +77,12 @@ def parse_fm_args() -> argparse.Namespace:
         choices=["reward", "start_obs"],
         help="Condition type for trajectory generation.",
     )
+    conditional_args.add_argument(
+        "--chunk-type",
+        type=str,
+        default="obs_only",
+        choices=["obs_only", "act_only", "obs_act"],
+        help="Chunk type for trajectory generation.",
+    )
+
     return parser.parse_args()
