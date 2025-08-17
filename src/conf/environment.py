@@ -7,6 +7,7 @@ class LunarLanderConfig:
     dataset_name: str = "Box2D/LunarLanderContinuous-v3/expert-v0"
     obs_dim: int = 8
     action_dim: int = 2
+    category: str = "Box2D"
 
 @dataclass
 class CarRacingConfig:
@@ -14,6 +15,8 @@ class CarRacingConfig:
     dataset_name: str = "Box2D/CarRacing-v3/expert-v0"
     obs_dim: int = 64
     action_dim: int = 3
+    category: str = "Box2D"
+
 
 @dataclass
 class BipedalWalkerConfig:
@@ -21,6 +24,7 @@ class BipedalWalkerConfig:
     dataset_name: str = "Box2D/BipedalWalker-v3/expert-v0"
     obs_dim: int = 24
     action_dim: int = 4
+    category: str = "Box2D"
 
 @dataclass
 class HopperConfig:
@@ -28,6 +32,8 @@ class HopperConfig:
     dataset_name: str = "mujoco/hopper/expert-v0"
     obs_dim: int = 11
     action_dim: int = 3
+    category: str = "MuJoCo"
+
 
 @dataclass
 class Walker2dConfig:
@@ -35,3 +41,4 @@ class Walker2dConfig:
     dataset_name: str = "mujoco/walker2d/expert-v0"
     obs_dim: int = 17
     action_dim: int = 6
+    category: str = "MuJoCo"

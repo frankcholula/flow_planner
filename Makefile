@@ -7,12 +7,12 @@ SHELL := /bin/bash
 ALGO ?= ppo
 HF_ORG ?= frankcholula
 WANDB_PROJECT ?= "Flow Planner"
-CATEGORY ?= BOX2D
+CATEGORY ?= Box2D
 LUNAR_ENV := LunarLanderContinuous-v3
 BIPEDAL_ENV := BipedalWalker-v3
 CAR_ENV := CarRacing-v3
 MOUNTAIN_ENV := MountainCarContinuous-v0
-TOTAL_EPISODES := 1_000
+TOTAL_EPISODES := 500
 LEVEL ?= expert
 ARCH := $(shell uname -m)
 
@@ -27,6 +27,7 @@ endif
 	enjoy enjoy-lunar enjoy-bipedal enjoy-car enjoy-mountain \
 	push-model push-all-models push-car-model push-bipedal-model push-lunar-model push-mountain-model \
 	generate-dataset generate-all-datasets \
+	push-datasets push-all-datasets push-lunar-dataset push-bipedal-dataset push-car-dataset push-mountain-dataset \
 	download-datasets download-Box2D download-ClassicControl
 
 .DEFAULT_GOAL := help
@@ -140,8 +141,23 @@ generate-lunar-dataset: generate-dataset
 generate-bipedal-dataset: ENV=$(BIPEDAL_ENV)
 generate-bipedal-dataset: generate-dataset
 
+generate-vae-training-dataset:
+	@echo "--> Generating VAE training dataset for CarRacing using random policy..."
+	python -m src.pipelines.carracing.random_policy
+	@echo "--> Mixing random dataset with expert dataset..."
+	python -m src.pipelines.carracing.mix_datasets
+
+mix-car-dataset:
+	@echo "--> Mixing CarRacing datasets..."
+	minari combine Box2D/CarRacing-v3/expert-v0 Box2D/CarRacing-v3/simple-v0 --dataset-name Box2D/CarRacing-v3/mixed-v0
+
+generate-latent-dataset: ENV=$(CAR_ENV)
+generate-latent-dataset:
+	@echo "--> Generating latent dataset for CarRacing..."
+	python -m src.pipelines.carracing.create_latent_dataset
+
 generate-car-dataset: ENV=$(CAR_ENV)
-generate-car-dataset: generate-dataset
+generate-car-dataset: generate-dataset mix-car-dataset generate-vae-training-dataset
 
 generate-mountain-dataset: ENV=$(MOUNTAIN_ENV)
 generate-mountain-dataset: generate-dataset
@@ -152,18 +168,17 @@ push-dataset:
 	@echo "--> Pushing $(ENV) to the $(CATEGORY) category..."
 	@minari upload $(CATEGORY)/$(ENV)/$(LEVEL)-v0 --key-path $(HF_TOKEN)
 
-push-lunar-dataset:    ENV=$(LUNAR_ENV)
-push-lunar-dataset: push-dataset
+push-lunar-dataset:
+	@$(MAKE) push-dataset ENV=$(LUNAR_ENV)
 
-push-bipedal-dataset:  ENV=$(BIPEDAL_ENV)
-push-bipedal-dataset: push-dataset
+push-bipedal-dataset:
+	@$(MAKE) push-dataset ENV=$(BIPEDAL_ENV)
 
-push-car-dataset:      ENV=$(CAR_ENV)
-push-car-dataset: push-dataset
+push-car-dataset:
+	@$(MAKE) push-dataset ENV=$(CAR_ENV)
 
-push-mountain-dataset: ENV=$(MOUNTAIN_ENV)
-push-mountain-dataset: CATEGORY= ClassicControl
-push-mountain-dataset: push-dataset
+push-mountain-dataset:
+	@$(MAKE) push-dataset ENV=$(MOUNTAIN_ENV) CATEGORY=ClassicControl
 
 push-all-datasets: push-lunar-dataset push-bipedal-dataset push-car-dataset push-mountain-dataset
 
@@ -180,9 +195,11 @@ download-ClassicControl:
 download-Box2D: CATEGORY=Box2D
 download-Box2D:
 	@echo "Downloading all $(CATEGORY) datasets..."
-	minari download $(CATEGORY)/$(LUNAR_ENV)/$(LEVEL)-v0
-	minari download $(CATEGORY)/$(BIPEDAL_ENV)/$(LEVEL)-v0
-	minari download $(CATEGORY)	/$(CAR_ENV)/$(LEVEL)-v0
+	minari download $(CATEGORY)/$(LUNAR_ENV)/expert-v0
+	minari download $(CATEGORY)/$(BIPEDAL_ENV)/expert-v0
+	minari download $(CATEGORY)/$(CAR_ENV)/expert-v0
+	minari download $(CATEGORY)/$(CAR_ENV)/mixed-v0
+	minari download $(CATEGORY)/$(CAR_ENV)/simple-v0
 
 download-agents:
 	@echo "Downloading trained-agents..."

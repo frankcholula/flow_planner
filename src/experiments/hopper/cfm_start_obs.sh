@@ -1,3 +1,4 @@
+#!/bin/bash
 python -m src.run \
     --environment "hopper-v5" \
     --horizon 100 \
