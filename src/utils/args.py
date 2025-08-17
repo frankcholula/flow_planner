@@ -40,7 +40,7 @@ def parse_fm_args() -> argparse.Namespace:
     training_args.add_argument("--hidden-dim", type=int, default=128)
     training_args.add_argument("--lr", type=float, default=1e-3)
     training_args.add_argument(
-        "--model-type", type=str, default="ccnn", choices=["mlp", "cnn", "ccnn"]
+        "--model-type", type=str, default="ccnn", choices=["mlp", "cnn", "ccnn", "unet"]
     )
     training_args.add_argument(
         "--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu"
