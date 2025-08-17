@@ -57,7 +57,7 @@ def build_model(args, obs_dim, action_dim):
             cond_dim = obs_dim * 2
         else:
             raise ValueError(
-                "ConditionalCNN requires a valid --condition-on argument ('reward', 'start_obs', 'start_obs_goal')"
+                f"ConditionalCNN requires a valid --condition-on argument ('reward', 'start_obs', 'start_obs_goal'). Got: {args.condition_on!r}"
             )
         model = ConditionalCNN(
             input_dim=input_dim,
