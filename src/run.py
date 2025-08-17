@@ -43,24 +43,6 @@ def build_model(args, obs_dim, action_dim):
         raise ValueError(f"Invalid chunk_type: {args.chunk_type}")
     print(f"Input dimension for the model: {input_dim}")
 
-<<<<<<< HEAD
-    # load the dataset and stats based on config
-    generator = None
-    if args.device == "cuda":
-        generator = torch.Generator(device=args.device)
-
-    dataloader = DataLoader(
-        dataset,
-        batch_size=args.batch_size,
-        shuffle=True,
-        collate_fn=collate_fn,
-        generator=generator,
-    )
-    stats = get_dataset_stats(dataset)
-
-    # Setting up models
-=======
->>>>>>> main
     if args.model_type == "mlp":
         model = MLP(input_dim=input_dim, time_dim=1, hidden_dim=args.hidden_dim).to(
             args.device
