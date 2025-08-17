@@ -149,7 +149,7 @@ generate-vae-training-dataset:
 
 mix-car-dataset:
 	@echo "--> Mixing CarRacing datasets..."
-	minari combine Box2D/CarRacing-v3/expert-v0 Box2D/CarRacing-v3/simple-v0 Box2D/CarRacing-v3/mixed-v0
+	minari combine Box2D/CarRacing-v3/expert-v0 Box2D/CarRacing-v3/simple-v0 --dataset-name Box2D/CarRacing-v3/mixed-v0
 
 generate-car-dataset: ENV=$(CAR_ENV)
 generate-car-dataset: generate-dataset mix-car-dataset generate-vae-training-dataset
