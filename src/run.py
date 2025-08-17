@@ -21,11 +21,11 @@ from src.pipelines.preprocessing import (
     get_dataset_stats,
     create_normalized_chunks,
 )
-from src.pipelines.eval import evaluate_open_loop, evaluate_policy_mpc
+from src.pipelines.eval import evaluate_open_loop
 from matplotlib import pyplot as plt
 
 
-def train(config, args, dataset, logger):
+def train(config, args, dataset, logger=None, run_name="run"):
     # parsing some configs
     obs_dim = config.obs_dim
     action_dim = config.action_dim
@@ -109,16 +109,17 @@ def train(config, args, dataset, logger):
     optim = torch.optim.Adam(model.parameters(), lr=args.lr)
 
     # checkpoints and model saving
-    model_name = logger.run.name + ".pth"
+    model_name = f"{run_name}.pth"
     save_dir = "src/checkpoints"
     model_save_path = os.path.join(save_dir, model_name)
 
     pp = pprint.PrettyPrinter(indent=2)
     print("Training configuration:")
     pp.pprint(config)
-    print("Run name:", logger.run.name)
+    print("Run name:", run_name)
     print("Starting training...")
 
+    env = None
     for epoch in range(args.num_epochs):
         total_loss = 0.0
         total_chunks = 0
@@ -163,7 +164,15 @@ def train(config, args, dataset, logger):
             total_chunks += 1
 
         epoch_loss = total_loss / total_chunks if total_chunks > 0 else 0.0
-        logger.log({"epoch loss": epoch_loss})
+        if logger:
+            logger.log({"epoch loss": epoch_loss})
+        if args.eval_every and (epoch + 1) % args.eval_every == 0:
+            if env is None:
+                env = dataset.recover_environment()
+            fig, ax = evaluate_open_loop(
+                env, model, stats, input_dim, args, logger=logger
+            )
+            plt.close(fig)
         if (epoch + 1) % args.print_every == 0:
             elapsed = time.time() - start_time
             print(
@@ -173,7 +182,8 @@ def train(config, args, dataset, logger):
     print("Training complete. Saving model...")
     os.makedirs(save_dir, exist_ok=True)
     torch.save(model.state_dict(), model_save_path)
-    logger.save_model(model_save_path)
+    if logger:
+        logger.save_model(model_save_path)
     print(f"Model saved to {model_save_path}, training complete.")
     return model, stats, input_dim
 
@@ -194,31 +204,40 @@ def main():
     if args.environment == "LunarLander-v3":
         config = LunarLanderConfig()
     dataset = minari.load_dataset(dataset_id=config.dataset_name)
-    run_name = f"{args.environment}_{args.model_type}_h{args.horizon}_e{args.num_epochs}_k{args.kernel_size}_start_obs"
-    logger = WandBLogger(
-        config={
-            "environment": args.environment,
-            "horizon": args.horizon,
-            "batch_size": args.batch_size,
-            "model_type": args.model_type,
-            "hidden_dim": args.hidden_dim,
-            "kernel_size": (
-                args.kernel_size
-                if args.model_type == "cnn" or args.model_type == "ccnn"
-                else 0
-            ),
-            "num_epochs": args.num_epochs,
-            "lr": args.lr,
-        },
-        run_name=run_name,
+    cond = args.condition_on if args.condition_on else "none"
+    run_name = (
+        f"{args.environment}_{args.model_type}_h{args.horizon}_e{args.num_epochs}_"
+        f"k{args.kernel_size}_chunk-{args.chunk_type}_cond-{cond}"
     )
+    logger = None
+    if not args.no_wandb:
+        logger = WandBLogger(
+            config={
+                "environment": args.environment,
+                "horizon": args.horizon,
+                "batch_size": args.batch_size,
+                "model_type": args.model_type,
+                "hidden_dim": args.hidden_dim,
+                "kernel_size": (
+                    args.kernel_size
+                    if args.model_type == "cnn" or args.model_type == "ccnn"
+                    else 0
+                ),
+                "num_epochs": args.num_epochs,
+                "lr": args.lr,
+            },
+            run_name=run_name,
+        )
     model, stats, input_dim = train(
-        config=config, args=args, dataset=dataset, logger=logger
+        config=config, args=args, dataset=dataset, logger=logger, run_name=run_name
     )
     env = dataset.recover_environment()
-    fig, ax = evaluate_open_loop(env, model, stats, input_dim, args, logger=logger)
+    fig, ax = evaluate_open_loop(
+        env, model, stats, input_dim, args, logger=logger
+    )
     plt.close(fig)
-    logger.finish()
+    if logger:
+        logger.finish()
 
 
 if __name__ == "__main__":
