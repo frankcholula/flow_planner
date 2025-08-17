@@ -147,8 +147,12 @@ generate-vae-training-dataset:
 	@echo "--> Mixing random dataset with expert dataset..."
 	python -m src.pipelines.carracing.mix_datasets
 
+mix-car-dataset:
+	@echo "--> Mixing CarRacing datasets..."
+	minari combine Box2D/CarRacing-v3/expert-v0 Box2D/CarRacing-v3/simple-v0 Box2D/CarRacing-v3/mixed-v0
+
 generate-car-dataset: ENV=$(CAR_ENV)
-generate-car-dataset: generate-dataset generate-vae-training-dataset
+generate-car-dataset: generate-dataset mix-car-dataset generate-vae-training-dataset
 
 generate-mountain-dataset: ENV=$(MOUNTAIN_ENV)
 generate-mountain-dataset: generate-dataset
