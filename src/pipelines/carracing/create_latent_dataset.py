@@ -76,6 +76,10 @@ def create_latent_dataset(vae_model_path, latent_dim=32):
     )
 
 
-if __name__ == "__main__":
+def main():
     VAE_MODEL_PATH = "src/checkpoints/CarRacing-v3_vae_e50_l32_mixed.pth"
     create_latent_dataset(VAE_MODEL_PATH)
+
+
+if __name__ == "__main__":
+    main()
