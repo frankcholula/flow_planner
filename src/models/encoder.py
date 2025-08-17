@@ -25,7 +25,7 @@ class VAE(nn.Module):
             nn.Flatten(),
         )
 
-        # New flattened size for a 64x64 input is 256 * 4 * 4 = 4096
+        # flattened size for a 64x64 input is 256 * 4 * 4 = 4096
         self.fc_mu = nn.Linear(256 * 4 * 4, latent_dim)
         self.fc_log_var = nn.Linear(256 * 4 * 4, latent_dim)
 
@@ -56,7 +56,7 @@ class VAE(nn.Module):
 
     def decode(self, z):
         result = self.decoder_input(z)
-        result = result.view(-1, 256, 4, 4)  # Reshape to the new 4x4 size
+        result = result.view(-1, 256, 4, 4)
         return self.decoder(result)
 
     def forward(self, x):
