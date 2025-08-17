@@ -57,14 +57,15 @@ def create_latent_dataset(vae_model_path, latent_dim=32):
 
     # encode
     episode_buffers = []
-    transform = transforms.ToTensor()
+
+    preprocess = transforms.Compose([transforms.ToTensor(), transforms.CenterCrop(64)])
     print("Encoding all trajectories to latent space...")
     for i, episode in enumerate(
         tqdm(
             source_dataset.iterate_episodes(), total=len(source_dataset.episode_indices)
         )
     ):
-        obs_tensors = torch.stack([transform(obs) for obs in episode.observations]).to(
+        obs_tensors = torch.stack([preprocess(obs) for obs in episode.observations]).to(
             device
         )
         with torch.no_grad():
@@ -76,6 +77,7 @@ def create_latent_dataset(vae_model_path, latent_dim=32):
             "rewards": episode.rewards,
             "terminations": episode.terminations,
             "truncations": episode.truncations,
+            "infos": episode.infos,
         }
 
         episode_data = EpisodeData(id=i, **episode_buffer_dict)
@@ -98,5 +100,5 @@ def create_latent_dataset(vae_model_path, latent_dim=32):
 
 if __name__ == "__main__":
     VAE_MODEL_PATH = "src/checkpoints/CarRacing-v3_vae_e50_l32_mixed.pth"
-    create_mixed_carracing_dataset()
+    # create_mixed_carracing_dataset()
     create_latent_dataset(VAE_MODEL_PATH)
