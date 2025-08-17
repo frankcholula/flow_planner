@@ -1,7 +1,6 @@
 import gymnasium as gym
 import minari
 from tqdm import tqdm
-import minari
 from minari.data_collector import EpisodeBuffer
 from minari import EpisodeData, StepData
 from rl_zoo3.wrappers import YAMLCompatResizeObservation
