@@ -34,7 +34,7 @@ class MinariDataset(Dataset):
         return self.transform(obs)
 
 
-def load_dataset(dataset_name: str):
+def load_dataset(dataset_name: str, batch_size=64):
     minari_dataset = MinariDataset(dataset_name)
     print(f"Total observations: {len(minari_dataset)}")
     print(f"Observation shape: {minari_dataset[0].shape}")
@@ -46,8 +46,6 @@ def load_dataset(dataset_name: str):
 
     print(f"Training set size: {len(train_dataset)}")
     print(f"Validation set size: {len(val_dataset)}")
-
-    batch_size = 64
 
     train_loader = DataLoader(
         train_dataset, batch_size=batch_size, shuffle=True, num_workers=2
