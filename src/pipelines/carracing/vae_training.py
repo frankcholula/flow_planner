@@ -10,6 +10,7 @@ import torch
 import minari
 import random
 import os
+from typing import Tuple
 
 
 class MinariDataset(Dataset):
@@ -36,7 +37,7 @@ class MinariDataset(Dataset):
         return self.transform(obs)
 
 
-def load_dataset(dataset_name: str, batch_size=64):
+def load_dataset(dataset_name: str, batch_size=64) -> Tuple[DataLoader, DataLoader, MinariDataset]:
     minari_dataset = MinariDataset(dataset_name)
     print(f"Total observations: {len(minari_dataset)}")
     print(f"Observation shape: {minari_dataset[0].shape}")
