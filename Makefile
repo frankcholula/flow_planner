@@ -151,6 +151,11 @@ mix-car-dataset:
 	@echo "--> Mixing CarRacing datasets..."
 	minari combine Box2D/CarRacing-v3/expert-v0 Box2D/CarRacing-v3/simple-v0 --dataset-name Box2D/CarRacing-v3/mixed-v0
 
+generate-latent-dataset: ENV=$(CAR_ENV)
+generate-latent-dataset:
+	@echo "--> Generating latent dataset for CarRacing..."
+	python -m src.pipelines.carracing.create_latent_dataset
+
 generate-car-dataset: ENV=$(CAR_ENV)
 generate-car-dataset: generate-dataset mix-car-dataset generate-vae-training-dataset
 
