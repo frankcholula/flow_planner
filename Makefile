@@ -186,9 +186,11 @@ download-ClassicControl:
 download-Box2D: CATEGORY=Box2D
 download-Box2D:
 	@echo "Downloading all $(CATEGORY) datasets..."
-	minari download $(CATEGORY)/$(LUNAR_ENV)/$(LEVEL)-v0
-	minari download $(CATEGORY)/$(BIPEDAL_ENV)/$(LEVEL)-v0
-	minari download $(CATEGORY)/$(CAR_ENV)/$(LEVEL)-v0
+	minari download $(CATEGORY)/$(LUNAR_ENV)/expert-v0
+	minari download $(CATEGORY)/$(BIPEDAL_ENV)/expert-v0
+	minari download $(CATEGORY)/$(CAR_ENV)/expert-v0
+	minari download $(CATEGORY)/$(CAR_ENV)/mixed-v0
+	minari download $(CATEGORY)/$(CAR_ENV)/simple-v0
 
 download-agents:
 	@echo "Downloading trained-agents..."
