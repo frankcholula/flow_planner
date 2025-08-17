@@ -190,14 +190,13 @@ def main():
     torch.manual_seed(args.seed)
     random.seed(args.seed)
     np.random.seed(args.seed)
-
     if args.device:
         torch.set_default_device(args.device)
         print(f"Using device: {args.device}")
 
-    # Load configuration based on the environment using a mapping dictionary
     if args.environment not in env_config_map:
         raise ValueError(f"Unknown environment: {args.environment}")
+
     config = env_config_map[args.environment]()
     dataset = minari.load_dataset(dataset_id=config.dataset_name)
     run_name = f"{args.environment}_{args.model_type}_h{args.horizon}_e{args.num_epochs}_k{args.kernel_size}_{args.condition_on}"
@@ -209,9 +208,7 @@ def main():
             "model_type": args.model_type,
             "hidden_dim": args.hidden_dim,
             "kernel_size": (
-                args.kernel_size
-                if args.model_type == "cnn" or args.model_type == "ccnn"
-                else 0
+                args.kernel_size if args.model_type in ("cnn", "ccnn") else 0
             ),
             "num_epochs": args.num_epochs,
             "lr": args.lr,

@@ -1,14 +1,9 @@
 python -m src.run \
-    --environment "CarRacing-v3" \
-    --horizon 50 \
-    --batch-size 32 \
+    --environment CarRacing-v3 \
+    --horizon 30 \
+    --batch-size 64 \
     --num-epochs 100 \
-    --print-every 10 \
-    --lr 1e-3 \
-    --model-type "ccnn" \
-    --kernel-size 10 \
-    --hidden-dim 128 \
-    --step-size 0.05 \
-    --solver-method "midpoint" \
-    --inference-batch-size 1 \
-    --condition-on "start_obs"
+    --model-type ccnn \
+    --condition-on start_obs \
+    --chunk-type obs_only \
+    --lr 1e-3
