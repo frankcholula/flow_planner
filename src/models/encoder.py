@@ -2,44 +2,45 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch
 
+import torch.nn as nn
+import torch.nn.functional as F
+import torch
+
 
 class VAE(nn.Module):
     def __init__(self, latent_dim=32):
         super(VAE, self).__init__()
         self.latent_dim = latent_dim
 
-        # Encoder
+        # Encoder for 64x64 images
         self.encoder = nn.Sequential(
-            nn.Conv2d(3, 32, kernel_size=4, stride=2, padding=1),  # -> 48x48
+            nn.Conv2d(3, 32, kernel_size=4, stride=2, padding=1),  # -> 32x32
             nn.ReLU(),
-            nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=1),  # -> 24x24
+            nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=1),  # -> 16x16
             nn.ReLU(),
-            nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1),  # -> 12x12
+            nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1),  # -> 8x8
             nn.ReLU(),
-            nn.Conv2d(128, 256, kernel_size=4, stride=2, padding=1),  # -> 6x6
+            nn.Conv2d(128, 256, kernel_size=4, stride=2, padding=1),  # -> 4x4
             nn.ReLU(),
             nn.Flatten(),
         )
 
-        # We need to calculate the flattened size after the conv layers
-        # For a 96x96 input, it becomes 256 * 6 * 6 = 9216
-        self.fc_mu = nn.Linear(256 * 6 * 6, latent_dim)
-        self.fc_log_var = nn.Linear(256 * 6 * 6, latent_dim)
+        # New flattened size for a 64x64 input is 256 * 4 * 4 = 4096
+        self.fc_mu = nn.Linear(256 * 4 * 4, latent_dim)
+        self.fc_log_var = nn.Linear(256 * 4 * 4, latent_dim)
 
         # Decoder
-        self.decoder_input = nn.Linear(latent_dim, 256 * 6 * 6)
+        self.decoder_input = nn.Linear(latent_dim, 256 * 4 * 4)
 
         self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(
-                256, 128, kernel_size=4, stride=2, padding=1
-            ),  # -> 12x12
+            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1),  # -> 8x8
             nn.ReLU(),
-            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),  # -> 24x24
+            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),  # -> 16x16
             nn.ReLU(),
-            nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1),  # -> 48x48
+            nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1),  # -> 32x32
             nn.ReLU(),
-            nn.ConvTranspose2d(32, 3, kernel_size=4, stride=2, padding=1),  # -> 96x96
-            nn.Sigmoid(),  # Sigmoid to output pixel values between 0 and 1
+            nn.ConvTranspose2d(32, 3, kernel_size=4, stride=2, padding=1),  # -> 64x64
+            nn.Sigmoid(),
         )
 
     def encode(self, x):
@@ -55,7 +56,7 @@ class VAE(nn.Module):
 
     def decode(self, z):
         result = self.decoder_input(z)
-        result = result.view(-1, 256, 6, 6)  # Reshape to image format
+        result = result.view(-1, 256, 4, 4)  # Reshape to the new 4x4 size
         return self.decoder(result)
 
     def forward(self, x):
