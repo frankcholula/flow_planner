@@ -13,7 +13,7 @@ class LunarLanderConfig:
 @dataclass
 class CarRacingConfig:
     env_name: str = "CarRacing-v3"
-    dataset_name: str = "Box2D/CarRacing-v3/expert-v0"
+    dataset_name: str = "Box2D/CarRacing-v3/latent-v0"
     obs_dim: int = 32
     action_dim: int = 3
     category: str = "Box2D"
