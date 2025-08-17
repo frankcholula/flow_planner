@@ -12,7 +12,7 @@ LUNAR_ENV := LunarLanderContinuous-v3
 BIPEDAL_ENV := BipedalWalker-v3
 CAR_ENV := CarRacing-v3
 MOUNTAIN_ENV := MountainCarContinuous-v0
-TOTAL_EPISODES := 250
+TOTAL_EPISODES := 500
 LEVEL ?= expert
 ARCH := $(shell uname -m)
 
@@ -27,6 +27,7 @@ endif
 	enjoy enjoy-lunar enjoy-bipedal enjoy-car enjoy-mountain \
 	push-model push-all-models push-car-model push-bipedal-model push-lunar-model push-mountain-model \
 	generate-dataset generate-all-datasets \
+	push-datasets push-all-datasets push-lunar-dataset push-bipedal-dataset push-car-dataset push-mountain-dataset \
 	download-datasets download-Box2D download-ClassicControl
 
 .DEFAULT_GOAL := help
@@ -158,18 +159,17 @@ push-dataset:
 	@echo "--> Pushing $(ENV) to the $(CATEGORY) category..."
 	@minari upload $(CATEGORY)/$(ENV)/$(LEVEL)-v0 --key-path $(HF_TOKEN)
 
-push-lunar-dataset:    ENV=$(LUNAR_ENV)
-push-lunar-dataset: push-dataset
+push-lunar-dataset:
+	@$(MAKE) push-dataset ENV=$(LUNAR_ENV)
 
-push-bipedal-dataset:  ENV=$(BIPEDAL_ENV)
-push-bipedal-dataset: push-dataset
+push-bipedal-dataset:
+	@$(MAKE) push-dataset ENV=$(BIPEDAL_ENV)
 
-push-car-dataset:      ENV=$(CAR_ENV)
-push-car-dataset: push-dataset
+push-car-dataset:
+	@$(MAKE) push-dataset ENV=$(CAR_ENV)
 
-push-mountain-dataset: ENV=$(MOUNTAIN_ENV)
-push-mountain-dataset: CATEGORY= ClassicControl
-push-mountain-dataset: push-dataset
+push-mountain-dataset:
+	@$(MAKE) push-dataset ENV=$(MOUNTAIN_ENV) CATEGORY=ClassicControl
 
 push-all-datasets: push-lunar-dataset push-bipedal-dataset push-car-dataset push-mountain-dataset
 
