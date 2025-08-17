@@ -157,28 +157,28 @@ def eval(config, dataset, logger, model: VAE = None, model_path=None):
     model.eval()
 
     sample_idx = random.choice(range(len(dataset)))
-    sample_obs_np = dataset.observations[sample_idx]
     image_tensor = dataset[sample_idx]
+    before_img = image_tensor.permute(1, 2, 0).numpy()
     image = image_tensor.unsqueeze(0).to(device)
 
     with torch.no_grad():
         mu, _ = model.encode(image)
         reconstructed_image_tensor = model.decode(mu)
 
-    reconstructed_image_np = (
+    reconstructed_img = (
         reconstructed_image_tensor.cpu().squeeze(0).permute(1, 2, 0).numpy()
     )
 
     fig, axes = plt.subplots(1, 2, figsize=(8, 4))
-    axes[0].imshow(sample_obs_np)
+    axes[0].imshow(before_img)
     axes[0].set_title("Before")
     axes[0].axis("off")
 
-    axes[1].imshow(reconstructed_image_np)
+    axes[1].imshow(reconstructed_img)
     axes[1].set_title("After")
     axes[1].axis("off")
 
-    logger.log({"Reconstruction": fig})
+    logger.log({"Reconstruction Result": fig})
     plt.close(fig)
 
 
