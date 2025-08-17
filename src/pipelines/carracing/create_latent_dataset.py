@@ -60,7 +60,6 @@ def create_latent_dataset(vae_model_path, latent_dim=32):
             truncations=episode.truncations,
             infos=episode.infos,
         )
-        print(f"Encoded episode {episode.id} to latent space.")
         episode_buffers.append(episode_data)
 
     minari_env = create_env(vae_model_path, latent_dim, device)
