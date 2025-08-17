@@ -6,6 +6,7 @@ from torchvision import transforms
 from src.models.encoder import VAE
 from tqdm import tqdm
 import minari
+from minari import EpisodeData
 
 
 class VAEObservationWrapper(gym.ObservationWrapper):
@@ -50,26 +51,29 @@ def create_latent_dataset(vae_model_path, latent_dim=32):
 
     # encode
     episode_buffers = []
+    transform = transforms.ToTensor()
     print("Encoding all trajectories to latent space...")
-    for episode in tqdm(
-        source_dataset.iterate_episodes(), total=len(source_dataset.episode_indices)
+    for i, episode in enumerate(
+        tqdm(
+            source_dataset.iterate_episodes(), total=len(source_dataset.episode_indices)
+        )
     ):
-        transform = transforms.ToTensor()
         obs_tensors = torch.stack([transform(obs) for obs in episode.observations]).to(
             device
         )
         with torch.no_grad():
             latent_vectors, _ = vae.encode(obs_tensors)
 
-        # Create the episode buffer dictionary
-        episode_buffer = {
+        episode_buffer_dict = {
             "observations": latent_vectors.cpu().numpy(),
             "actions": episode.actions,
             "rewards": episode.rewards,
             "terminations": episode.terminations,
             "truncations": episode.truncations,
         }
-        episode_buffers.append(episode_buffer)
+
+        episode_data = EpisodeData(id=i, **episode_buffer_dict)
+        episode_buffers.append(episode_data)
 
     base_env = gym.make("CarRacing-v3", render_mode="rgb_array", continuous=True)
     minari_env = VAEObservationWrapper(
@@ -84,10 +88,12 @@ def create_latent_dataset(vae_model_path, latent_dim=32):
     latent_dataset = minari.create_dataset_from_buffers(
         dataset_id=latent_dataset_id,
         buffer=episode_buffers,
-        env=minari_env,
+        eval_env=minari_env,
         algorithm_name="PPO",
         description="VAE-Encoded PPO Expert",
+        code_permalink="https://github.com/frankcholula/flow_planner",
         author="Frank Lu",
+        author_email="lu.phrank@gmail.com",
     )
 
 
