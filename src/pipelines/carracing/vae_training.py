@@ -14,7 +14,7 @@ import os
 
 class MinariDataset(Dataset):
     def __init__(self, dataset_name, num_episodes=250, seed=42, crop_size=64):
-        print(f"Loading Minari dataset '{dataset_name}'...")
+        print(f"Loading Minari dataset '{dataset_name}' with {num_episodes} episodes...")
         full_dataset = minari.load_dataset(dataset_name)
         dataset = minari.split_dataset(
             dataset=full_dataset, sizes=(num_episodes,), seed=seed
