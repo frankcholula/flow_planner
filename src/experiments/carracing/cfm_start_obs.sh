@@ -13,9 +13,10 @@
 # unet
 python -m src.run \
     --environment CarRacing-v3 \
-    --horizon 30 \
-    --batch-size 64 \
+    --horizon 25 \
+    --batch-size 32 \
     --num-epochs 100 \
+    --print-every 10 \
     --model-type unet \
     --condition-on start_obs \
     --chunk-type obs_only \

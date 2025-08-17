@@ -84,5 +84,4 @@ def parse_fm_args() -> argparse.Namespace:
         choices=["obs_only", "act_only", "obs_act"],
         help="Chunk type for trajectory generation.",
     )
-
     return parser.parse_args()
