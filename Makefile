@@ -12,7 +12,7 @@ LUNAR_ENV := LunarLanderContinuous-v3
 BIPEDAL_ENV := BipedalWalker-v3
 CAR_ENV := CarRacing-v3
 MOUNTAIN_ENV := MountainCarContinuous-v0
-TOTAL_EPISODES := 1_000
+TOTAL_EPISODES := 250
 LEVEL ?= expert
 ARCH := $(shell uname -m)
 
