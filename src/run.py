@@ -121,33 +121,33 @@ def train(config, args, dataset, logger):
 
     for epoch in range(args.num_epochs):
         total_loss = 0.0
-        total_chunks = 0
+        num_batches = 0  # track number of processed batches
         start_time = time.time()
         for batch in dataloader:
             optim.zero_grad()
 
             if args.condition_on:
-                x1, c = create_normalized_chunks(
+                data_chunk, c = create_normalized_chunks(
                     batch,
                     args.horizon,
                     stats,
                     cond_type=args.condition_on,
                     chunk_type=args.chunk_type,
                 )
-                if x1 is None:
+                if data_chunk is None:
                     continue
-                x1, c = x1.to(args.device), c.to(args.device)
+                data_chunk, c = data_chunk.to(args.device), c.to(args.device)
             else:
-                x1 = create_normalized_chunks(
+                data_chunk = create_normalized_chunks(
                     batch, args.horizon, stats, chunk_type=args.chunk_type
                 )
-                if x1 is None:
+                if data_chunk is None:
                     continue
-                x1 = x1.to(args.device)
+                data_chunk = data_chunk.to(args.device)
 
-            x0 = torch.randn_like(x1)
-            t = torch.rand(x1.shape[0], device=args.device)
-            sample = path.sample(t=t, x_0=x0, x_1=x1)
+            noise = torch.randn_like(data_chunk)
+            t = torch.rand(data_chunk.shape[0], device=args.device)
+            sample = path.sample(t=t, x_0=noise, x_1=data_chunk)
 
             if args.condition_on:
                 pred = model(sample.x_t, sample.t, c=c)
@@ -160,9 +160,9 @@ def train(config, args, dataset, logger):
             loss.backward()
             optim.step()
             total_loss += loss.item()
-            total_chunks += 1
+            num_batches += 1
 
-        epoch_loss = total_loss / total_chunks if total_chunks > 0 else 0.0
+        epoch_loss = total_loss / num_batches if num_batches > 0 else 0.0
         logger.log({"epoch loss": epoch_loss})
         if (epoch + 1) % args.print_every == 0:
             elapsed = time.time() - start_time
