@@ -22,7 +22,7 @@ def create_env(vae_model_path, latent_dim, device, input_dim=64):
     return minari_env
 
 
-def create_latent_dataset(vae_model_path, latent_dim=32):
+def create_latent_dataset(vae_model_path, latent_dim=16):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # load vae model
     print(f"Loading VAE from {vae_model_path}")
@@ -78,8 +78,8 @@ def create_latent_dataset(vae_model_path, latent_dim=32):
 
 
 def main():
-    VAE_MODEL_PATH = "src/checkpoints/CarRacing-v3_vae_e50_l32_mixed.pth"
-    create_latent_dataset(VAE_MODEL_PATH)
+    VAE_MODEL_PATH = "src/checkpoints/CarRacing-v3_vae_e50_l16_mixed.pth"
+    create_latent_dataset(VAE_MODEL_PATH, latent_dim=16)
 
 
 if __name__ == "__main__":
