@@ -15,7 +15,9 @@ from typing import Tuple
 
 class MinariDataset(Dataset):
     def __init__(self, dataset_name, num_episodes=250, seed=42, crop_size=64):
-        print(f"Loading Minari dataset '{dataset_name}' with {num_episodes} episodes...")
+        print(
+            f"Loading Minari dataset '{dataset_name}' with {num_episodes} episodes..."
+        )
         full_dataset = minari.load_dataset(dataset_name)
         dataset = minari.split_dataset(
             dataset=full_dataset, sizes=(num_episodes,), seed=seed
@@ -37,7 +39,9 @@ class MinariDataset(Dataset):
         return self.transform(obs)
 
 
-def load_dataset(dataset_name: str, batch_size=64) -> Tuple[DataLoader, DataLoader, MinariDataset]:
+def load_dataset(
+    dataset_name: str, batch_size=64
+) -> Tuple[DataLoader, DataLoader, MinariDataset]:
     minari_dataset = MinariDataset(dataset_name)
     print(f"Total observations: {len(minari_dataset)}")
     print(f"Observation shape: {minari_dataset[0].shape}")
@@ -79,7 +83,7 @@ def train(
     lr = config.lr
     latent_dim = config.latent_dim
     beta = config.beta
-
+    print(config)
     # Setup
     run_name = f"CarRacing-v3_vae_e{epochs}_l{latent_dim}_mixed"
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -87,7 +91,6 @@ def train(
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     logger = WandBLogger(config=config, run_name=run_name)
     MODEL_SAVE_PATH = os.path.join("src/checkpoints", f"{run_name}.pth")
-
     best_val_loss = float("inf")
     for epoch in range(epochs):
         # training
