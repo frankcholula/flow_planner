@@ -194,7 +194,26 @@ def main():
     if args.environment == "LunarLander-v3":
         config = LunarLanderConfig()
     dataset = minari.load_dataset(dataset_id=config.dataset_name)
-    run_name = f"{args.environment}_{args.model_type}_h{args.horizon}_e{args.num_epochs}_k{args.kernel_size}_start_obs"
+
+    # Build a descriptive run name based on provided arguments.
+    run_name_parts = [
+        args.environment,
+        args.model_type,
+        f"h{args.horizon}",
+        f"e{args.num_epochs}",
+    ]
+
+    # Include kernel size only for CNN-based models.
+    if args.model_type in {"cnn", "ccnn"}:
+        run_name_parts.append(f"k{args.kernel_size}")
+
+    # Append chunk type and conditioning information when available.
+    if getattr(args, "chunk_type", None):
+        run_name_parts.append(args.chunk_type)
+    if getattr(args, "condition_on", None):
+        run_name_parts.append(args.condition_on)
+
+    run_name = "_".join(run_name_parts)
     logger = WandBLogger(
         config={
             "environment": args.environment,
