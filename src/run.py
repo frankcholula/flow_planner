@@ -169,7 +169,6 @@ def train(config, args, dataset, logger):
     pp = pprint.PrettyPrinter(indent=2)
     print("Training configuration:")
     pp.pprint(config)
-    print("Run name:", run_name)
     print("Starting training...")
 
     env = None
@@ -231,7 +230,10 @@ def main():
             run_name=run_name,
         )
     model, stats, input_dim = train(
-        config=config, args=args, dataset=dataset, logger=logger, run_name=run_name
+        config=config,
+        args=args,
+        dataset=dataset,
+        logger=logger,
     )
     env = dataset.recover_environment()
     fig, ax = evaluate_open_loop(env, model, stats, input_dim, args, logger=logger)

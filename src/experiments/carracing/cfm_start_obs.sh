@@ -14,7 +14,7 @@
 python -m src.run \
     --environment CarRacing-v3 \
     --horizon 25 \
-    --batch-size 32 \
+    --batch-size 64 \
     --num-epochs 100 \
     --print-every 10 \
     --model-type unet \
