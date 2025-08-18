@@ -8,7 +8,9 @@ def parse_vae_args() -> argparse.Namespace:
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--latent_dim", type=int, default=32)
     parser.add_argument("--beta", type=float, default=1.0)
-    parser.add_argument("--dataset_name", type=str, default="Box2D/CarRacing-v3/mixed-v0")
+    parser.add_argument(
+        "--dataset_name", type=str, default="Box2D/CarRacing-v3/mixed-v0"
+    )
     return parser.parse_args()
 
 
@@ -24,7 +26,7 @@ def parse_agent_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def parse_args() -> argparse.Namespace:
+def parse_fm_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Flow matching trajectory generation.")
 
     training_args = parser.add_argument_group("Training arguments")
@@ -35,10 +37,26 @@ def parse_args() -> argparse.Namespace:
     training_args.add_argument("--batch-size", type=int, default=32)
     training_args.add_argument("--num-epochs", type=int, default=100)
     training_args.add_argument("--print-every", type=int, default=10)
+    training_args.add_argument(
+        "--eval-every",
+        type=int,
+        default=0,
+        help="Evaluate model every N epochs (0 to disable)",
+    )
     training_args.add_argument("--hidden-dim", type=int, default=128)
     training_args.add_argument("--lr", type=float, default=1e-3)
     training_args.add_argument(
-        "--model-type", type=str, default="ccnn", choices=["mlp", "cnn", "ccnn"]
+        "--model-type",
+        type=str,
+        default="ccnn",
+        choices=["mlp", "cnn", "ccnn", "unet"],
+    )
+    training_args.add_argument(
+        "--chunk-type",
+        type=str,
+        default="obs_act",
+        choices=["obs_act", "obs_only", "act_only"],
+        help="Type of data chunks to use",
     )
     training_args.add_argument(
         "--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu"
@@ -71,8 +89,15 @@ def parse_args() -> argparse.Namespace:
     conditional_args.add_argument(
         "--condition-on",
         type=str,
-        default="reward",
-        choices=["reward", "start_obs"],
+        default=None,
+        choices=["reward", "start_obs", "start_obs_goal"],
         help="Condition type for trajectory generation.",
+    )
+    conditional_args.add_argument(
+        "--chunk-type",
+        type=str,
+        default="obs_only",
+        choices=["obs_only", "act_only", "obs_act"],
+        help="Chunk type for trajectory generation.",
     )
     return parser.parse_args()

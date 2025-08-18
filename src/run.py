@@ -9,28 +9,31 @@ import torch
 from torch.utils.data import DataLoader
 
 from src.models.backbone import MLP, CNN, ConditionalCNN, ConditionalUNet1D
-from src.utils.args import parse_args
+from src.utils.args import parse_fm_args
 from src.utils.loggers import WandBLogger
 
 from flow_matching.path.scheduler import CondOTScheduler
 from flow_matching.path import AffineProbPath
 
-from src.conf.environment import LunarLanderConfig
+from src.conf.environment import BipedalWalkerConfig, CarRacingConfig, LunarLanderConfig
 from src.pipelines.preprocessing import (
     collate_fn,
     get_dataset_stats,
     create_normalized_chunks,
 )
-from src.pipelines.eval import evaluate_open_loop, evaluate_policy_mpc
+from src.pipelines.eval import evaluate_open_loop
 from matplotlib import pyplot as plt
 
+env_config_map = {
+    "LunarLander-v3": LunarLanderConfig,
+    "CarRacing-v3": CarRacingConfig,
+    "BipedalWalker-v3": BipedalWalkerConfig,
+}
 
-def train(config, args, dataset, logger):
-    # parsing some configs
-    obs_dim = config.obs_dim
-    action_dim = config.action_dim
+
+def build_model(args, obs_dim, action_dim):
     horizon = args.horizon
-    if args.chunk_type == "obs_act":        
+    if args.chunk_type == "obs_act":
         input_dim = (obs_dim + action_dim) * horizon
     elif args.chunk_type == "obs_only":
         input_dim = obs_dim * horizon
@@ -40,20 +43,6 @@ def train(config, args, dataset, logger):
         raise ValueError(f"Invalid chunk_type: {args.chunk_type}")
     print(f"Input dimension for the model: {input_dim}")
 
-    # load the dataset and stats based on config
-    generator = None
-    if args.device == "cuda":
-        generator = torch.Generator(device=args.device)
-    dataloader = DataLoader(
-        dataset,
-        batch_size=args.batch_size,
-        shuffle=True,
-        collate_fn=collate_fn,
-        generator=generator,
-    )
-    stats = get_dataset_stats(dataset)
-
-    # Setting up models
     if args.model_type == "mlp":
         model = MLP(input_dim=input_dim, time_dim=1, hidden_dim=args.hidden_dim).to(
             args.device
@@ -74,8 +63,7 @@ def train(config, args, dataset, logger):
             cond_dim = obs_dim * 2
         else:
             raise ValueError(
-                f"ConditionalCNN requires a valid --condition-on argument ('reward', 'start_obs', 'start_obs_goal'), "
-                f"but got: {args.condition_on}"
+                f"ConditionalCNN requires a valid --condition-on argument ('reward', 'start_obs', 'start_obs_goal'). Got: {args.condition_on!r}"
             )
         model = ConditionalCNN(
             input_dim=input_dim,
@@ -94,8 +82,7 @@ def train(config, args, dataset, logger):
             cond_dim = obs_dim * 2
         else:
             raise ValueError(
-                f"UNet1D requires a valid --condition-on argument ('reward', 'start_obs', 'start_obs_goal'), "
-                f"but got: {args.condition_on}"
+                f"UNet1D requires a valid --condition-on argument ('reward', 'start_obs', 'start_obs_goal'), but got: {args.condition_on!r}"
             )
         model = ConditionalUNet1D(
             input_dim=input_dim,
@@ -105,10 +92,76 @@ def train(config, args, dataset, logger):
             fusion_strategy="concat",
             use_mlp_embedding=False,
         ).to(args.device)
+    else:
+        raise ValueError(f"Invalid model_type: {args.model_type}")
+    return model, input_dim
+
+
+def build_dataloader(dataset, args):
+    generator = torch.Generator(device=args.device) if args.device == "cuda" else None
+    dataloader = DataLoader(
+        dataset,
+        batch_size=args.batch_size,
+        shuffle=True,
+        collate_fn=collate_fn,
+        generator=generator,
+    )
+    stats = get_dataset_stats(dataset)
+    return dataloader, stats
+
+
+def run_epoch(model, dataloader, path, optim, args, stats):
+    total_loss = 0.0
+    total_chunks = 0
+    for batch in dataloader:
+        optim.zero_grad()
+
+        if args.condition_on:
+            x1, c = create_normalized_chunks(
+                batch,
+                args.horizon,
+                stats,
+                cond_type=args.condition_on,
+                chunk_type=args.chunk_type,
+            )
+            if x1 is None:
+                continue
+            x1, c = x1.to(args.device), c.to(args.device)
+        else:
+            x1 = create_normalized_chunks(
+                batch, args.horizon, stats, chunk_type=args.chunk_type
+            )
+            if x1 is None:
+                continue
+            x1 = x1.to(args.device)
+
+        x0 = torch.randn_like(x1)
+        t = torch.rand(x1.shape[0], device=args.device)
+        sample = path.sample(t=t, x_0=x0, x_1=x1)
+
+        if args.condition_on:
+            pred = model(sample.x_t, sample.t, c=c)
+        else:
+            pred = model(sample.x_t, sample.t)
+
+        loss = torch.pow(pred - sample.dx_t, 2).mean()
+        loss.backward()
+        optim.step()
+        total_loss += loss.item()
+        total_chunks += 1
+
+    return total_loss / total_chunks if total_chunks > 0 else 0.0
+
+
+def train(config, args, dataset, logger):
+    obs_dim = config.obs_dim
+    action_dim = config.action_dim
+
+    model, input_dim = build_model(args, obs_dim, action_dim)
+    dataloader, stats = build_dataloader(dataset, args)
     path = AffineProbPath(scheduler=CondOTScheduler())
     optim = torch.optim.Adam(model.parameters(), lr=args.lr)
 
-    # checkpoints and model saving
     model_name = logger.run.name + ".pth"
     save_dir = "src/checkpoints"
     model_save_path = os.path.join(save_dir, model_name)
@@ -116,109 +169,77 @@ def train(config, args, dataset, logger):
     pp = pprint.PrettyPrinter(indent=2)
     print("Training configuration:")
     pp.pprint(config)
-    print("Run name:", logger.run.name)
+    print("Run name:", run_name)
     print("Starting training...")
 
+    env = None
     for epoch in range(args.num_epochs):
-        total_loss = 0.0
-        num_batches = 0  # track number of processed batches
         start_time = time.time()
-        for batch in dataloader:
-            optim.zero_grad()
-
-            if args.condition_on:
-                data_chunk, c = create_normalized_chunks(
-                    batch,
-                    args.horizon,
-                    stats,
-                    cond_type=args.condition_on,
-                    chunk_type=args.chunk_type,
-                )
-                if data_chunk is None:
-                    continue
-                data_chunk, c = data_chunk.to(args.device), c.to(args.device)
-            else:
-                data_chunk = create_normalized_chunks(
-                    batch, args.horizon, stats, chunk_type=args.chunk_type
-                )
-                if data_chunk is None:
-                    continue
-                data_chunk = data_chunk.to(args.device)
-
-            noise = torch.randn_like(data_chunk)
-            t = torch.rand(data_chunk.shape[0], device=args.device)
-            sample = path.sample(t=t, x_0=noise, x_1=data_chunk)
-
-            if args.condition_on:
-                pred = model(sample.x_t, sample.t, c=c)
-            else:
-                pred = model(sample.x_t, sample.t)
-
-            loss = torch.pow(pred - sample.dx_t, 2).mean()
-            # for debugging
-            # print(f"Epoch {epoch+1}, Batch Loss: {loss.item():.4f}")
-            loss.backward()
-            optim.step()
-            total_loss += loss.item()
-            num_batches += 1
-
-        epoch_loss = total_loss / num_batches if num_batches > 0 else 0.0
+        epoch_loss = run_epoch(model, dataloader, path, optim, args, stats)
         logger.log({"epoch loss": epoch_loss})
         if (epoch + 1) % args.print_every == 0:
             elapsed = time.time() - start_time
             print(
                 f"| Epoch {epoch+1:6d} | {elapsed:.2f} s/epoch | Loss {epoch_loss:8.5f} |"
             )
-            start_time = time.time()
+
     print("Training complete. Saving model...")
     os.makedirs(save_dir, exist_ok=True)
     torch.save(model.state_dict(), model_save_path)
-    logger.save_model(model_save_path)
+    if logger:
+        logger.save_model(model_save_path)
     print(f"Model saved to {model_save_path}, training complete.")
     return model, stats, input_dim
 
 
 def main():
-    args = parse_args()
-
-    # Set random seeds for reproducibility
+    args = parse_fm_args()
     torch.manual_seed(args.seed)
     random.seed(args.seed)
     np.random.seed(args.seed)
-    # set device
     if args.device:
         torch.set_default_device(args.device)
         print(f"Using device: {args.device}")
 
-    # Load configuration based on the environment
-    if args.environment == "LunarLander-v3":
-        config = LunarLanderConfig()
+    if args.environment not in env_config_map:
+        raise ValueError(f"Unknown environment: {args.environment}")
+
+    config = env_config_map[args.environment]()
     dataset = minari.load_dataset(dataset_id=config.dataset_name)
-    run_name = f"{args.environment}_{args.model_type}_h{args.horizon}_e{args.num_epochs}_k{args.kernel_size}_start_obs"
-    logger = WandBLogger(
-        config={
-            "environment": args.environment,
-            "horizon": args.horizon,
-            "batch_size": args.batch_size,
-            "model_type": args.model_type,
-            "hidden_dim": args.hidden_dim,
-            "kernel_size": (
-                args.kernel_size
-                if args.model_type == "cnn" or args.model_type == "ccnn"
-                else 0
-            ),
-            "num_epochs": args.num_epochs,
-            "lr": args.lr,
-        },
-        run_name=run_name,
+    cond = args.condition_on if args.condition_on else "none"
+    run_name = (
+        f"{args.environment}_{args.model_type}_h{args.horizon}_e{args.num_epochs}_"
+        f"k{args.kernel_size}_chunk-{args.chunk_type}_cond-{cond}"
     )
+    logger = None
+    if not args.no_wandb:
+        logger = WandBLogger(
+            config={
+                "environment": args.environment,
+                "horizon": args.horizon,
+                "batch_size": args.batch_size,
+                "model_type": args.model_type,
+                "hidden_dim": args.hidden_dim,
+                "kernel_size": (
+                    args.kernel_size
+                    if args.model_type == "cnn" or args.model_type == "ccnn"
+                    else 0
+                ),
+                "num_epochs": args.num_epochs,
+                "lr": args.lr,
+            },
+            run_name=run_name,
+        )
     model, stats, input_dim = train(
-        config=config, args=args, dataset=dataset, logger=logger
+        config=config, args=args, dataset=dataset, logger=logger, run_name=run_name
     )
     env = dataset.recover_environment()
-    fig, ax = evaluate_open_loop(env, model, stats, input_dim, args, logger=logger)
+    fig, ax = evaluate_open_loop(
+        env, model, stats, input_dim, args, logger=logger
+    )
     plt.close(fig)
-    logger.finish()
+    if logger:
+        logger.finish()
 
 
 if __name__ == "__main__":
