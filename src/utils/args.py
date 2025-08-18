@@ -52,11 +52,11 @@ def parse_fm_args() -> argparse.Namespace:
         choices=["mlp", "cnn", "ccnn", "unet"],
     )
     training_args.add_argument(
-        "--chunk-type",
+        "--model-target",
         type=str,
         default="obs_act",
         choices=["obs_act", "obs_only", "act_only"],
-        help="Type of data chunks to use",
+        help="type of target distribution to model",
     )
     training_args.add_argument(
         "--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu"
@@ -92,12 +92,5 @@ def parse_fm_args() -> argparse.Namespace:
         default=None,
         choices=["reward", "start_obs", "start_obs_goal"],
         help="Condition type for trajectory generation.",
-    )
-    conditional_args.add_argument(
-        "--chunk-type",
-        type=str,
-        default="obs_only",
-        choices=["obs_only", "act_only", "obs_act"],
-        help="Chunk type for trajectory generation.",
     )
     return parser.parse_args()

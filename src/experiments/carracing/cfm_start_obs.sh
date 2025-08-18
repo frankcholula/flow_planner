@@ -7,7 +7,7 @@
 #     --num-epochs 100 \
 #     --model-type ccnn \
 #     --condition-on start_obs \
-#     --chunk-type obs_only \
+#     --model-target obs_only \
 #     --lr 1e-3
 
 # unet
@@ -19,5 +19,5 @@ python -m src.run \
     --print-every 10 \
     --model-type unet \
     --condition-on start_obs \
-    --chunk-type obs_only \
+    --model-target obs_only \
     --lr 1e-3
