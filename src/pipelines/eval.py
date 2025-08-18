@@ -26,7 +26,16 @@ def evaluate_open_loop(env, model, stats, input_dim, args, logger=None):
         condition_dict = {"start_obs": torch.from_numpy(start_observation)}
     elif args.condition_on == "start_obs_goal":
         start_observation, _ = env.reset()
-        goal_observation = torch.tensor([0, 0, 0, 0, 0, 0, 1, 1], dtype=torch.float32)
+        if args.environment == "LunarLander-v3":
+            goal_observation = torch.tensor(
+                [0, 0, 0, 0, 0, 0, 1, 1], dtype=torch.float32
+            )
+        elif (
+            args.environment == "BipedalWalker-v3" or args.environment == "CarRacing-v3"
+        ):
+            goal_observation = torch.from_numpy(start_observation)
+        else:
+            raise ValueError(f"Unknown environment: {args.environment}")
         condition_dict = {
             args.condition_on: (torch.from_numpy(start_observation), goal_observation)
         }
