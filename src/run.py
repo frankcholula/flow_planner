@@ -12,6 +12,22 @@ from src.models.backbone import MLP, CNN, ConditionalCNN, ConditionalUNet1D
 from src.utils.args import parse_args
 from src.utils.loggers import WandBLogger
 
+
+class StubLogger:
+    """Lightweight logger that mimics WandBLogger's interface."""
+
+    def __init__(self, run_name: str):
+        self.run = type("Run", (), {"name": run_name})()
+
+    def log(self, data):
+        print(data)
+
+    def save_model(self, model_path):
+        print(f"Model saved to {model_path}")
+
+    def finish(self):
+        pass
+
 from flow_matching.path.scheduler import CondOTScheduler
 from flow_matching.path import AffineProbPath
 
@@ -195,23 +211,26 @@ def main():
         config = LunarLanderConfig()
     dataset = minari.load_dataset(dataset_id=config.dataset_name)
     run_name = f"{args.environment}_{args.model_type}_h{args.horizon}_e{args.num_epochs}_k{args.kernel_size}_start_obs"
-    logger = WandBLogger(
-        config={
-            "environment": args.environment,
-            "horizon": args.horizon,
-            "batch_size": args.batch_size,
-            "model_type": args.model_type,
-            "hidden_dim": args.hidden_dim,
-            "kernel_size": (
-                args.kernel_size
-                if args.model_type == "cnn" or args.model_type == "ccnn"
-                else 0
-            ),
-            "num_epochs": args.num_epochs,
-            "lr": args.lr,
-        },
-        run_name=run_name,
-    )
+    if args.no_wandb:
+        logger = StubLogger(run_name=run_name)
+    else:
+        logger = WandBLogger(
+            config={
+                "environment": args.environment,
+                "horizon": args.horizon,
+                "batch_size": args.batch_size,
+                "model_type": args.model_type,
+                "hidden_dim": args.hidden_dim,
+                "kernel_size": (
+                    args.kernel_size
+                    if args.model_type == "cnn" or args.model_type == "ccnn"
+                    else 0
+                ),
+                "num_epochs": args.num_epochs,
+                "lr": args.lr,
+            },
+            run_name=run_name,
+        )
     model, stats, input_dim = train(
         config=config, args=args, dataset=dataset, logger=logger
     )
