@@ -21,7 +21,7 @@ from src.pipelines.preprocessing import (
     get_dataset_stats,
     create_normalized_chunks,
 )
-from src.pipelines.eval import evaluate_open_loop, evaluate_policy_mpc
+from src.pipelines.eval import evaluate_open_loop
 from matplotlib import pyplot as plt
 
 env_config_map = {
@@ -169,9 +169,10 @@ def train(config, args, dataset, logger):
     pp = pprint.PrettyPrinter(indent=2)
     print("Training configuration:")
     pp.pprint(config)
-    print("Run name:", logger.run.name)
+    print("Run name:", run_name)
     print("Starting training...")
 
+    env = None
     for epoch in range(args.num_epochs):
         start_time = time.time()
         epoch_loss = run_epoch(model, dataloader, path, optim, args, stats)
@@ -185,7 +186,8 @@ def train(config, args, dataset, logger):
     print("Training complete. Saving model...")
     os.makedirs(save_dir, exist_ok=True)
     torch.save(model.state_dict(), model_save_path)
-    logger.save_model(model_save_path)
+    if logger:
+        logger.save_model(model_save_path)
     print(f"Model saved to {model_save_path}, training complete.")
     return model, stats, input_dim
 
@@ -204,29 +206,40 @@ def main():
 
     config = env_config_map[args.environment]()
     dataset = minari.load_dataset(dataset_id=config.dataset_name)
-    run_name = f"{args.environment}_{args.model_type}_h{args.horizon}_e{args.num_epochs}_k{args.kernel_size}_{args.condition_on}"
-    logger = WandBLogger(
-        config={
-            "environment": args.environment,
-            "horizon": args.horizon,
-            "batch_size": args.batch_size,
-            "model_type": args.model_type,
-            "hidden_dim": args.hidden_dim,
-            "kernel_size": (
-                args.kernel_size if args.model_type in ("cnn", "ccnn") else 0
-            ),
-            "num_epochs": args.num_epochs,
-            "lr": args.lr,
-        },
-        run_name=run_name,
+    cond = args.condition_on if args.condition_on else "none"
+    run_name = (
+        f"{args.environment}_{args.model_type}_h{args.horizon}_e{args.num_epochs}_"
+        f"k{args.kernel_size}_chunk-{args.chunk_type}_cond-{cond}"
     )
+    logger = None
+    if not args.no_wandb:
+        logger = WandBLogger(
+            config={
+                "environment": args.environment,
+                "horizon": args.horizon,
+                "batch_size": args.batch_size,
+                "model_type": args.model_type,
+                "hidden_dim": args.hidden_dim,
+                "kernel_size": (
+                    args.kernel_size
+                    if args.model_type == "cnn" or args.model_type == "ccnn"
+                    else 0
+                ),
+                "num_epochs": args.num_epochs,
+                "lr": args.lr,
+            },
+            run_name=run_name,
+        )
     model, stats, input_dim = train(
-        config=config, args=args, dataset=dataset, logger=logger
+        config=config, args=args, dataset=dataset, logger=logger, run_name=run_name
     )
     env = dataset.recover_environment()
-    fig, ax = evaluate_open_loop(env, model, stats, input_dim, args, logger=logger)
+    fig, ax = evaluate_open_loop(
+        env, model, stats, input_dim, args, logger=logger
+    )
     plt.close(fig)
-    logger.finish()
+    if logger:
+        logger.finish()
 
 
 if __name__ == "__main__":
