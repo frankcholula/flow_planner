@@ -31,6 +31,17 @@ env_config_map = {
 }
 
 
+def load_dataset(args):
+    """Load dataset and environment based on the selected environment."""
+    if args.environment not in env_config_map:
+        raise ValueError(f"Unknown environment: {args.environment}")
+
+    config = env_config_map[args.environment]()
+    dataset = minari.load_dataset(dataset_id=config.dataset_name)
+    env = dataset.recover_environment()
+    return config, dataset, env
+
+
 def build_model(args, obs_dim, action_dim):
     horizon = args.horizon
     if args.model_target == "obs_act":
@@ -153,7 +164,13 @@ def run_epoch(model, dataloader, path, optim, args, stats):
     return total_loss / total_chunks if total_chunks > 0 else 0.0
 
 
-def train(config, args, dataset, logger):
+def evaluate(env, model, stats, input_dim, args, logger=None):
+    fig, ax = evaluate_open_loop(env, model, stats, input_dim, args, logger=logger)
+    plt.close(fig)
+    return fig, ax
+
+
+def train(config, args, dataset, env, run_name=None, logger=None):
     obs_dim = config.obs_dim
     action_dim = config.action_dim
 
@@ -162,25 +179,28 @@ def train(config, args, dataset, logger):
     path = AffineProbPath(scheduler=CondOTScheduler())
     optim = torch.optim.Adam(model.parameters(), lr=args.lr)
 
-    model_name = logger.run.name + ".pth"
     save_dir = "src/checkpoints"
-    model_save_path = os.path.join(save_dir, model_name)
+    model_base = run_name if run_name is not None else "model"
+    model_save_path = os.path.join(save_dir, model_base + ".pth")
 
     pp = pprint.PrettyPrinter(indent=2)
     print("Training configuration:")
     pp.pprint(config)
     print("Starting training...")
 
-    env = None
     for epoch in range(args.num_epochs):
         start_time = time.time()
         epoch_loss = run_epoch(model, dataloader, path, optim, args, stats)
-        logger.log({"epoch loss": epoch_loss})
+        if logger:
+            logger.log({"epoch loss": epoch_loss})
         if (epoch + 1) % args.print_every == 0:
             elapsed = time.time() - start_time
             print(
                 f"| Epoch {epoch+1:6d} | {elapsed:.2f} s/epoch | Loss {epoch_loss:8.5f} |"
             )
+
+        if args.eval_every and (epoch + 1) % args.eval_every == 0:
+            evaluate(env, model, stats, input_dim, args, logger=logger)
 
     print("Training complete. Saving model...")
     os.makedirs(save_dir, exist_ok=True)
@@ -199,12 +219,7 @@ def main():
     if args.device:
         torch.set_default_device(args.device)
         print(f"Using device: {args.device}")
-
-    if args.environment not in env_config_map:
-        raise ValueError(f"Unknown environment: {args.environment}")
-
-    config = env_config_map[args.environment]()
-    dataset = minari.load_dataset(dataset_id=config.dataset_name)
+    config, dataset, env = load_dataset(args)
     cond = args.condition_on if args.condition_on else "none"
     run_name = (
         f"{args.environment}_{args.model_type}_h{args.horizon}_e{args.num_epochs}_"
@@ -233,11 +248,11 @@ def main():
         config=config,
         args=args,
         dataset=dataset,
+        env=env,
+        run_name=run_name,
         logger=logger,
     )
-    env = dataset.recover_environment()
-    fig, ax = evaluate_open_loop(env, model, stats, input_dim, args, logger=logger)
-    plt.close(fig)
+    evaluate(env, model, stats, input_dim, args, logger=logger)
     if logger:
         logger.finish()
 
