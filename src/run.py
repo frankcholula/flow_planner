@@ -25,7 +25,7 @@ from src.pipelines.eval import evaluate_open_loop, evaluate_policy_mpc
 from matplotlib import pyplot as plt
 
 
-def train(config, args, dataset, logger):
+def train(config, args, dataset, logger, eval_env=None):
     # parsing some configs
     obs_dim = config.obs_dim
     action_dim = config.action_dim
@@ -164,12 +164,30 @@ def train(config, args, dataset, logger):
 
         epoch_loss = total_loss / total_chunks if total_chunks > 0 else 0.0
         logger.log({"epoch loss": epoch_loss})
+        if eval_env is not None and (epoch + 1) % args.eval_every == 0:
+            model.eval()
+            fig, ax = evaluate_open_loop(
+                eval_env, model, stats, input_dim, args, logger=logger
+            )
+            plt.close(fig)
+            if logger is not None:
+                logger.log({"evaluation_epoch": epoch + 1})
+            model.train()
         if (epoch + 1) % args.print_every == 0:
             elapsed = time.time() - start_time
             print(
-                f"| Epoch {epoch+1:6d} | {elapsed:.2f} s/epoch | Loss {epoch_loss:8.5f} |"
+                f"| Epoch {epoch+1:6d} | {elapsed:.2f} s/epoch | Loss {epoch_loss:8.5f} |",
             )
             start_time = time.time()
+    if eval_env is not None:
+        model.eval()
+        fig, ax = evaluate_open_loop(
+            eval_env, model, stats, input_dim, args, logger=logger
+        )
+        plt.close(fig)
+        if logger is not None:
+            logger.log({"evaluation_epoch": args.num_epochs})
+        model.train()
     print("Training complete. Saving model...")
     os.makedirs(save_dir, exist_ok=True)
     torch.save(model.state_dict(), model_save_path)
@@ -194,6 +212,7 @@ def main():
     if args.environment == "LunarLander-v3":
         config = LunarLanderConfig()
     dataset = minari.load_dataset(dataset_id=config.dataset_name)
+    env = dataset.recover_environment()
     run_name = f"{args.environment}_{args.model_type}_h{args.horizon}_e{args.num_epochs}_k{args.kernel_size}_start_obs"
     logger = WandBLogger(
         config={
@@ -213,11 +232,8 @@ def main():
         run_name=run_name,
     )
     model, stats, input_dim = train(
-        config=config, args=args, dataset=dataset, logger=logger
+        config=config, args=args, dataset=dataset, logger=logger, eval_env=env
     )
-    env = dataset.recover_environment()
-    fig, ax = evaluate_open_loop(env, model, stats, input_dim, args, logger=logger)
-    plt.close(fig)
     logger.finish()
 
 

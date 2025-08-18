@@ -35,6 +35,7 @@ def parse_args() -> argparse.Namespace:
     training_args.add_argument("--batch-size", type=int, default=32)
     training_args.add_argument("--num-epochs", type=int, default=100)
     training_args.add_argument("--print-every", type=int, default=10)
+    training_args.add_argument("--eval-every", type=int, default=10)
     training_args.add_argument("--hidden-dim", type=int, default=128)
     training_args.add_argument("--lr", type=float, default=1e-3)
     training_args.add_argument(
@@ -46,6 +47,12 @@ def parse_args() -> argparse.Namespace:
     training_args.add_argument("--seed", type=int, default=42)
     training_args.add_argument(
         "--no-wandb", action="store_true", help="Disable W&B logging"
+    )
+    training_args.add_argument(
+        "--chunk-type",
+        type=str,
+        default="obs_act",
+        choices=["obs_act", "obs_only", "act_only"],
     )
 
     inference_args = parser.add_argument_group("Inference arguments")
@@ -72,7 +79,7 @@ def parse_args() -> argparse.Namespace:
         "--condition-on",
         type=str,
         default="reward",
-        choices=["reward", "start_obs"],
+        choices=["reward", "start_obs", "start_obs_goal"],
         help="Condition type for trajectory generation.",
     )
     return parser.parse_args()
