@@ -2,7 +2,7 @@ import torch
 
 
 def unnormalize_trajectory(
-    chunk, stats, horizon, obs_dim, action_dim, chunk_type="obs_act"
+    chunk, stats, horizon, obs_dim, action_dim, model_target="obs_act"
 ):
     obs_mean, obs_std = stats["obs_mean"].to(chunk.device), stats["obs_std"].to(
         chunk.device
@@ -13,17 +13,17 @@ def unnormalize_trajectory(
 
     obs, act = None, None
 
-    if chunk_type == "obs_act":
+    if model_target == "obs_act":
         reshaped = chunk.reshape(horizon, obs_dim + action_dim)
         norm_obs = reshaped[:, :obs_dim]
         norm_act = reshaped[:, obs_dim:]
         obs = norm_obs * obs_std + obs_mean
         act = norm_act * act_std + act_mean
-    elif chunk_type == "obs_only":
+    elif model_target == "obs_only":
         reshaped = chunk.reshape(horizon, obs_dim)
         obs = reshaped * obs_std + obs_mean
         act = None
-    elif chunk_type == "act_only":
+    elif model_target == "act_only":
         reshaped = chunk.reshape(horizon, action_dim)
         act = reshaped * act_std + act_mean
         obs = None
@@ -42,7 +42,7 @@ def generate_trajectory(
     batch_size: int = 1,
     step_size: float = 0.05,
     return_intermediates: bool = False,
-    chunk_type: str = "obs_act",
+    model_target: str = "obs_act",
 ):
     # infer obs and action dim from stats
     obs_dim = stats["obs_mean"].shape[0]
@@ -89,6 +89,11 @@ def generate_trajectory(
     }
     sol = solver.sample(**solver_kwargs)
     obs, act = unnormalize_trajectory(
-        sol[0].flatten().detach(), stats, horizon, obs_dim, action_dim, chunk_type=chunk_type
+        sol[0].flatten().detach(),
+        stats,
+        horizon,
+        obs_dim,
+        action_dim,
+        model_target=model_target,
     )
     return obs, act

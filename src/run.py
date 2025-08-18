@@ -1,9 +1,10 @@
 import os
-import minari
 import time
 import random
-import numpy as np
 import pprint
+import minari
+import numpy as np
+from matplotlib import pyplot as plt
 
 import torch
 from torch.utils.data import DataLoader
@@ -22,7 +23,6 @@ from src.pipelines.preprocessing import (
     create_normalized_chunks,
 )
 from src.pipelines.eval import evaluate_open_loop
-from matplotlib import pyplot as plt
 
 env_config_map = {
     "LunarLander-v3": LunarLanderConfig,
@@ -33,14 +33,14 @@ env_config_map = {
 
 def build_model(args, obs_dim, action_dim):
     horizon = args.horizon
-    if args.chunk_type == "obs_act":
+    if args.model_target == "obs_act":
         input_dim = (obs_dim + action_dim) * horizon
-    elif args.chunk_type == "obs_only":
+    elif args.model_target == "obs_only":
         input_dim = obs_dim * horizon
-    elif args.chunk_type == "act_only":
+    elif args.model_target == "act_only":
         input_dim = action_dim * horizon
     else:
-        raise ValueError(f"Invalid chunk_type: {args.chunk_type}")
+        raise ValueError(f"Invalid model_target: {args.model_target}")
     print(f"Input dimension for the model: {input_dim}")
 
     if args.model_type == "mlp":
@@ -122,14 +122,14 @@ def run_epoch(model, dataloader, path, optim, args, stats):
                 args.horizon,
                 stats,
                 cond_type=args.condition_on,
-                chunk_type=args.chunk_type,
+                model_target=args.model_target,
             )
             if x1 is None:
                 continue
             x1, c = x1.to(args.device), c.to(args.device)
         else:
             x1 = create_normalized_chunks(
-                batch, args.horizon, stats, chunk_type=args.chunk_type
+                batch, args.horizon, stats, model_target=args.model_target
             )
             if x1 is None:
                 continue
@@ -209,7 +209,7 @@ def main():
     cond = args.condition_on if args.condition_on else "none"
     run_name = (
         f"{args.environment}_{args.model_type}_h{args.horizon}_e{args.num_epochs}_"
-        f"k{args.kernel_size}_chunk-{args.chunk_type}_cond-{cond}"
+        f"k{args.kernel_size}_chunk-{args.model_target}_cond-{cond}"
     )
     logger = None
     if not args.no_wandb:
@@ -234,9 +234,7 @@ def main():
         config=config, args=args, dataset=dataset, logger=logger, run_name=run_name
     )
     env = dataset.recover_environment()
-    fig, ax = evaluate_open_loop(
-        env, model, stats, input_dim, args, logger=logger
-    )
+    fig, ax = evaluate_open_loop(env, model, stats, input_dim, args, logger=logger)
     plt.close(fig)
     if logger:
         logger.finish()

@@ -84,7 +84,7 @@ def create_trajectory_chunks(batch, horizon):
 
 
 def create_normalized_chunks(
-    batch, horizon, stats, cond_type=None, chunk_type="obs_act"
+    batch, horizon, stats, cond_type=None, model_target="obs_act"
 ):
     """
     Creates normalized chunks of a specified type (obs_act, obs_only, act_only).
@@ -114,14 +114,14 @@ def create_normalized_chunks(
             norm_obs_chunk = (obs_chunk - obs_mean) / obs_std
             norm_act_chunk = (act_chunk - act_mean) / act_std
 
-            if chunk_type == "obs_act":
+            if model_target == "obs_act":
                 chunk = torch.cat([norm_obs_chunk, norm_act_chunk], dim=-1)
-            elif chunk_type == "obs_only":
+            elif model_target == "obs_only":
                 chunk = norm_obs_chunk
-            elif chunk_type == "act_only":
+            elif model_target == "act_only":
                 chunk = norm_act_chunk
             else:
-                raise ValueError(f"Invalid chunk_type: {chunk_type}")
+                raise ValueError(f"Invalid model target: {model_target}")
             all_chunks.append(chunk.flatten())
 
             if cond_type:
@@ -132,9 +132,9 @@ def create_normalized_chunks(
 
                 elif cond_type == "start_obs_goal":
                     start_obs = obs_chunk[0]
-                    if chunk_type == "obs_act" or chunk_type == "obs_only":
+                    if model_target == "obs_act" or model_target == "obs_only":
                         end_obs = obs[length - 1]
-                    elif chunk_type == "act_only":
+                    elif model_target == "act_only":
                         end_obs = obs_chunk[-1]
                     norm_start = (start_obs - obs_mean) / obs_std
                     norm_end = (end_obs - obs_mean) / obs_std
