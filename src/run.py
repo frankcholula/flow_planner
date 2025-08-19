@@ -31,7 +31,7 @@ env_config_map = {
 }
 
 
-def load_dataset(args, env_render_mode="rgb_array", eval_env=True):
+def load_dataset(args, env_render_mode="rgb_array", eval_env=False):
     if args.environment not in env_config_map:
         raise ValueError(f"Unknown environment: {args.environment}")
 
