@@ -73,6 +73,7 @@ def evaluate_policy_mpc(
     max_episode_length=300,
     replan_freq=1,
     render=False,
+    visualize=True,
 ):
     rewards = []
     print(
@@ -115,4 +116,6 @@ def evaluate_policy_mpc(
         print(
             f"Episode {eps + 1}/{num_episodes} finished. Total Reward: {total_rew:.2f}"
         )
+        if visualize:
+            pass
     return rewards
