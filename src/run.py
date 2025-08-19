@@ -31,19 +31,22 @@ env_config_map = {
 }
 
 
-def load_dataset(args):
-    """Load dataset and environment based on the selected environment."""
+def load_dataset(args, env_render_mode="rgb_array", eval_env=True):
     if args.environment not in env_config_map:
         raise ValueError(f"Unknown environment: {args.environment}")
 
-    config = env_config_map[args.environment]()
-    dataset = minari.load_dataset(dataset_id=config.dataset_name)
-    env = dataset.recover_environment()
-    return config, dataset, env
+    dataset_config = env_config_map[args.environment]()
+    dataset = minari.load_dataset(dataset_id=dataset_config.dataset_name)
+    recovered_env = dataset.recover_environment(
+        eval_env=eval_env, render_mode=env_render_mode
+    )
+    # recovered_env = dataset.recover_environment()
+    return dataset_config, dataset, recovered_env
 
 
 def build_model(args, obs_dim, action_dim):
     horizon = args.horizon
+    # setting input dimension based on what we're modeling
     if args.model_target == "obs_act":
         input_dim = (obs_dim + action_dim) * horizon
     elif args.model_target == "obs_only":
@@ -52,8 +55,10 @@ def build_model(args, obs_dim, action_dim):
         input_dim = action_dim * horizon
     else:
         raise ValueError(f"Invalid model_target: {args.model_target}")
-    print(f"Input dimension for the model: {input_dim}")
+    print(f"Modeling {args.model_target} with an input_dim of {input_dim}")
 
+    # setting the right model based on args
+    # unconditional models
     if args.model_type == "mlp":
         model = MLP(input_dim=input_dim, time_dim=1, hidden_dim=args.hidden_dim).to(
             args.device
@@ -65,7 +70,11 @@ def build_model(args, obs_dim, action_dim):
             horizon=horizon,
             kernel_size=args.kernel_size,
         ).to(args.device)
+
+    # conditional models
     elif args.model_type == "ccnn":
+        print("Using CCNN for training...")
+        # setting conditioning dimension
         if args.condition_on == "reward":
             cond_dim = 1
         elif args.condition_on == "start_obs":
@@ -74,7 +83,7 @@ def build_model(args, obs_dim, action_dim):
             cond_dim = obs_dim * 2
         else:
             raise ValueError(
-                f"ConditionalCNN requires a valid --condition-on argument ('reward', 'start_obs', 'start_obs_goal'). Got: {args.condition_on!r}"
+                f"ConditionalCNN requires a valid --condition-on argument ('reward', 'start_obs', 'start_obs_goal'). but got: {args.condition_on!r}"
             )
         model = ConditionalCNN(
             input_dim=input_dim,
@@ -83,8 +92,9 @@ def build_model(args, obs_dim, action_dim):
             kernel_size=args.kernel_size,
             cond_dim=cond_dim,
         ).to(args.device)
+
     elif args.model_type == "unet":
-        print("Using UNet1D model for training.")
+        print("Using UNet1D model for training...")
         if args.condition_on == "reward":
             cond_dim = 1
         elif args.condition_on == "start_obs":
@@ -126,7 +136,6 @@ def run_epoch(model, dataloader, path, optim, args, stats):
     total_chunks = 0
     for batch in dataloader:
         optim.zero_grad()
-
         if args.condition_on:
             x1, c = create_normalized_chunks(
                 batch,
@@ -160,21 +169,23 @@ def run_epoch(model, dataloader, path, optim, args, stats):
         optim.step()
         total_loss += loss.item()
         total_chunks += 1
-
     return total_loss / total_chunks if total_chunks > 0 else 0.0
 
 
-def evaluate(env, model, stats, input_dim, args, logger=None):
-    fig, ax = evaluate_open_loop(env, model, stats, input_dim, args, logger=logger)
-    plt.close(fig)
+def evaluate(env, model, stats, input_dim, args, logger=None, eval_mode="open_loop"):
+    if eval_mode == "open_loop":
+        fig, ax = evaluate_open_loop(env, model, stats, input_dim, args, logger=logger)
+        plt.close(fig)
     return fig, ax
 
 
 def train(config, args, dataset, env, run_name=None, logger=None):
+    # creating the model
     obs_dim = config.obs_dim
     action_dim = config.action_dim
-
     model, input_dim = build_model(args, obs_dim, action_dim)
+
+    # getting the dataloader and dataset statistics
     dataloader, stats = build_dataloader(dataset, args)
     path = AffineProbPath(scheduler=CondOTScheduler())
     optim = torch.optim.Adam(model.parameters(), lr=args.lr)
@@ -183,9 +194,12 @@ def train(config, args, dataset, env, run_name=None, logger=None):
     model_base = run_name if run_name is not None else "model"
     model_save_path = os.path.join(save_dir, model_base + ".pth")
 
+    # print out configuration for sanity checks
     pp = pprint.PrettyPrinter(indent=2)
-    print("Training configuration:")
+    print("Dataset configuration:")
     pp.pprint(config)
+    print("Training parameters:")
+    pp.print(args)
     print("Starting training...")
 
     for epoch in range(args.num_epochs):
@@ -201,7 +215,6 @@ def train(config, args, dataset, env, run_name=None, logger=None):
 
         if args.eval_every and (epoch + 1) % args.eval_every == 0:
             evaluate(env, model, stats, input_dim, args, logger=logger)
-
     print("Training complete. Saving model...")
     os.makedirs(save_dir, exist_ok=True)
     torch.save(model.state_dict(), model_save_path)
