@@ -9,5 +9,6 @@ python -m src.diffusion \
     --model-type "unet" \
     --hidden-dim 64 \
     --scheduler "ddpm" \
+    --num-train-timesteps 1000 \
     --condition-on "start_obs" \
     --model-target "act_only"

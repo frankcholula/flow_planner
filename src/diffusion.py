@@ -31,6 +31,8 @@ env_config_map = {
     "BipedalWalker-v3": BipedalWalkerConfig,
 }
 
+scheduler_map = {"ddpm": DDPMScheduler, "ddim": DDIMScheduler}
+
 
 def load_dataset(args, env_render_mode="rgb_array", eval_env=False):
     if args.environment not in env_config_map:
@@ -195,7 +197,8 @@ def train(config, args, dataset, env, run_name=None, logger=None):
     # getting the dataloader and dataset statistics
     dataloader, stats = build_dataloader(dataset, args)
     # TODO: replace path with a noise scheduler
-    noise_scheduler = DDPMScheduler(num_train_timesteps=1000)
+    scheduler_type = scheduler_map(args.scheduler)
+    noise_scheduler = scheduler_type(args.num_train_timesteps)
 
     optim = torch.optim.Adam(model.parameters(), lr=args.lr)
 
@@ -238,6 +241,7 @@ def main():
     torch.manual_seed(args.seed)
     random.seed(args.seed)
     np.random.seed(args.seed)
+
     if args.device:
         torch.set_default_device(args.device)
         print(f"Using device: {args.device}")
