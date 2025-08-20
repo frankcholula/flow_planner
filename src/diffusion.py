@@ -236,8 +236,7 @@ def train(config, args, dataset, env, run_name=None, logger=None):
 
 
 def runname_builder(args) -> str:
-    parts = []
-
+    parts = ["DIFFUSION"]
     if (env := getattr(args, "environment", None)) is not None:
         parts.append(env)
     if (model_type := getattr(args, "model_type", None)) is not None:
