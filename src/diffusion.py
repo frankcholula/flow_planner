@@ -197,8 +197,7 @@ def train(config, args, dataset, env, run_name=None, logger=None):
     # getting the dataloader and dataset statistics
     dataloader, stats = build_dataloader(dataset, args)
     # TODO: replace path with a noise scheduler
-    scheduler_type = scheduler_map(args.scheduler)
-    noise_scheduler = scheduler_type(args.num_train_timesteps)
+    noise_scheduler = scheduler_map[args.scheduler](args.num_train_timesteps)
 
     optim = torch.optim.Adam(model.parameters(), lr=args.lr)
 
@@ -270,32 +269,32 @@ def main():
     run_name = runname_builder(args)
     print(run_name)
     logger = None
-    # if not args.no_wandb:
-    #     logger = WandBLogger(
-    #         config={
-    #             "environment": args.environment,
-    #             "horizon": args.horizon,
-    #             "batch_size": args.batch_size,
-    #             "model_type": args.model_type,
-    #             "hidden_dim": args.hidden_dim,
-    #             "kernel_size": (
-    #                 args.kernel_size
-    #                 if args.model_type == "cnn" or args.model_type == "ccnn"
-    #                 else 0
-    #             ),
-    #             "num_epochs": args.num_epochs,
-    #             "lr": args.lr,
-    #         },
-    #         run_name=run_name,
-    #     )
-    # model, stats, input_dim = train(
-    #     config=config,
-    #     args=args,
-    #     dataset=dataset,
-    #     env=env,
-    #     run_name=run_name,
-    #     logger=logger,
-    # )
+    if not args.no_wandb:
+        logger = WandBLogger(
+            config={
+                "environment": args.environment,
+                "horizon": args.horizon,
+                "batch_size": args.batch_size,
+                "model_type": args.model_type,
+                "hidden_dim": args.hidden_dim,
+                "kernel_size": (
+                    args.kernel_size
+                    if args.model_type == "cnn" or args.model_type == "ccnn"
+                    else 0
+                ),
+                "num_epochs": args.num_epochs,
+                "lr": args.lr,
+            },
+            run_name=run_name,
+        )
+    model, stats, input_dim = train(
+        config=config,
+        args=args,
+        dataset=dataset,
+        env=env,
+        run_name=run_name,
+        logger=logger,
+    )
     # evaluate(env, model, stats, input_dim, args, logger=logger)
     # if logger:
     #     logger.finish()
