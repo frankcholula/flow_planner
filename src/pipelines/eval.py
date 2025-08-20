@@ -3,7 +3,8 @@ from src.pipelines.sampling import generate_trajectory
 from flow_matching.utils import ModelWrapper
 from flow_matching.solver import ODESolver
 from src.pipelines.lunarlander.visualizers import visualize_trajectories as lvt
-from src.pipelines.hopper.visualizers import visualize_trajectory as hvt
+from src.pipelines.lunarlander.visualizers import plot_reward_histogram
+import numpy as np
 import wandb
 
 
@@ -23,11 +24,20 @@ class WrappedConditionalModel(ModelWrapper):
 def evaluate_open_loop(env, model, stats, input_dim, args, logger=None):
     if args.condition_on == "start_obs":
         start_observation, _ = env.reset()
-        condition_dict = {"start_obs": torch.from_numpy(start_observation)}
+        cond_dict = {"start_obs": torch.from_numpy(start_observation)}
     elif args.condition_on == "start_obs_goal":
         start_observation, _ = env.reset()
-        goal_observation = torch.tensor([0, 0, 0, 0, 0, 0, 1, 1], dtype=torch.float32)
-        condition_dict = {
+        if args.environment == "LunarLander-v3":
+            goal_observation = torch.tensor(
+                [0, 0, 0, 0, 0, 0, 1, 1], dtype=torch.float32
+            )
+        elif (
+            args.environment == "BipedalWalker-v3" or args.environment == "CarRacing-v3"
+        ):
+            goal_observation = torch.from_numpy(start_observation)
+        else:
+            raise ValueError(f"Unknown environment: {args.environment}")
+        cond_dict = {
             args.condition_on: (torch.from_numpy(start_observation), goal_observation)
         }
     elif args.condition_on == "reward":
@@ -42,7 +52,7 @@ def evaluate_open_loop(env, model, stats, input_dim, args, logger=None):
         T=T,
         input_dim=input_dim,
         horizon=args.horizon,
-        condition=condition_dict if args.condition_on else None,
+        condition=cond_dict if args.condition_on else None,
         solver_method=args.solver_method,
         batch_size=args.inference_batch_size,
         step_size=args.step_size,
@@ -64,6 +74,7 @@ def evaluate_policy_mpc(
     max_episode_length=300,
     replan_freq=1,
     render=False,
+    visualize=True,
 ):
     rewards = []
     print(
@@ -81,17 +92,17 @@ def evaluate_policy_mpc(
             if t % replan_freq == 0:
                 start_obs_tensor = torch.from_numpy(obs)
 
-                condition_dict = {}
+                cond_dict = {}
                 if condition_type == "start_obs":
-                    condition_dict = {"start_obs": start_obs_tensor}
+                    cond_dict = {"start_obs": start_obs_tensor}
                 elif condition_type == "start_obs_goal":
                     if goal_obs is None:
                         raise ValueError(
                             "goal_obs must be provided for start_obs_goal conditioning"
                         )
-                    condition_dict = {"start_obs_goal": (start_obs_tensor, goal_obs)}
+                    cond_dict = {"start_obs_goal": (start_obs_tensor, goal_obs)}
 
-                _, actions_plan = planner_fn(condition_dict)
+                _, actions_plan = planner_fn(cond_dict)
 
             action_index_in_plan = t % replan_freq
             action_to_take = actions_plan[action_index_in_plan].cpu().numpy()
@@ -106,4 +117,12 @@ def evaluate_policy_mpc(
         print(
             f"Episode {eps + 1}/{num_episodes} finished. Total Reward: {total_rew:.2f}"
         )
+    avg_model_reward = np.mean(rewards)
+    std_model_reward = np.std(rewards)
+    print(
+        f"Average MPC Reward over {num_episodes} episodes: {avg_model_reward:.2f} +/- {std_model_reward:.2f}"
+    )
+    if visualize:
+        plot_title = f"Reward Distribution (Replan Freq: {replan_freq})"
+        plot_reward_histogram(rewards, title=plot_title)
     return rewards
