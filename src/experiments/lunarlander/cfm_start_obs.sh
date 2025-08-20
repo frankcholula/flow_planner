@@ -12,4 +12,5 @@ python -m src.run \
     --step-size 0.05 \
     --solver-method "midpoint" \
     --inference-batch-size 1 \
-    --condition-on "start_obs"
+    --condition-on "start_obs" \
+    --model-target "act_only"
