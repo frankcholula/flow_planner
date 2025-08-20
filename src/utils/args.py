@@ -76,6 +76,11 @@ def parse_diffusion_args() -> argparse.Namespace:
         choices=["reward", "start_obs", "start_obs_goal"],
         help="Condition type for trajectory generation.",
     )
+
+    inference_args = parser.add_argument_group("Inference arguments")
+    inference_args.add_argument(
+        "--num-inference-steps", type=int, default=50, help="Number of inference steps"
+    )
     return parser.parse_args()
 
 

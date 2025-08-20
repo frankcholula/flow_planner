@@ -23,7 +23,7 @@ from src.pipelines.preprocessing import (
     get_dataset_stats,
     create_normalized_chunks,
 )
-from src.pipelines.eval import evaluate_open_loop
+from src.pipelines.eval import evaluate_open_loop, evaluate_open_loop_diffusion
 
 env_config_map = {
     "LunarLander-v3": LunarLanderConfig,
@@ -181,10 +181,32 @@ def run_epoch(model, dataloader, noise_scheduler, optim, args, stats):
     return total_loss / total_chunks if total_chunks > 0 else 0.0
 
 
-def evaluate(env, model, stats, input_dim, args, logger=None, eval_mode="open_loop"):
+def evaluate(
+    env,
+    model,
+    noise_scheduler,
+    stats,
+    input_dim,
+    args,
+    logger=None,
+    eval_mode="diffusion_open_loop",
+):
     if eval_mode == "open_loop":
         fig, ax = evaluate_open_loop(env, model, stats, input_dim, args, logger=logger)
         plt.close(fig)
+
+    if eval_mode == "diffusion_open_loop":
+        fig, ax = evaluate_open_loop_diffusion(
+            env=env,
+            model=model,
+            noise_scheduler=noise_scheduler,  # Pass the scheduler
+            stats=stats,
+            input_dim=input_dim,
+            args=args,
+            logger=logger,
+        )
+        plt.close(fig)
+
     return fig, ax
 
 
@@ -224,8 +246,8 @@ def train(config, args, dataset, env, run_name=None, logger=None):
                 f"| Epoch {epoch+1:6d} | {elapsed:.2f} s/epoch | Loss {epoch_loss:8.5f} |"
             )
 
-        # if args.eval_every and (epoch + 1) % args.eval_every == 0:
-            # evaluate(env, model, stats, input_dim, args, logger=logger)
+        if args.eval_every and (epoch + 1) % args.eval_every == 0:
+            evaluate(env, model, stats, input_dim, args, logger=logger)
     print("Training complete. Saving model...")
     os.makedirs(save_dir, exist_ok=True)
     torch.save(model.state_dict(), model_save_path)

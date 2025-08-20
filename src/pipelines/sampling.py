@@ -97,3 +97,57 @@ def generate_trajectory(
         model_target=model_target,
     )
     return obs, act
+
+
+@torch.no_grad()
+def generate_diffusion_trajectory(
+    model, noise_scheduler, stats, args, input_dim, condition: dict = None
+):
+    c_tensor = None
+    device = args.device
+    batch_size = args.inference_batch_size
+    # Check if a condition was provided at all
+    if condition is not None:
+        if "reward" in condition:
+            rew_mean = torch.from_numpy(stats["rew_mean"]).to(device)
+            rew_std = torch.from_numpy(stats["rew_std"]).to(device)
+            norm_c = (
+                torch.tensor([condition["reward"]], device=device) - rew_mean
+            ) / rew_std
+            c_tensor = norm_c.view(1, 1).expand(batch_size, -1)
+
+        elif "start_obs" in condition:
+            obs_mean = torch.from_numpy(stats["obs_mean"]).to(device)
+            obs_std = torch.from_numpy(stats["obs_std"]).to(device)
+            start_obs_tensor = condition["start_obs"].float().to(device)
+            norm_c = (start_obs_tensor - obs_mean) / obs_std
+            c_tensor = norm_c.unsqueeze(0).expand(batch_size, -1)
+
+        elif "start_obs_goal" in condition:
+            obs_mean = torch.from_numpy(stats["obs_mean"]).to(device)
+            obs_std = torch.from_numpy(stats["obs_std"]).to(device)
+            start_obs, goal_obs = condition["start_obs_goal"]
+            start_obs_tensor = start_obs.float().to(device)
+            goal_obs_tensor = goal_obs.float().to(device)
+            norm_start = (start_obs_tensor - obs_mean) / obs_std
+            norm_goal = (goal_obs_tensor - obs_mean) / obs_std
+            norm_c = torch.cat([norm_start, norm_goal])
+            c_tensor = norm_c.unsqueeze(0).expand(batch_size, -1)
+
+        else:
+            raise ValueError(
+                f"Condition type in dict not recognized: {condition.keys()}"
+            )
+
+    # Reverse diffusion
+    sample = torch.randn((batch_size, input_dim), device=device)
+    noise_scheduler.set_timesteps(args.num_inference_steps)
+
+    for t in noise_scheduler.timesteps:
+        timestep_tensor = t.repeat(batch_size).to(device)
+
+        # The model receives the final, processed c_tensor
+        predicted_noise = model(sample, timestep_tensor, c=c_tensor)
+        sample = noise_scheduler.step(predicted_noise, t, sample).prev_sample
+
+    return sample

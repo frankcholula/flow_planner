@@ -1,5 +1,5 @@
 import torch
-from src.pipelines.sampling import generate_trajectory
+from src.pipelines.sampling import generate_trajectory, generate_diffusion_trajectory
 from flow_matching.utils import ModelWrapper
 from flow_matching.solver import ODESolver
 from src.pipelines.lunarlander.visualizers import visualize_trajectories as lvt
@@ -19,6 +19,59 @@ class WrappedConditionalModel(ModelWrapper):
         if t.ndim == 0:
             t = t.repeat(x.shape[0])
         return self.model(x, t, c)
+
+
+def evaluate_open_loop_diffusion(
+    env, model, noise_scheduler, stats, input_dim, args, logger=None
+):
+    model.eval()
+    condition_tensor = None
+
+    if args.condition_on == "start_obs":
+        start_observation, _ = env.reset()
+        cond_dict = {"start_obs": torch.from_numpy(start_observation)}
+    elif args.condition_on == "start_obs_goal":
+        start_observation, _ = env.reset()
+        if args.environment == "LunarLander-v3":
+            goal_observation = torch.tensor(
+                [0, 0, 0, 0, 0, 0, 1, 1], dtype=torch.float32
+            )
+        elif (
+            args.environment == "BipedalWalker-v3" or args.environment == "CarRacing-v3"
+        ):
+            goal_observation = torch.from_numpy(start_observation)
+        else:
+            raise ValueError(f"Unknown environment: {args.environment}")
+        cond_dict = {
+            args.condition_on: (torch.from_numpy(start_observation), goal_observation)
+        }
+
+    # 2. Define the trajectory generation function (the lambda)
+    trajectory_fn = lambda: generate_diffusion_trajectory(
+        model=model,
+        noise_scheduler=noise_scheduler,
+        args=args,
+        input_dim=input_dim,
+        condition=condition_tensor,
+    )
+
+    # Generate the normalized trajectory
+    norm_trajectory = trajectory_fn()
+
+    # 3. Un-normalize the data for visualization and evaluation
+    data_mean = torch.from_numpy(stats[args.model_target]["mean"]).to(args.device)
+    data_std = torch.from_numpy(stats[args.model_target]["std"]).to(args.device)
+    unnorm_trajectory = norm_trajectory * data_std + data_mean
+
+    # 4. Visualize the result using your existing `lvt` function
+    # Note: We create a new lambda here to pass the already-generated data to lvt
+    fig, ax = lvt(trajectory_fn=lambda: unnorm_trajectory, num_trajectories=1)
+
+    if logger is not None:
+        logger.log({"diffusion_trajectory_plot": wandb.Image(fig)})
+
+    model.train()
+    return fig, ax
 
 
 def evaluate_open_loop(env, model, stats, input_dim, args, logger=None):
