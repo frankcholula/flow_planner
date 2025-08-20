@@ -67,7 +67,7 @@ def parse_diffusion_args() -> argparse.Namespace:
     )
 
     training_args.add_argument("--scheduler", type=str, default="ddpm")
-
+    training_args.add_argument("--num-train-timesteps", type=int, default=1000)
     conditional_args = parser.add_argument_group("Conditional arguments")
     conditional_args.add_argument(
         "--condition-on",

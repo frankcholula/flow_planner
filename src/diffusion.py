@@ -214,26 +214,47 @@ def train(config, args, dataset, env, run_name=None, logger=None):
     pp.print(args)
     print("Starting training...")
 
-    for epoch in range(args.num_epochs):
-        start_time = time.time()
-        epoch_loss = run_epoch(model, dataloader, noise_scheduler, optim, args, stats)
-        if logger:
-            logger.log({"epoch loss": epoch_loss})
-        if (epoch + 1) % args.print_every == 0:
-            elapsed = time.time() - start_time
-            print(
-                f"| Epoch {epoch+1:6d} | {elapsed:.2f} s/epoch | Loss {epoch_loss:8.5f} |"
-            )
+    # for epoch in range(args.num_epochs):
+    #     start_time = time.time()
+    #     epoch_loss = run_epoch(model, dataloader, noise_scheduler, optim, args, stats)
+    #     if logger:
+    #         logger.log({"epoch loss": epoch_loss})
+    #     if (epoch + 1) % args.print_every == 0:
+    #         elapsed = time.time() - start_time
+    #         print(
+    #             f"| Epoch {epoch+1:6d} | {elapsed:.2f} s/epoch | Loss {epoch_loss:8.5f} |"
+    #         )
 
-        if args.eval_every and (epoch + 1) % args.eval_every == 0:
-            evaluate(env, model, stats, input_dim, args, logger=logger)
-    print("Training complete. Saving model...")
-    os.makedirs(save_dir, exist_ok=True)
-    torch.save(model.state_dict(), model_save_path)
-    if logger:
-        logger.save_model(model_save_path)
-    print(f"Model saved to {model_save_path}, training complete.")
+    #     if args.eval_every and (epoch + 1) % args.eval_every == 0:
+    #         evaluate(env, model, stats, input_dim, args, logger=logger)
+    # print("Training complete. Saving model...")
+    # os.makedirs(save_dir, exist_ok=True)
+    # torch.save(model.state_dict(), model_save_path)
+    # if logger:
+    #     logger.save_model(model_save_path)
+    # print(f"Model saved to {model_save_path}, training complete.")
     return model, stats, input_dim
+
+
+def runname_builder(args) -> str:
+    parts = []
+
+    if (env := getattr(args, "environment", None)) is not None:
+        parts.append(env)
+    if (model_type := getattr(args, "model_type", None)) is not None:
+        parts.append(model_type)
+    if (horizon := getattr(args, "horizon", None)) is not None:
+        parts.append(f"h{horizon}")
+    if (num_epochs := getattr(args, "num_epochs", None)) is not None:
+        parts.append(f"e{num_epochs}")
+    if (kernel_size := getattr(args, "kernel_size", None)) is not None:
+        parts.append(f"k{kernel_size}")
+    if (model_target := getattr(args, "model_target", None)) is not None:
+        parts.append(f"target-{model_target}")
+    if (condition_on := getattr(args, "condition_on", None)) is not None:
+        parts.append(f"cond-{condition_on}")
+
+    return "_".join(parts)
 
 
 def main():
@@ -246,41 +267,38 @@ def main():
         torch.set_default_device(args.device)
         print(f"Using device: {args.device}")
     config, dataset, env = load_dataset(args)
-    cond = args.condition_on if args.condition_on else "none"
-    run_name = (
-        f"{args.environment}_{args.model_type}_h{args.horizon}_e{args.num_epochs}_"
-        f"k{args.kernel_size}_chunk-{args.model_target}_cond-{cond}"
-    )
+    run_name = runname_builder(args)
+    print(run_name)
     logger = None
-    if not args.no_wandb:
-        logger = WandBLogger(
-            config={
-                "environment": args.environment,
-                "horizon": args.horizon,
-                "batch_size": args.batch_size,
-                "model_type": args.model_type,
-                "hidden_dim": args.hidden_dim,
-                "kernel_size": (
-                    args.kernel_size
-                    if args.model_type == "cnn" or args.model_type == "ccnn"
-                    else 0
-                ),
-                "num_epochs": args.num_epochs,
-                "lr": args.lr,
-            },
-            run_name=run_name,
-        )
-    model, stats, input_dim = train(
-        config=config,
-        args=args,
-        dataset=dataset,
-        env=env,
-        run_name=run_name,
-        logger=logger,
-    )
-    evaluate(env, model, stats, input_dim, args, logger=logger)
-    if logger:
-        logger.finish()
+    # if not args.no_wandb:
+    #     logger = WandBLogger(
+    #         config={
+    #             "environment": args.environment,
+    #             "horizon": args.horizon,
+    #             "batch_size": args.batch_size,
+    #             "model_type": args.model_type,
+    #             "hidden_dim": args.hidden_dim,
+    #             "kernel_size": (
+    #                 args.kernel_size
+    #                 if args.model_type == "cnn" or args.model_type == "ccnn"
+    #                 else 0
+    #             ),
+    #             "num_epochs": args.num_epochs,
+    #             "lr": args.lr,
+    #         },
+    #         run_name=run_name,
+    #     )
+    # model, stats, input_dim = train(
+    #     config=config,
+    #     args=args,
+    #     dataset=dataset,
+    #     env=env,
+    #     run_name=run_name,
+    #     logger=logger,
+    # )
+    # evaluate(env, model, stats, input_dim, args, logger=logger)
+    # if logger:
+    #     logger.finish()
 
 
 if __name__ == "__main__":
