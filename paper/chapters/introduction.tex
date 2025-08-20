@@ -9,43 +9,51 @@ Finally, taking a page out of the rise of vision language models, the ability to
 
 \section{Background and Context}
 
-Despite its immense promise, offline RL is plagued by algorithmic challenges. At its core, offline RL is fundamentally about making and answering counterfactual queries (Levine 2020). These are “what if” questions that involve forming hypotheses about what might happen if the agent were to carry out actions different from those observed in the training data. In other words, the ability to improve upon the behavior seen in the dataset, it must execute sequences of actions that diverge from the training data.  This inherent need for counterfactual inference strains convention machine learning tools, which are typically designed under the assumption that test-time queries come from the same distribution as the training data, independently and identically distributed.
+Despite its immense promise, offline RL is plagued by algorithmic challenges. At its core, offline RL is fundamentally about making and answering counterfactual queries (Levine, 2020). These are “what if” questions about what might happen if the agent were to carry out actions different from those in the dataset. In other words, for an agent to improve upon the behavior policy, it must be able to execute action sequences that diverge from the training data. This inherent need for counterfactual inference strains conventional machine learning tools, which assume that test data is drawn from the same distribution as training data. Consequently, making such counterfactual queries results in distributional shift. When a learned policy deviates from the training data, conventional RL algorithms can produce erroneous and excessively optimistic Q-value estimates, leading to brittle policies that perform poorly when deployed.
 
-Consequently, making such counterfactual queries results in distributional shift. When a learned policy attempts to take actions or visit states that deviate from those observed in the training data, conventional RL algorithms can produce erroneous and excessively optimistic Q-value estimate. This leads to policies that are brittle and perform poorly when deployed.
+This instability is particularly exacerbated by high-dimensional function approximators such as Deep Neural Networks (DNNs). The errors can accumulate over long horizons, making stable learning notoriously difficult (CITE HERE). Furthermore, real-world datasets, especially those from human demonstrations, inherently exhibit multimodal action distributions; there are often multiple valid ways to perform a task. Traditional methods like behavior cloning struggle to capture this multimodality, often averaging across modes and leading to indecisive or jerky behaviors that fail to generalize.
 
-This issue is particularly exacerbated by the use of high-dimensional and expressive function approximators such as DNN. The errors can accumulate quadratically over long horizons and make stable learning difficult. Furthermore, real-world datasets, especially those derived from human demonstrations or varied sources, inherently exhibit multimodal action distributions. This means that there are often multiple valid ways to perform a given task or different sequences of actions to achieve a long-horizon goal. Traditional behavior cloning methods frequently struggle to capture this multimodality effectively, resulting in jerky, hesitating, or stuck motions and failing to generalize beyond narrowly observed demonstrations. This inadvertently average across modes and leads to indecisive behaviors.
+To address the challenge of multimodality, generative modeling, particularly with denoising diffusion models, has emerged as a powerful approach. By framing planning as a conditional sampling process, diffusion models can learn and represent complex, multi-modal distributions directly from data. This is a critical capability for robotics, where a task may have multiple valid solutions, such as different grasps for an object or various paths around an obstacle. By capturing the entire distribution of expert solutions, these models can enhance a robot's versatility and ability to generalize.
 
-In recent years, generative modeling, particularly with denoising diffusion probabilistic models, has shown remarkable capability in generating high-quality and diverse images. These models learn by iteratively refining random noise into coherent output and offer significant advantages in addressing distributional shift when applied in robotics, especially in behavior cloning:
-\begin{enumerate}
-	\item Diffusion models gracefully capture high-dimensional and multimodal action spaces, as evidenced by their success in image and video generation.
-	\item They exhibit impressive training stability, requiring little task-specific hyperparameter tuning compared to models like generative adversarial networks. 
-	\item The most surprising property is temporal compositionality. The models can essentially “stitch together” in-distribution subsequences from training data to generalize to novel tasks.
-\end{enumerate}
+However, the very properties that make diffusion models powerful for generation introduce fundamental challenges for their deployment in real-time robotic systems. These models are built upon a stochastic, iterative framework that imposes a significant computational burden, leading to high-latency inference incompatible with dynamic control loops. More importantly, their stochastic nature is fundamentally misaligned with the deterministic physical laws and hard safety constraints that govern robotic motion, calling for an alternative generative paradigms.
 
-This enables counterfactual queries because planning can now be framed as a sampling conditioned on desired outcomes. Just like in image generation, the iterative sampling process of diffusion models allows for flexible conditioning. This allows a single diffusion model to be used for multiple tasks in the same environment, even for tasks unseen during training.
+Therefore, this dissertation presents Flow Planner, a hierarchical framework built upon flow matching, a powerful alternative that directly addresses the core limitations of diffusion models. Flow matching learns a deterministic transformation governed by an Ordinary Differential Equation (ODE) rather than a Stochastic Differential Equation (SDE). This fundamental distinction makes it not merely an incremental improvement but a paradigm inherently aligned with the deterministic, low-latency requirements of physical robotic systems.
 
 \section{Objectives}
 
-The objectives should be clearly listed here to explain what new outputs you plan to achieve in this work. After the abstract, this section is the one next most important thing your examiner will read. They want to know what you plan to do and see if you are on target to achieve it. You will have listed these objectives in your first report that you submitted at the start of your project. Therefore copy and paste them into this section and show them in bullet points each with no more than one sentence like below:
+The primary aim of this dissertation is to develop and validate a novel, deterministic framework for behavior cloning in offline reinforcement learning, leveraging the principles of flow matching. The specific objectives established to achieve this aim are as follows:
 
 \begin{itemize}
-	\item Objective 1…..
-	\item Objective 2 ….
-	\item Objective 3 ….
-	\item ..
-	\item Objective N
+	\item To design and validate a systematic methodology for curating offline reinforcement learning datasets from actively trained agents.
+	\item To design and implement "Flow Planner," a modular framework that utilizes flow matching for the generation of trajectories from offline data.
+	\item To analyze the impact of various conditioning mechanisms on the precision and generalizability of the trajectories generated by the framework.
+	\item To evaluate the performance of the "Flow Planner" framework, benchmarking its core attributes such as inference speed and policy effectiveness against diffusion models.
 \end{itemize}
 
-You may find that you need to slightly revise your objectives since writing your first report. This is totally acceptable if you see a need but you are advised to discuss any revisions with your supervisor. Be very clear to understand what is an objective. An objective is a new output providing new knowledge or bringing knowledge together. Therefore statements like “learn about …”, “perform simulations on…” or “write software code for…” are not objectives, they are tasks that would possibly be required to form an objective. Therefore objectives are \underline{not tasks}; they are statements of what advances the work aims to or will make.
-
-Having listed your objectives you may wish to summarise below the tasks you have carried out and will carry out to fulfil the objectives, so that for example it gives an idea of what work was involved in the project such as building new hardware, performing simulations or carrying out theoretical analysis.
-
 \section{Achievements}
+This dissertation's primary contribution is the development and validation of Flow Planner, a novel and modular framework for deterministic behavior cloning. The key achievements are:
 
-Summarise what you have achieved in your work, what are the highlights that the reader should look forward to reading about?
+
+\begin{itemize}
+	\item A Data Curation Pipeline and Benchmark Datasets: A flexible pipeline was designed and implemented for curating offline reinforcement learning datasets. This was demonstrated by producing three distinct datasets from PPO agents in Box2D environments, with the system designed for easy xetension to other agents and environments.
+	\item A Modular Framework for Behavior Cloning: The Flow Planner framework was developed to directly address the high latency and stochasticity that limit current diffusion-based BC approaches. Its modular architecture is a key feature, allowing for the flexible optimization of its different components.
+	\item Analysis of the Flow Planner Framework: This work provides a comprehensive analysis of the architectural choices essential for applying flow-matching models to behavior cloning. The findings highlight the critical role of conditioning mechanisms and model architecture, offering practical guidance for future implementations.
+	\item Successful Proof-of-Concept Validation: The Flow Planner framework was successfully validated in the LunarLander continuous control environment. This proof-of-concept demonstrated the ability to generate effective policies with significantly lower inference latency than baseline approaches.
+\end{itemize}
 
 \section{Overview of Dissertation}
-Briefly overview the contents of what follows in the dissertation explaining what is in each chapter and explain it in a way that show the narrative of the work so that it makes sense to the reader why the dissertation is organised in the way it is.
+This dissertation is structured as follows:
+\begin{itemize}
+	\item Chapter 2 provides the theoretical background for this work. It begins by reviewing foundational concepts in offline reinforcement learning and methods for addressing distributional shift. The chapter then provides an overview of Denoising Diffusion Probabilistic Models, unifying these concepts by framing them through the lens of continuous flows to introduce flow matching. It concludes by reviewing applications of diffusion for trajectory synthesis and related state-of-the-art attempts at integrating these models directly into reinforcement learning.
+	\item Chapter 3 details the methodology for data curation and introduces the experimental environments. This includes a technical discussion on the implementation of the data pipeline using Gymnasium wrappers and the Minari library for dataset management.
+	\item Chapter 4 presents the core technical contribution of this dissertation. It details the different approaches o model the control problem and introduces the proposed hierarchical planning framework, "Flow Planner," along with its implementation details using Meta’s flow matching library.
+	\item Chapter 5 provides a comprehensive analysis and discussion of the empirical results. This includes an investigation of various conditioning mechanisms and a benchmark comparison of the framework's performance against baseline models.
+	\item Chapter 6 concludes the dissertation by summarizing the key contributions, discussing the implications of the findings, and outlining promising directions for future research.
+\end{itemize}
+
+
+
+
 
 
 

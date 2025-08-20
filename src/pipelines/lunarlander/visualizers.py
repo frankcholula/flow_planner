@@ -75,13 +75,12 @@ def plot_reward_histogram(
 
     plt.figure(figsize=(10, 6))
 
-    # Calculate mean and standard deviation for the legend
     mean_reward = np.mean(rewards_list)
     std_reward = np.std(rewards_list)
     legend_label = f"mean={mean_reward:.2f}, std={std_reward:.2f}"
 
-    # Plot the histogram
     plt.hist(rewards_list, bins=bins, alpha=0.75, edgecolor="black", label=legend_label)
+    plt.xlim(0, 300)
 
     plt.title(title, fontsize=16)
     plt.xlabel("Total Reward per Episode", fontsize=12)
