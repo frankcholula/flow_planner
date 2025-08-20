@@ -137,23 +137,23 @@ def run_epoch(model, dataloader, path, optim, args, stats):
     for batch in dataloader:
         optim.zero_grad()
         if args.condition_on:
-            x0, c = create_normalized_chunks(
+            x1, c = create_normalized_chunks(
                 batch,
                 args.horizon,
                 stats,
                 cond_type=args.condition_on,
                 model_target=args.model_target,
             )
-            if x0 is None:
+            if x1 is None:
                 continue
-            x0, c = x0.to(args.device), c.to(args.device)
+            x1, c = x1.to(args.device), c.to(args.device)
         else:
-            x0 = create_normalized_chunks(
+            x1 = create_normalized_chunks(
                 batch, args.horizon, stats, model_target=args.model_target
             )
-            if x0 is None:
+            if x1 is None:
                 continue
-            x0 = x0.to(args.device)
+            x1 = x1.to(args.device)
 
         x0 = torch.randn_like(x1)
         t = torch.rand(x1.shape[0], device=args.device)
@@ -187,7 +187,8 @@ def train(config, args, dataset, env, run_name=None, logger=None):
 
     # getting the dataloader and dataset statistics
     dataloader, stats = build_dataloader(dataset, args)
-    path = AffineProbPath(scheduler=CondOTScheduler())
+    # replace affine path with noise scheduler
+
     optim = torch.optim.Adam(model.parameters(), lr=args.lr)
 
     save_dir = "src/checkpoints"

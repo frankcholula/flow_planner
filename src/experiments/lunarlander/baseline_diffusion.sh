@@ -7,6 +7,10 @@ python -m src.diffusion \
     --print-every 10 \
     --lr 1e-3 \
     --model-type "unet" \
-    --hidden-dim 64 \
+    --kernel-size 10 \
+    --hidden-dim 128 \
+    --step-size 0.05 \
+    --solver-method "midpoint" \
+    --inference-batch-size 1 \
     --condition-on "start_obs" \
     --model-target "act_only"

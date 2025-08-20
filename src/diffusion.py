@@ -10,11 +10,8 @@ import torch
 from torch.utils.data import DataLoader
 
 from src.models.backbone import MLP, CNN, ConditionalCNN, ConditionalUNet1D
-from src.utils.args import parse_fm_args
+from src.utils.args import parse_diffusion_args
 from src.utils.loggers import WandBLogger
-
-from flow_matching.path.scheduler import CondOTScheduler
-from flow_matching.path import AffineProbPath
 
 # diffusion
 from diffusers.schedulers.scheduling_ddim import DDIMScheduler
@@ -197,7 +194,9 @@ def train(config, args, dataset, env, run_name=None, logger=None):
 
     # getting the dataloader and dataset statistics
     dataloader, stats = build_dataloader(dataset, args)
-    path = AffineProbPath(scheduler=CondOTScheduler())
+    # TODO: replace path with a noise scheduler
+    noise_scheduler = DDPMScheduler(num_train_timesteps=1000)
+
     optim = torch.optim.Adam(model.parameters(), lr=args.lr)
 
     save_dir = "src/checkpoints"
@@ -214,7 +213,7 @@ def train(config, args, dataset, env, run_name=None, logger=None):
 
     for epoch in range(args.num_epochs):
         start_time = time.time()
-        epoch_loss = run_epoch(model, dataloader, path, optim, args, stats)
+        epoch_loss = run_epoch(model, dataloader, noise_scheduler, optim, args, stats)
         if logger:
             logger.log({"epoch loss": epoch_loss})
         if (epoch + 1) % args.print_every == 0:
@@ -235,7 +234,7 @@ def train(config, args, dataset, env, run_name=None, logger=None):
 
 
 def main():
-    args = parse_fm_args()
+    args = parse_diffusion_args()
     torch.manual_seed(args.seed)
     random.seed(args.seed)
     np.random.seed(args.seed)
