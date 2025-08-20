@@ -213,25 +213,25 @@ def train(config, args, dataset, env, run_name=None, logger=None):
     pp.pprint(args)
     print("Starting training...")
 
-    # for epoch in range(args.num_epochs):
-    #     start_time = time.time()
-    #     epoch_loss = run_epoch(model, dataloader, noise_scheduler, optim, args, stats)
-    #     if logger:
-    #         logger.log({"epoch loss": epoch_loss})
-    #     if (epoch + 1) % args.print_every == 0:
-    #         elapsed = time.time() - start_time
-    #         print(
-    #             f"| Epoch {epoch+1:6d} | {elapsed:.2f} s/epoch | Loss {epoch_loss:8.5f} |"
-    #         )
+    for epoch in range(args.num_epochs):
+        start_time = time.time()
+        epoch_loss = run_epoch(model, dataloader, noise_scheduler, optim, args, stats)
+        if logger:
+            logger.log({"epoch loss": epoch_loss})
+        if (epoch + 1) % args.print_every == 0:
+            elapsed = time.time() - start_time
+            print(
+                f"| Epoch {epoch+1:6d} | {elapsed:.2f} s/epoch | Loss {epoch_loss:8.5f} |"
+            )
 
-    #     if args.eval_every and (epoch + 1) % args.eval_every == 0:
-    #         evaluate(env, model, stats, input_dim, args, logger=logger)
-    # print("Training complete. Saving model...")
-    # os.makedirs(save_dir, exist_ok=True)
-    # torch.save(model.state_dict(), model_save_path)
-    # if logger:
-    #     logger.save_model(model_save_path)
-    # print(f"Model saved to {model_save_path}, training complete.")
+        if args.eval_every and (epoch + 1) % args.eval_every == 0:
+            evaluate(env, model, stats, input_dim, args, logger=logger)
+    print("Training complete. Saving model...")
+    os.makedirs(save_dir, exist_ok=True)
+    torch.save(model.state_dict(), model_save_path)
+    if logger:
+        logger.save_model(model_save_path)
+    print(f"Model saved to {model_save_path}, training complete.")
     return model, stats, input_dim
 
 
