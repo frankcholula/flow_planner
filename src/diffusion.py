@@ -16,6 +16,10 @@ from src.utils.loggers import WandBLogger
 from flow_matching.path.scheduler import CondOTScheduler
 from flow_matching.path import AffineProbPath
 
+# diffusion
+from diffusers.schedulers.scheduling_ddim import DDIMScheduler
+from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
+
 from src.conf.environment import BipedalWalkerConfig, CarRacingConfig, LunarLanderConfig
 from src.pipelines.preprocessing import (
     collate_fn,
@@ -131,11 +135,13 @@ def build_dataloader(dataset, args):
     return dataloader, stats
 
 
-def run_epoch(model, dataloader, path, optim, args, stats):
+def run_epoch(model, dataloader, noise_scheduler, optim, args, stats):
     total_loss = 0.0
     total_chunks = 0
     for batch in dataloader:
         optim.zero_grad()
+
+        # same conditioning logic, but we use x_0 as clean data
         if args.condition_on:
             x0, c = create_normalized_chunks(
                 batch,
@@ -155,16 +161,20 @@ def run_epoch(model, dataloader, path, optim, args, stats):
                 continue
             x0 = x0.to(args.device)
 
-        x0 = torch.randn_like(x1)
-        t = torch.rand(x1.shape[0], device=args.device)
-        sample = path.sample(t=t, x_0=x0, x_1=x1)
+        noise = torch.randn_like(x0)
+        timesteps = torch.randint(
+            0,
+            noise_scheduler.config.num_train_timesteps,
+            (x0.shape[0],),
+            device=x0.device,
+        ).long()
 
+        x_t = noise_scheduler.add_noise(x0, noise, timesteps)
         if args.condition_on:
-            pred = model(sample.x_t, sample.t, c=c)
+            predicted_noise = model(x_t, timesteps, c=c)
         else:
-            pred = model(sample.x_t, sample.t)
-
-        loss = torch.pow(pred - sample.dx_t, 2).mean()
+            predicted_noise = model(x_t, timesteps)
+        loss = torch.nn.functional.mse_loss(predicted_noise, noise)
         loss.backward()
         optim.step()
         total_loss += loss.item()
