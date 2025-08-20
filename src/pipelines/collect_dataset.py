@@ -48,7 +48,7 @@ def make_env(env_name, hyperparams):
         print("Wrapping environment with FrameStackObservation")
         n_stack = hyperparams["frame_stack"]
         processed_env = FrameStackObservation(processed_env, n_stack)
-    return processed_env, data_collector
+    return processed_env, base_env, data_collector
 
 
 def generate_dataset(args):
@@ -60,7 +60,7 @@ def generate_dataset(args):
     )
     stats_path = os.path.join(log_path, f"{args.env}")
     hyperparams, _ = get_saved_hyperparams(stats_path=stats_path, test_mode=True)
-    minari_env, data_collector = make_env(args.env, hyperparams)
+    minari_env, base_env, data_collector = make_env(args.env, hyperparams)
     agent = ALGOS[args.algo].load(model_path, env=minari_env)
     for _ in tqdm(range(args.total_episodes), desc="Collecting episodes"):
         obs, _ = minari_env.reset()
@@ -77,7 +77,7 @@ def generate_dataset(args):
         author="Frank Lu",
         author_email="lu.phrank@gmail.com",
         description=f"Behavioral cloning dataset for {args.env} using {args.algo}",
-        eval_env=minari_env, #TODO: bug here
+        eval_env=base_env,
     )
 
 
