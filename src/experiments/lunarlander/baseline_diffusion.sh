@@ -1,4 +1,5 @@
 #!/bin/bash
+# model both state and actions
 python -m src.diffusion \
     --environment "LunarLander-v3" \
     --horizon 100 \
@@ -11,4 +12,4 @@ python -m src.diffusion \
     --scheduler "ddpm" \
     --num-train-timesteps 1000 \
     --condition-on "start_obs" \
-    --model-target "act_only"
+    --model-target "obs_act"
