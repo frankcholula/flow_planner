@@ -1,11 +1,12 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+
 def visualize_trajectories(trajectory_fn, num_trajectories=5):
     fig, ax = plt.subplots(figsize=(10, 7))
     ax.set_title(f"Trajectory Visualization")
     for _ in range(num_trajectories):
-        colors = ["red", "orange","yellow", "green", "blue"]
+        colors = ["red", "orange", "yellow", "green", "blue"]
         obs, act = trajectory_fn()
         visualize_chunk(ax, obs, color=colors[_ % len(colors)], mode="line")
     return fig, ax
@@ -63,3 +64,28 @@ def visualize_dataset(dataset):
     print(f"Average aggregated reward: {np.mean(aggregated_rewards):.2f}")
     print(f"Min aggregated reward: {np.min(aggregated_rewards):.2f}")
     print(f"Max aggregated reward: {np.max(aggregated_rewards):.2f}")
+
+
+def plot_reward_histogram(
+    rewards_list, bins=20, title="Reward Distribution per Episode"
+):
+    if not rewards_list:
+        print("Warning: Cannot plot an empty list of rewards.")
+        return
+
+    plt.figure(figsize=(10, 6))
+
+    # Calculate mean and standard deviation for the legend
+    mean_reward = np.mean(rewards_list)
+    std_reward = np.std(rewards_list)
+    legend_label = f"mean={mean_reward:.2f}, std={std_reward:.2f}"
+
+    # Plot the histogram
+    plt.hist(rewards_list, bins=bins, alpha=0.75, edgecolor="black", label=legend_label)
+
+    plt.title(title, fontsize=16)
+    plt.xlabel("Total Reward per Episode", fontsize=12)
+    plt.ylabel("Frequency", fontsize=12)
+    plt.legend()
+    plt.grid(axis="y", linestyle="--", alpha=0.7)
+    plt.show()
