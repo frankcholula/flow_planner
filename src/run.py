@@ -187,8 +187,7 @@ def train(config, args, dataset, env, run_name=None, logger=None):
 
     # getting the dataloader and dataset statistics
     dataloader, stats = build_dataloader(dataset, args)
-    # replace affine path with noise scheduler
-
+    path = AffineProbPath(scheduler=CondOTScheduler())
     optim = torch.optim.Adam(model.parameters(), lr=args.lr)
 
     save_dir = "src/checkpoints"
