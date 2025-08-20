@@ -4,7 +4,7 @@ from flow_matching.utils import ModelWrapper
 from flow_matching.solver import ODESolver
 from src.pipelines.lunarlander.visualizers import visualize_trajectories as lvt
 from src.pipelines.lunarlander.visualizers import plot_reward_histogram
-
+import numpy as np
 import wandb
 
 
@@ -117,7 +117,12 @@ def evaluate_policy_mpc(
         print(
             f"Episode {eps + 1}/{num_episodes} finished. Total Reward: {total_rew:.2f}"
         )
-        if visualize:
-            plot_title = f"Reward Distribution (Replan Freq: {replan_freq})"
-            plot_reward_histogram(rewards, title=plot_title)
+    avg_model_reward = np.mean(rewards)
+    std_model_reward = np.std(rewards)
+    print(
+        f"Average MPC Reward over {num_episodes} episodes: {avg_model_reward:.2f} +/- {std_model_reward:.2f}"
+    )
+    if visualize:
+        plot_title = f"Reward Distribution (Replan Freq: {replan_freq})"
+        plot_reward_histogram(rewards, title=plot_title)
     return rewards
