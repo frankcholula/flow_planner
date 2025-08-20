@@ -7,7 +7,7 @@ python -m src.run \
     --print-every 10 \
     --lr 1e-3 \
     --model-type "ccnn" \
-    --kernel-size 10 \
+    --kernel-size 5 \
     --hidden-dim 128 \
     --step-size 0.05 \
     --solver-method "midpoint" \

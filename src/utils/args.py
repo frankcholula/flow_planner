@@ -27,8 +27,7 @@ def parse_agent_args() -> argparse.Namespace:
 
 
 def parse_diffusion_args() -> argparse.Namespace:
-
-    parser = argparse.ArgumentParser(description="Flow matching trajectory generation.")
+    parser = argparse.ArgumentParser(description="Diffusion trajectory generation.")
 
     training_args = parser.add_argument_group("Training arguments")
     training_args.add_argument(
@@ -66,6 +65,18 @@ def parse_diffusion_args() -> argparse.Namespace:
     training_args.add_argument(
         "--no-wandb", action="store_true", help="Disable W&B logging"
     )
+
+    training_args.add_argument("--scheduler", type=str, default="ddpm")
+
+    conditional_args = parser.add_argument_group("Conditional arguments")
+    conditional_args.add_argument(
+        "--condition-on",
+        type=str,
+        default=None,
+        choices=["reward", "start_obs", "start_obs_goal"],
+        help="Condition type for trajectory generation.",
+    )
+    return parser.parse_args()
 
 
 def parse_fm_args() -> argparse.Namespace:
