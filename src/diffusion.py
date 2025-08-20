@@ -224,8 +224,8 @@ def train(config, args, dataset, env, run_name=None, logger=None):
                 f"| Epoch {epoch+1:6d} | {elapsed:.2f} s/epoch | Loss {epoch_loss:8.5f} |"
             )
 
-        if args.eval_every and (epoch + 1) % args.eval_every == 0:
-            evaluate(env, model, stats, input_dim, args, logger=logger)
+        # if args.eval_every and (epoch + 1) % args.eval_every == 0:
+            # evaluate(env, model, stats, input_dim, args, logger=logger)
     print("Training complete. Saving model...")
     os.makedirs(save_dir, exist_ok=True)
     torch.save(model.state_dict(), model_save_path)
