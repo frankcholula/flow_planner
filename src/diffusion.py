@@ -43,7 +43,6 @@ def load_dataset(args, env_render_mode="rgb_array", eval_env=False):
     recovered_env = dataset.recover_environment(
         eval_env=eval_env, render_mode=env_render_mode
     )
-    # recovered_env = dataset.recover_environment()
     return dataset_config, dataset, recovered_env
 
 
