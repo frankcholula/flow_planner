@@ -25,7 +25,7 @@ def evaluate_open_loop_diffusion(
     env, model, noise_scheduler, stats, input_dim, args, logger=None
 ):
     model.eval()
-    condition_tensor = None
+    cond_dict = None
 
     if args.condition_on == "start_obs":
         start_observation, _ = env.reset()
@@ -46,25 +46,21 @@ def evaluate_open_loop_diffusion(
             args.condition_on: (torch.from_numpy(start_observation), goal_observation)
         }
 
-    # 2. Define the trajectory generation function (the lambda)
     trajectory_fn = lambda: generate_diffusion_trajectory(
         model=model,
         noise_scheduler=noise_scheduler,
+        stats=stats,
         args=args,
         input_dim=input_dim,
-        condition=condition_tensor,
+        condition=cond_dict,
     )
 
-    # Generate the normalized trajectory
     norm_trajectory = trajectory_fn()
-
-    # 3. Un-normalize the data for visualization and evaluation
     data_mean = torch.from_numpy(stats[args.model_target]["mean"]).to(args.device)
     data_std = torch.from_numpy(stats[args.model_target]["std"]).to(args.device)
     unnorm_trajectory = norm_trajectory * data_std + data_mean
 
-    # 4. Visualize the result using your existing `lvt` function
-    # Note: We create a new lambda here to pass the already-generated data to lvt
+    # Visualize the result
     fig, ax = lvt(trajectory_fn=lambda: unnorm_trajectory, num_trajectories=1)
 
     if logger is not None:
