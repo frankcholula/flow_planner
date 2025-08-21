@@ -294,7 +294,7 @@ def main():
     if args.device:
         torch.set_default_device(args.device)
         print(f"Using device: {args.device}")
-    config, dataset, env = load_dataset(args)
+    config, dataset, env = load_dataset(args, eval_env=True, env_render_mode="rgb_array")
     run_name = runname_builder(args)
     print(run_name)
     logger = None
@@ -325,8 +325,8 @@ def main():
         logger=logger,
     )
     # evaluate(env, model, stats, input_dim, args, logger=logger)
-    # if logger:
-    #     logger.finish()
+    if logger:
+        logger.finish()
 
 
 if __name__ == "__main__":
