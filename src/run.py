@@ -236,7 +236,7 @@ def main():
     cond = args.condition_on if args.condition_on else "none"
     run_name = (
         f"{args.environment}_{args.model_type}_h{args.horizon}_e{args.num_epochs}_"
-        f"k{args.kernel_size}_chunk-{args.model_target}_cond-{cond}"
+        f"k{args.kernel_size}_target-{args.model_target}_cond-{cond}"
     )
     logger = None
     if not args.no_wandb:
