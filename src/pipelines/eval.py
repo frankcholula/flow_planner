@@ -1,5 +1,8 @@
 import torch
-from src.pipelines.sampling import generate_trajectory, generate_diffusion_trajectory
+from src.pipelines.sampling import (
+    generate_trajectory,
+    generate_diffusion_trajectory,
+)
 from flow_matching.utils import ModelWrapper
 from flow_matching.solver import ODESolver
 from src.pipelines.lunarlander.visualizers import visualize_trajectories as lvt
@@ -55,18 +58,9 @@ def evaluate_open_loop_diffusion(
         condition=cond_dict,
     )
 
-    norm_trajectory = trajectory_fn()
-    data_mean = torch.from_numpy(stats[args.model_target]["mean"]).to(args.device)
-    data_std = torch.from_numpy(stats[args.model_target]["std"]).to(args.device)
-    unnorm_trajectory = norm_trajectory * data_std + data_mean
-
-    # Visualize the result
-    fig, ax = lvt(trajectory_fn=lambda: unnorm_trajectory, num_trajectories=1)
-
+    fig, ax = lvt(trajectory_fn=trajectory_fn, num_trajectories=5)
     if logger is not None:
         logger.log({"diffusion_trajectory_plot": wandb.Image(fig)})
-
-    model.train()
     return fig, ax
 
 

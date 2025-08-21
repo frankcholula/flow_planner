@@ -109,23 +109,24 @@ def generate_diffusion_trajectory(
     # Check if a condition was provided at all
     if condition is not None:
         if "reward" in condition:
-            rew_mean = torch.from_numpy(stats["rew_mean"]).to(device)
-            rew_std = torch.from_numpy(stats["rew_std"]).to(device)
+            rew_mean = stats["rew_mean"].to(device)
+            rew_std = stats["rew_std"].to(device)
             norm_c = (
                 torch.tensor([condition["reward"]], device=device) - rew_mean
             ) / rew_std
             c_tensor = norm_c.view(1, 1).expand(batch_size, -1)
 
         elif "start_obs" in condition:
-            obs_mean = torch.from_numpy(stats["obs_mean"]).to(device)
-            obs_std = torch.from_numpy(stats["obs_std"]).to(device)
+            obs_mean = stats["obs_mean"].to(device)
+            obs_std = stats["obs_std"].to(device)
             start_obs_tensor = condition["start_obs"].float().to(device)
             norm_c = (start_obs_tensor - obs_mean) / obs_std
             c_tensor = norm_c.unsqueeze(0).expand(batch_size, -1)
 
         elif "start_obs_goal" in condition:
-            obs_mean = torch.from_numpy(stats["obs_mean"]).to(device)
-            obs_std = torch.from_numpy(stats["obs_std"]).to(device)
+            obs_mean = stats["obs_mean"].to(device)
+            obs_std = stats["obs_std"].to(device)
+
             start_obs, goal_obs = condition["start_obs_goal"]
             start_obs_tensor = start_obs.float().to(device)
             goal_obs_tensor = goal_obs.float().to(device)
@@ -150,4 +151,15 @@ def generate_diffusion_trajectory(
         predicted_noise = model(sample, timestep_tensor, c=c_tensor)
         sample = noise_scheduler.step(predicted_noise, t, sample).prev_sample
 
-    return sample
+    obs_dim = stats["obs_mean"].shape[0]
+    action_dim = stats["act_mean"].shape[0]
+
+    obs, act = unnormalize_trajectory(
+        chunk=sample,
+        stats=stats,
+        horizon=args.horizon,
+        obs_dim=obs_dim,
+        action_dim=action_dim,
+        model_target=args.model_target,
+    )
+    return obs, act
