@@ -7,6 +7,7 @@ from flow_matching.utils import ModelWrapper
 from flow_matching.solver import ODESolver
 from src.pipelines.lunarlander.visualizers import visualize_trajectories as lvt
 from src.pipelines.lunarlander.visualizers import plot_reward_histogram
+from src.utils.loggers import EpisodeTimer
 import numpy as np
 import wandb
 
@@ -127,6 +128,8 @@ def evaluate_policy_mpc(
     print(
         f"\n--- Starting MPC Evaluation (Condition Type: {condition_type}) and Replan Frequency: {replan_freq} ---"
     )
+
+    timed_planner_fn = EpisodeTimer(planner_fn)
     for eps in range(num_episodes):
         obs, _ = env.reset()
         total_rew = 0
@@ -149,7 +152,7 @@ def evaluate_policy_mpc(
                         )
                     cond_dict = {"start_obs_goal": (start_obs_tensor, goal_obs)}
 
-                _, actions_plan = planner_fn(cond_dict)
+                _, actions_plan = timed_planner_fn(cond_dict)
 
             action_index_in_plan = t % replan_freq
             action_to_take = actions_plan[action_index_in_plan].cpu().numpy()
@@ -164,6 +167,8 @@ def evaluate_policy_mpc(
         print(
             f"Episode {eps + 1}/{num_episodes} finished. Total Reward: {total_rew:.2f}"
         )
+        timed_planner_fn.report_average_time()
+        timed_planner_fn.reset()
     avg_model_reward = np.mean(rewards)
     std_model_reward = np.std(rewards)
     print(

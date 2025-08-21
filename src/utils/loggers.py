@@ -1,6 +1,9 @@
 from stable_baselines3.common.callbacks import BaseCallback
 import wandb
 import os
+import time
+import numpy as np
+from functools import update_wrapper
 
 
 class VideoLoggingCallback(BaseCallback):
@@ -26,9 +29,13 @@ class VideoLoggingCallback(BaseCallback):
 
 
 class WandBLogger:
-    def __init__(self, config, project_name="Flow Planner", entity="frankcholula",run_name=None):
+    def __init__(
+        self, config, project_name="Flow Planner", entity="frankcholula", run_name=None
+    ):
         print("Initializing WandB logger...")
-        self.run = wandb.init(project= project_name, entity=entity, config=config, name=run_name)
+        self.run = wandb.init(
+            project=project_name, entity=entity, config=config, name=run_name
+        )
 
     def log(self, data):
         self.run.log(data)
@@ -43,3 +50,28 @@ class WandBLogger:
     def finish(self):
         self.run.finish()
         print("WandB run finished.")
+
+
+class EpisodeTimer:
+    def __init__(self, func):
+        self.func = func
+        self.timings = []
+        update_wrapper(self, func)
+
+    def __call__(self, *args, **kwargs):
+        start_time = time.perf_counter()
+        result = self.func(*args, **kwargs)
+        end_time = time.perf_counter()
+        self.timings.append(end_time - start_time)
+        return result
+
+    def reset(self):
+        self.timings = []
+
+    def report_average_time(self):
+        if not self.timings:
+            avg_time = 0.0  # Handle cases where no calls were made
+        else:
+            avg_time = np.mean(self.timings)
+
+        print(f"  Average '{self.func.__name__}' time this episode: {avg_time:.4f}s")
