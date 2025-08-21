@@ -68,6 +68,12 @@ def parse_diffusion_args() -> argparse.Namespace:
 
     training_args.add_argument("--scheduler", type=str, default="ddpm")
     training_args.add_argument("--num-train-timesteps", type=int, default=1000)
+
+    cnn_args = parser.add_argument_group("CNN-specific arguments")
+    cnn_args.add_argument(
+        "--kernel-size", type=int, default=5, help="Kernel size for CNN models."
+    )
+
     conditional_args = parser.add_argument_group("Conditional arguments")
     conditional_args.add_argument(
         "--condition-on",
