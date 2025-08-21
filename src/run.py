@@ -173,6 +173,7 @@ def run_epoch(model, dataloader, path, optim, args, stats):
 
 
 def evaluate(env, model, stats, input_dim, args, logger=None, eval_mode="open_loop"):
+    print("Evaluating the model...")
     if eval_mode == "open_loop":
         fig, ax = evaluate_open_loop(env, model, stats, input_dim, args, logger=logger)
         plt.close(fig)
