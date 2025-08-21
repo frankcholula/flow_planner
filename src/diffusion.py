@@ -294,7 +294,9 @@ def main():
     if args.device:
         torch.set_default_device(args.device)
         print(f"Using device: {args.device}")
-    config, dataset, env = load_dataset(args, eval_env=True, env_render_mode="rgb_array")
+    config, dataset, env = load_dataset(
+        args, eval_env=True, env_render_mode="rgb_array"
+    )
     run_name = runname_builder(args)
     print(run_name)
     logger = None
