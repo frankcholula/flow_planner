@@ -74,4 +74,4 @@ class EpisodeTimer:
         else:
             avg_time = np.mean(self.timings)
 
-        print(f"  Average '{self.func.__name__}' time this episode: {avg_time:.4f}s")
+        print(f"  Average inference time this episode: {avg_time:.4f}s")
