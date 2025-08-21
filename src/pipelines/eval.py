@@ -61,10 +61,13 @@ def evaluate_open_loop_diffusion(
     fig, ax = lvt(trajectory_fn=trajectory_fn, num_trajectories=5)
     if logger is not None:
         logger.log({"diffusion_trajectory_plot": wandb.Image(fig)})
+
+    model.train()
     return fig, ax
 
 
 def evaluate_open_loop(env, model, stats, input_dim, args, logger=None):
+    model.eval()
     if args.condition_on == "start_obs":
         start_observation, _ = env.reset()
         cond_dict = {"start_obs": torch.from_numpy(start_observation)}
@@ -105,6 +108,7 @@ def evaluate_open_loop(env, model, stats, input_dim, args, logger=None):
     fig, ax = lvt(trajectory_fn=trajectory_fn, num_trajectories=5)
     if logger is not None:
         logger.log({"trajectory plot": wandb.Image(fig)})
+    model.train()
     return fig, ax
 
 
