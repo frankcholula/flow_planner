@@ -7,7 +7,7 @@ python -m src.run \
     --print-every 1 \
     --eval-every 5 \
     --lr 1e-3 \
-    --model-type "ccnn" \
+    --model-type "unet" \
     --kernel-size 5 \
     --hidden-dim 128 \
     --step-size 0.05 \
