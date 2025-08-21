@@ -8,7 +8,7 @@ python -m src.run \
     --eval-every 5 \
     --lr 1e-3 \
     --model-type "unet" \
-    --hidden-dim 128 \
+    --hidden-dim 64 \
     --step-size 0.05 \
     --solver-method "midpoint" \
     --inference-batch-size 1 \
