@@ -191,6 +191,7 @@ def evaluate(
     logger=None,
     eval_mode="diffusion_open_loop",
 ):
+    print("Evaluating model...")
     if eval_mode == "open_loop":
         fig, ax = evaluate_open_loop(env, model, stats, input_dim, args, logger=logger)
         plt.close(fig)
