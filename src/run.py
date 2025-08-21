@@ -10,11 +10,13 @@ import torch
 from torch.utils.data import DataLoader
 
 from src.models.backbone import MLP, CNN, ConditionalCNN, ConditionalUNet1D
+from src.pipelines.sampling import generate_trajectory
 from src.utils.args import parse_fm_args
 from src.utils.loggers import WandBLogger
 
 from flow_matching.path.scheduler import CondOTScheduler
 from flow_matching.path import AffineProbPath
+from flow_matching.solver import ODESolver
 
 from src.conf.environment import BipedalWalkerConfig, CarRacingConfig, LunarLanderConfig
 from src.pipelines.preprocessing import (
@@ -22,7 +24,11 @@ from src.pipelines.preprocessing import (
     get_dataset_stats,
     create_normalized_chunks,
 )
-from src.pipelines.eval import evaluate_open_loop
+from src.pipelines.eval import (
+    WrappedConditionalModel,
+    evaluate_open_loop,
+    evaluate_policy_mpc,
+)
 
 env_config_map = {
     "LunarLander-v3": LunarLanderConfig,
@@ -177,7 +183,38 @@ def evaluate(env, model, stats, input_dim, args, logger=None, eval_mode="open_lo
     if eval_mode == "open_loop":
         fig, ax = evaluate_open_loop(env, model, stats, input_dim, args, logger=logger)
         plt.close(fig)
-    return fig, ax
+        return fig, ax
+    if eval_mode == "mpc":
+        if args.condition_on == "start_obs_goal":
+            goal_obs = torch.tensor([0, 0, 0, 0, 0, 0, 1, 1], dtype=torch.float32)
+        else:
+            goal_obs = None
+        wrapped_vf = WrappedConditionalModel(model)
+        T = torch.linspace(0, 1, 10)
+        T = T.to(device=args.device)
+        solver = ODESolver(velocity_model=wrapped_vf)
+        # create trajectory function
+        planner_fn = lambda cond_dict: generate_trajectory(
+            stats=stats,
+            solver=solver,
+            T=T,
+            input_dim=input_dim,
+            horizon=args.horizon,
+            condition=cond_dict,
+            batch_size=args.inference_batch_size,
+            model_target=args.model_target,
+        )
+        model_rewards = evaluate_policy_mpc(
+            env=env,
+            planner_fn=planner_fn,
+            num_episodes=10,
+            replan_freq=1,
+            render=False,
+            max_episode_length=300,
+            condition_type=args.condition_on,
+            goal_obs=goal_obs,
+        )
+    return model_rewards
 
 
 def train(config, args, dataset, env, run_name=None, logger=None):
@@ -266,7 +303,7 @@ def main():
         run_name=run_name,
         logger=logger,
     )
-    evaluate(env, model, stats, input_dim, args, logger=logger)
+    evaluate(env, model, stats, input_dim, args, logger=logger, eval_mode="mpc")
     if logger:
         logger.finish()
 

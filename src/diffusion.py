@@ -23,7 +23,7 @@ from src.pipelines.preprocessing import (
     get_dataset_stats,
     create_normalized_chunks,
 )
-from src.pipelines.eval import evaluate_open_loop, evaluate_open_loop_diffusion
+from src.pipelines.eval import evaluate_open_loop, evaluate_open_loop_diffusion, evaluate_policy_mpc
 
 env_config_map = {
     "LunarLander-v3": LunarLanderConfig,
@@ -194,7 +194,7 @@ def evaluate(
     if eval_mode == "open_loop":
         fig, ax = evaluate_open_loop(env, model, stats, input_dim, args, logger=logger)
         plt.close(fig)
-
+        return fig, ax
     if eval_mode == "diffusion_open_loop":
         fig, ax = evaluate_open_loop_diffusion(
             env=env,
@@ -206,8 +206,9 @@ def evaluate(
             logger=logger,
         )
         plt.close(fig)
-
-    return fig, ax
+        return fig, ax
+    if eval_mode == "mpc":
+        pass
 
 
 def train(config, args, dataset, env, run_name=None, logger=None):
