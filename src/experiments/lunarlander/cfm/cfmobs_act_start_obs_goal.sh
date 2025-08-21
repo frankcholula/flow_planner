@@ -13,4 +13,4 @@ python -m src.run \
     --solver-method "midpoint" \
     --inference-batch-size 1 \
     --condition-on "start_obs_goal" \
-    --model-target "act_only"
+    --model-target "obs_act"
