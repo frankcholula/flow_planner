@@ -8,7 +8,7 @@ python -m src.diffusion \
     --print-every 5 \
     --eval-every 10 \
     --lr 1e-3 \
-    --model-type "unet" \
+    --model-type "ccnn" \
     --hidden-dim 64 \
     --scheduler "ddpm" \
     --num-train-timesteps 1000 \
