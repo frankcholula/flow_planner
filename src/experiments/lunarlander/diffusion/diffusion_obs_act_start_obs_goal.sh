@@ -9,6 +9,7 @@ python -m src.diffusion \
     --eval-every 5 \
     --lr 1e-3 \
     --model-type "ccnn" \
+    --kernel-size 5 \
     --hidden-dim 64 \
     --scheduler "ddpm" \
     --num-train-timesteps 1000 \
