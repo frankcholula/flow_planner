@@ -11,7 +11,7 @@ python -m src.diffusion \
     --lr 1e-3 \
     --model-type "ccnn" \
     --kernel-size 5 git\
-    --hidden-dim 64 \
+    --hidden-dim 128 \
     --scheduler "ddpm" \
     --num-train-timesteps 1000 \
     --num-inference-steps 1000 \
