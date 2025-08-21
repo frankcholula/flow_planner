@@ -81,6 +81,12 @@ def parse_diffusion_args() -> argparse.Namespace:
     inference_args.add_argument(
         "--num-inference-steps", type=int, default=50, help="Number of inference steps"
     )
+    inference_args.add_argument(
+        "--inference-batch-size",
+        type=int,
+        default=1,
+        help="Batch size for inference",
+    )
     return parser.parse_args()
 
 
@@ -135,7 +141,10 @@ def parse_fm_args() -> argparse.Namespace:
         choices=["midpoint", "euler"],
     )
     inference_args.add_argument(
-        "--inference-batch-size", type=int, default=1, help="Batch size for inference"
+        "--inference-batch-size",
+        type=int,
+        default=1,
+        help="Batch size for inference",
     )
 
     cnn_args = parser.add_argument_group("CNN-specific arguments")
