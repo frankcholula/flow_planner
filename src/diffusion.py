@@ -233,7 +233,7 @@ def train(config, args, dataset, env, run_name=None, logger=None):
     print("Dataset configuration:")
     pp.pprint(config)
     print("Training parameters:")
-    pp.pprint(args)
+    pp.pprint(vars(args))
     print("Starting training...")
 
     for epoch in range(args.num_epochs):
