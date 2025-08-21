@@ -31,6 +31,7 @@ def unnormalize_trajectory(
     return obs, act
 
 
+@torch.no_grad()
 def generate_trajectory(
     stats,
     solver,
