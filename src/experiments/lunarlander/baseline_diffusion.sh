@@ -6,6 +6,7 @@ python -m src.diffusion \
     --batch-size 32 \
     --num-epochs 10 \
     --print-every 1 \
+    --eval-every 1 \
     --lr 1e-3 \
     --model-type "unet" \
     --hidden-dim 64 \
