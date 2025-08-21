@@ -86,7 +86,6 @@ class ConditionalCNN(torch.nn.Module):
         self,
         input_dim: int,
         horizon: int,
-        # --- MODIFICATION: Increased default time_dim for a richer embedding ---
         time_dim: int = 32,
         cond_dim: int = 1,
         hidden_dim: int = 128,
@@ -99,17 +98,13 @@ class ConditionalCNN(torch.nn.Module):
         assert input_dim % horizon == 0, "input_dim must be divisible by horizon"
         self.transition_dim = input_dim // horizon
 
-        # --- MODIFICATION: Add the time embedding layer ---
         self.time_mlp = SinusoidalPosEmb(time_dim)
-
-        # --- MODIFICATION: Update input channels to use the new time_dim ---
         input_channels = self.transition_dim + time_dim + cond_dim
 
         self.main = torch.nn.Sequential(
             torch.nn.Conv1d(
                 input_channels, hidden_dim, kernel_size=kernel_size, padding="same"
             ),
-            # --- MODIFICATION: Use the standard SiLU activation (Swish) ---
             torch.nn.SiLU(),
             torch.nn.Conv1d(
                 hidden_dim, hidden_dim, kernel_size=kernel_size, padding="same"
@@ -129,12 +124,10 @@ class ConditionalCNN(torch.nn.Module):
     ) -> torch.Tensor:
         x_reshaped = x.view(-1, self.horizon, self.transition_dim).permute(0, 2, 1)
 
-        # --- MODIFICATION: Unified time processing logic ---
         # If t is a float (from flow matching), scale it to an integer range
         if t.dtype == torch.float32:
-            t = (t * 1000).long()  # Scale 0-1 to 0-1000
+            t = (t * 1000).long()
 
-        # Get the time embedding vector
         t_emb = self.time_mlp(t)  # Shape: (batch_size, time_dim)
 
         # Reshape and expand the embedding to match the sequence length
