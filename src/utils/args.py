@@ -26,6 +26,76 @@ def parse_agent_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def parse_diffusion_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Diffusion trajectory generation.")
+
+    training_args = parser.add_argument_group("Training arguments")
+    training_args.add_argument(
+        "--environment", type=str, default="LunarLander-v3", help="Environment name."
+    )
+    training_args.add_argument("--horizon", type=int, default=100)
+    training_args.add_argument("--batch-size", type=int, default=32)
+    training_args.add_argument("--num-epochs", type=int, default=100)
+    training_args.add_argument("--print-every", type=int, default=10)
+    training_args.add_argument(
+        "--eval-every",
+        type=int,
+        default=0,
+        help="Evaluate model every N epochs (0 to disable)",
+    )
+    training_args.add_argument("--hidden-dim", type=int, default=128)
+    training_args.add_argument("--lr", type=float, default=1e-3)
+    training_args.add_argument(
+        "--model-type",
+        type=str,
+        default="ccnn",
+        choices=["mlp", "cnn", "ccnn", "unet"],
+    )
+    training_args.add_argument(
+        "--model-target",
+        type=str,
+        default="obs_act",
+        choices=["obs_act", "obs_only", "act_only"],
+        help="type of target distribution to model",
+    )
+    training_args.add_argument(
+        "--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu"
+    )
+    training_args.add_argument("--seed", type=int, default=42)
+    training_args.add_argument(
+        "--no-wandb", action="store_true", help="Disable W&B logging"
+    )
+
+    training_args.add_argument("--scheduler", type=str, default="ddpm")
+    training_args.add_argument("--num-train-timesteps", type=int, default=1000)
+
+    cnn_args = parser.add_argument_group("CNN-specific arguments")
+    cnn_args.add_argument(
+        "--kernel-size", type=int, default=5, help="Kernel size for CNN models."
+    )
+
+    conditional_args = parser.add_argument_group("Conditional arguments")
+    conditional_args.add_argument(
+        "--condition-on",
+        type=str,
+        default=None,
+        choices=["reward", "start_obs", "start_obs_goal"],
+        help="Condition type for trajectory generation.",
+    )
+
+    inference_args = parser.add_argument_group("Inference arguments")
+    inference_args.add_argument(
+        "--num-inference-steps", type=int, default=50, help="Number of inference steps"
+    )
+    inference_args.add_argument(
+        "--inference-batch-size",
+        type=int,
+        default=1,
+        help="Batch size for inference",
+    )
+    return parser.parse_args()
+
+
 def parse_fm_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Flow matching trajectory generation.")
 
@@ -77,7 +147,10 @@ def parse_fm_args() -> argparse.Namespace:
         choices=["midpoint", "euler"],
     )
     inference_args.add_argument(
-        "--inference-batch-size", type=int, default=1, help="Batch size for inference"
+        "--inference-batch-size",
+        type=int,
+        default=1,
+        help="Batch size for inference",
     )
 
     cnn_args = parser.add_argument_group("CNN-specific arguments")

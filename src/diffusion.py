@@ -10,11 +10,12 @@ import torch
 from torch.utils.data import DataLoader
 
 from src.models.backbone import MLP, CNN, ConditionalCNN, ConditionalUNet1D
-from src.utils.args import parse_fm_args
+from src.utils.args import parse_diffusion_args
 from src.utils.loggers import WandBLogger
 
-from flow_matching.path.scheduler import CondOTScheduler
-from flow_matching.path import AffineProbPath
+# diffusion
+from diffusers.schedulers.scheduling_ddim import DDIMScheduler
+from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 
 from src.conf.environment import BipedalWalkerConfig, CarRacingConfig, LunarLanderConfig
 from src.pipelines.preprocessing import (
@@ -22,13 +23,15 @@ from src.pipelines.preprocessing import (
     get_dataset_stats,
     create_normalized_chunks,
 )
-from src.pipelines.eval import evaluate_open_loop
+from src.pipelines.eval import evaluate_open_loop, evaluate_open_loop_diffusion
 
 env_config_map = {
     "LunarLander-v3": LunarLanderConfig,
     "CarRacing-v3": CarRacingConfig,
     "BipedalWalker-v3": BipedalWalkerConfig,
 }
+
+scheduler_map = {"ddpm": DDPMScheduler, "ddim": DDIMScheduler}
 
 
 def load_dataset(args, env_render_mode="rgb_array", eval_env=False):
@@ -40,7 +43,6 @@ def load_dataset(args, env_render_mode="rgb_array", eval_env=False):
     recovered_env = dataset.recover_environment(
         eval_env=eval_env, render_mode=env_render_mode
     )
-    # recovered_env = dataset.recover_environment()
     return dataset_config, dataset, recovered_env
 
 
@@ -131,40 +133,46 @@ def build_dataloader(dataset, args):
     return dataloader, stats
 
 
-def run_epoch(model, dataloader, path, optim, args, stats):
+def run_epoch(model, dataloader, noise_scheduler, optim, args, stats):
     total_loss = 0.0
     total_chunks = 0
     for batch in dataloader:
         optim.zero_grad()
+
+        # same conditioning logic, but we use x_0 as clean data
         if args.condition_on:
-            x1, c = create_normalized_chunks(
+            x0, c = create_normalized_chunks(
                 batch,
                 args.horizon,
                 stats,
                 cond_type=args.condition_on,
                 model_target=args.model_target,
             )
-            if x1 is None:
+            if x0 is None:
                 continue
-            x1, c = x1.to(args.device), c.to(args.device)
+            x0, c = x0.to(args.device), c.to(args.device)
         else:
-            x1 = create_normalized_chunks(
+            x0 = create_normalized_chunks(
                 batch, args.horizon, stats, model_target=args.model_target
             )
-            if x1 is None:
+            if x0 is None:
                 continue
-            x1 = x1.to(args.device)
+            x0 = x0.to(args.device)
 
-        x0 = torch.randn_like(x1)
-        t = torch.rand(x1.shape[0], device=args.device)
-        sample = path.sample(t=t, x_0=x0, x_1=x1)
+        noise = torch.randn_like(x0)
+        timesteps = torch.randint(
+            0,
+            noise_scheduler.config.num_train_timesteps,
+            (x0.shape[0],),
+            device=x0.device,
+        ).long()
 
+        x_t = noise_scheduler.add_noise(x0, noise, timesteps)
         if args.condition_on:
-            pred = model(sample.x_t, sample.t, c=c)
+            predicted_noise = model(x_t, timesteps, c=c)
         else:
-            pred = model(sample.x_t, sample.t)
-
-        loss = torch.pow(pred - sample.dx_t, 2).mean()
+            predicted_noise = model(x_t, timesteps)
+        loss = torch.nn.functional.mse_loss(predicted_noise, noise)
         loss.backward()
         optim.step()
         total_loss += loss.item()
@@ -172,11 +180,33 @@ def run_epoch(model, dataloader, path, optim, args, stats):
     return total_loss / total_chunks if total_chunks > 0 else 0.0
 
 
-def evaluate(env, model, stats, input_dim, args, logger=None, eval_mode="open_loop"):
-    print("Evaluating the model...")
+def evaluate(
+    env,
+    model,
+    noise_scheduler,
+    stats,
+    input_dim,
+    args,
+    logger=None,
+    eval_mode="diffusion_open_loop",
+):
+    print("Evaluating model...")
     if eval_mode == "open_loop":
         fig, ax = evaluate_open_loop(env, model, stats, input_dim, args, logger=logger)
         plt.close(fig)
+
+    if eval_mode == "diffusion_open_loop":
+        fig, ax = evaluate_open_loop_diffusion(
+            env=env,
+            model=model,
+            noise_scheduler=noise_scheduler,  # Pass the scheduler
+            stats=stats,
+            input_dim=input_dim,
+            args=args,
+            logger=logger,
+        )
+        plt.close(fig)
+
     return fig, ax
 
 
@@ -188,7 +218,9 @@ def train(config, args, dataset, env, run_name=None, logger=None):
 
     # getting the dataloader and dataset statistics
     dataloader, stats = build_dataloader(dataset, args)
-    path = AffineProbPath(scheduler=CondOTScheduler())
+    # TODO: replace path with a noise scheduler
+    noise_scheduler = scheduler_map[args.scheduler](args.num_train_timesteps)
+
     optim = torch.optim.Adam(model.parameters(), lr=args.lr)
 
     save_dir = "src/checkpoints"
@@ -205,7 +237,7 @@ def train(config, args, dataset, env, run_name=None, logger=None):
 
     for epoch in range(args.num_epochs):
         start_time = time.time()
-        epoch_loss = run_epoch(model, dataloader, path, optim, args, stats)
+        epoch_loss = run_epoch(model, dataloader, noise_scheduler, optim, args, stats)
         if logger:
             logger.log({"epoch loss": epoch_loss})
         if (epoch + 1) % args.print_every == 0:
@@ -215,7 +247,15 @@ def train(config, args, dataset, env, run_name=None, logger=None):
             )
 
         if args.eval_every and (epoch + 1) % args.eval_every == 0:
-            evaluate(env, model, stats, input_dim, args, logger=logger)
+            evaluate(
+                env=env,
+                model=model,
+                noise_scheduler=noise_scheduler,
+                stats=stats,
+                input_dim=input_dim,
+                args=args,
+                logger=logger,
+            )
     print("Training complete. Saving model...")
     os.makedirs(save_dir, exist_ok=True)
     torch.save(model.state_dict(), model_save_path)
@@ -225,20 +265,40 @@ def train(config, args, dataset, env, run_name=None, logger=None):
     return model, stats, input_dim
 
 
+def runname_builder(args) -> str:
+    parts = ["DIFFUSION"]
+    if (env := getattr(args, "environment", None)) is not None:
+        parts.append(env)
+    if (model_type := getattr(args, "model_type", None)) is not None:
+        parts.append(model_type)
+    if (horizon := getattr(args, "horizon", None)) is not None:
+        parts.append(f"h{horizon}")
+    if (num_epochs := getattr(args, "num_epochs", None)) is not None:
+        parts.append(f"e{num_epochs}")
+    if (kernel_size := getattr(args, "kernel_size", None)) is not None:
+        parts.append(f"k{kernel_size}")
+    if (model_target := getattr(args, "model_target", None)) is not None:
+        parts.append(f"target-{model_target}")
+    if (condition_on := getattr(args, "condition_on", None)) is not None:
+        parts.append(f"cond-{condition_on}")
+
+    return "_".join(parts)
+
+
 def main():
-    args = parse_fm_args()
+    args = parse_diffusion_args()
     torch.manual_seed(args.seed)
     random.seed(args.seed)
     np.random.seed(args.seed)
+
     if args.device:
         torch.set_default_device(args.device)
         print(f"Using device: {args.device}")
-    config, dataset, env = load_dataset(args)
-    cond = args.condition_on if args.condition_on else "none"
-    run_name = (
-        f"{args.environment}_{args.model_type}_h{args.horizon}_e{args.num_epochs}_"
-        f"k{args.kernel_size}_target-{args.model_target}_cond-{cond}"
+    config, dataset, env = load_dataset(
+        args, eval_env=True, env_render_mode="rgb_array"
     )
+    run_name = runname_builder(args)
+    print(run_name)
     logger = None
     if not args.no_wandb:
         logger = WandBLogger(
@@ -266,7 +326,7 @@ def main():
         run_name=run_name,
         logger=logger,
     )
-    evaluate(env, model, stats, input_dim, args, logger=logger)
+    # evaluate(env, model, stats, input_dim, args, logger=logger)
     if logger:
         logger.finish()
 

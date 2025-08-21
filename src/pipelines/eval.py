@@ -1,5 +1,8 @@
 import torch
-from src.pipelines.sampling import generate_trajectory
+from src.pipelines.sampling import (
+    generate_trajectory,
+    generate_diffusion_trajectory,
+)
 from flow_matching.utils import ModelWrapper
 from flow_matching.solver import ODESolver
 from src.pipelines.lunarlander.visualizers import visualize_trajectories as lvt
@@ -21,7 +24,50 @@ class WrappedConditionalModel(ModelWrapper):
         return self.model(x, t, c)
 
 
+def evaluate_open_loop_diffusion(
+    env, model, noise_scheduler, stats, input_dim, args, logger=None
+):
+    model.eval()
+    cond_dict = None
+
+    if args.condition_on == "start_obs":
+        start_observation, _ = env.reset()
+        cond_dict = {"start_obs": torch.from_numpy(start_observation)}
+    elif args.condition_on == "start_obs_goal":
+        start_observation, _ = env.reset()
+        if args.environment == "LunarLander-v3":
+            goal_observation = torch.tensor(
+                [0, 0, 0, 0, 0, 0, 1, 1], dtype=torch.float32
+            )
+        elif (
+            args.environment == "BipedalWalker-v3" or args.environment == "CarRacing-v3"
+        ):
+            goal_observation = torch.from_numpy(start_observation)
+        else:
+            raise ValueError(f"Unknown environment: {args.environment}")
+        cond_dict = {
+            args.condition_on: (torch.from_numpy(start_observation), goal_observation)
+        }
+
+    trajectory_fn = lambda: generate_diffusion_trajectory(
+        model=model,
+        noise_scheduler=noise_scheduler,
+        stats=stats,
+        args=args,
+        input_dim=input_dim,
+        condition=cond_dict,
+    )
+
+    fig, ax = lvt(trajectory_fn=trajectory_fn, num_trajectories=5)
+    if logger is not None:
+        logger.log({"diffusion_trajectory_plot": wandb.Image(fig)})
+
+    model.train()
+    return fig, ax
+
+
 def evaluate_open_loop(env, model, stats, input_dim, args, logger=None):
+    model.eval()
     if args.condition_on == "start_obs":
         start_observation, _ = env.reset()
         cond_dict = {"start_obs": torch.from_numpy(start_observation)}
@@ -62,6 +108,7 @@ def evaluate_open_loop(env, model, stats, input_dim, args, logger=None):
     fig, ax = lvt(trajectory_fn=trajectory_fn, num_trajectories=5)
     if logger is not None:
         logger.log({"trajectory plot": wandb.Image(fig)})
+    model.train()
     return fig, ax
 
 
