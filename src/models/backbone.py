@@ -127,12 +127,12 @@ class ConditionalCNN(torch.nn.Module):
         # scaling my time embedding
         # TODO: might be a bug here
         t_float = t.float()
-        if t_float.max() <= 1.0:
-            t_scaled = t_float * 1000.0
-        else:
-            t_scaled = t_float
+        # if t_float.max() <= 1.0:
+        #     t_scaled = t_float * 1000.0
+        # else:
+        #     t_scaled = t_float
 
-        t_emb = self.time_mlp(t_scaled)  # Shape: (batch_size, time_dim)
+        t_emb = self.time_mlp(t_float)  # Shape: (batch_size, time_dim)
 
         t_emb_expanded = t_emb.unsqueeze(-1).expand(-1, -1, self.horizon)
 
