@@ -5,8 +5,8 @@ python -m src.run \
     --horizon 100 \
     --batch-size 32 \
     --num-epochs 100 \
-    --print-every 10 \
-    --eval-every 10 \
+    --print-every 1 \
+    --eval-every 5 \
     --lr 1e-3 \
     --model-type "mlp" \
     --hidden-dim 128 \

@@ -299,7 +299,7 @@ class ConditionalUNet1D(nn.Module):
         h = self.up1(h, skip2)
         h = self.up2(h, skip1)
 
-        # 4. Final Layer and Reshape
+        # Final Layer and Reshape
         output_reshaped = self.final_conv(h)
         output_flat = rearrange(output_reshaped, "b d h -> b (h d)")
         return output_flat

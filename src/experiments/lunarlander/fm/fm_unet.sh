@@ -1,5 +1,4 @@
 #!/bin/bash
-
 python -m src.run \
     --environment "LunarLander-v3" \
     --horizon 100 \
