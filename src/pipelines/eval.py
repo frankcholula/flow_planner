@@ -170,6 +170,7 @@ def evaluate_policy_mpc(
         )
         timed_planner_fn.report_average_time()
         timed_planner_fn.reset()
+
     avg_model_reward = np.mean(rewards)
     std_model_reward = np.std(rewards)
     print(

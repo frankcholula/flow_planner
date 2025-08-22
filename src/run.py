@@ -204,7 +204,7 @@ def evaluate(env, model, stats, input_dim, args, logger=None, eval_mode="open_lo
             batch_size=args.inference_batch_size,
             model_target=args.model_target,
         )
-        model_rewards = evaluate_policy_mpc(
+        model_rewards, _= evaluate_policy_mpc(
             env=env,
             planner_fn=planner_fn,
             num_episodes=10,
