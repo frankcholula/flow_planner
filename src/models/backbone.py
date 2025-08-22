@@ -279,7 +279,7 @@ class ConditionalUNet1D(nn.Module):
             # Diffusion case: use as-is (already well-scaled)
             t_scaled = t_float
 
-        t_emb = self.time_embedding(t_scaled)
+        t_emb = self.time_embedding(t_float)
         c_emb = self.cond_embedding(c.float())
 
         if self.fusion_strategy == "concat":
