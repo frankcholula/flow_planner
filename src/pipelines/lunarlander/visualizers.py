@@ -71,20 +71,20 @@ def plot_reward_histogram(
 ):
     if not rewards_list:
         print("Warning: Cannot plot an empty list of rewards.")
-        return
+        return None
 
-    plt.figure(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(10, 6))
 
     mean_reward = np.mean(rewards_list)
     std_reward = np.std(rewards_list)
     legend_label = f"mean={mean_reward:.2f}, std={std_reward:.2f}"
 
-    plt.hist(rewards_list, bins=bins, alpha=0.75, edgecolor="black", label=legend_label)
-    plt.xlim(0, 300)
+    ax.hist(rewards_list, bins=bins, alpha=0.75, edgecolor="black", label=legend_label)
+    ax.set_xlim(0, 300)
 
-    plt.title(title, fontsize=16)
-    plt.xlabel("Total Reward per Episode", fontsize=12)
-    plt.ylabel("Frequency", fontsize=12)
-    plt.legend()
-    plt.grid(axis="y", linestyle="--", alpha=0.7)
-    plt.show()
+    ax.set_title(title, fontsize=16)
+    ax.set_xlabel("Total Reward per Episode", fontsize=12)
+    ax.set_ylabel("Frequency", fontsize=12)
+    ax.legend()
+    ax.grid(axis="y", linestyle="--", alpha=0.7)
+    return fig
