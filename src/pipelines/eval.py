@@ -176,5 +176,6 @@ def evaluate_policy_mpc(
     )
     if visualize:
         plot_title = f"Reward Distribution (Replan Freq: {replan_freq})"
-        plot_reward_histogram(rewards, title=plot_title)
+        plt = plot_reward_histogram(rewards, title=plot_title)
+        plt.close()
     return rewards

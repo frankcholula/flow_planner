@@ -88,3 +88,4 @@ def plot_reward_histogram(
     plt.legend()
     plt.grid(axis="y", linestyle="--", alpha=0.7)
     plt.show()
+    return plt
