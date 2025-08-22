@@ -214,7 +214,8 @@ def evaluate(env, model, stats, input_dim, args, logger=None, eval_mode="open_lo
             condition_type=args.condition_on,
             goal_obs=goal_obs,
         )
-        logger.log({"mpc_rewards": model_rewards})
+        logger.log({"reward_mean": np.mean(model_rewards)})
+        logger.log({"reward_std": np.std(model_rewards)})
     return model_rewards
 
 
