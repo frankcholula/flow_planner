@@ -125,6 +125,7 @@ class ConditionalCNN(torch.nn.Module):
         x_reshaped = x.view(-1, self.horizon, self.transition_dim).permute(0, 2, 1)
 
         # scaling my time embedding
+        # TODO: might be a bug here
         t_float = t.float()
         if t_float.max() <= 1.0:
             t_scaled = t_float * 1000.0
@@ -269,6 +270,7 @@ class ConditionalUNet1D(nn.Module):
         x_initial = self.initial_conv(rearrange(x, "b (h d) -> b d h", h=self.horizon))
 
         # Adaptive time scaling based on input range
+        # TODO: might be a bug here
         t_float = t.float()
         if t_float.max() <= 1.0:
             # Flow matching case: scale up for better resolution
