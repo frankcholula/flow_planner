@@ -10,20 +10,26 @@ import torch
 from torch.utils.data import DataLoader
 
 from src.models.backbone import MLP, CNN, ConditionalCNN, ConditionalUNet1D
+from src.utils import args
 from src.utils.args import parse_diffusion_args
 from src.utils.loggers import WandBLogger
-
-# diffusion
-from diffusers.schedulers.scheduling_ddim import DDIMScheduler
-from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
-
+from src.pipelines.sampling import generate_diffusion_trajectory
 from src.conf.environment import BipedalWalkerConfig, CarRacingConfig, LunarLanderConfig
 from src.pipelines.preprocessing import (
     collate_fn,
     get_dataset_stats,
     create_normalized_chunks,
 )
-from src.pipelines.eval import evaluate_open_loop, evaluate_open_loop_diffusion, evaluate_policy_mpc
+from src.pipelines.eval import (
+    evaluate_open_loop,
+    evaluate_open_loop_diffusion,
+    evaluate_policy_mpc,
+)
+
+# diffusion
+from diffusers.schedulers.scheduling_ddim import DDIMScheduler
+from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
+
 
 env_config_map = {
     "LunarLander-v3": LunarLanderConfig,
@@ -208,7 +214,30 @@ def evaluate(
         plt.close(fig)
         return fig, ax
     if eval_mode == "mpc":
-        pass
+        if args.condition_on == "start_obs_goal":
+            goal_obs = torch.tensor([0, 0, 0, 0, 0, 0, 1, 1], dtype=torch.float32)
+        else:
+            goal_obs = None
+        
+        diffusion_planner = lambda cond_dict: generate_diffusion_trajectory(
+            model=model,
+            noise_scheduler=noise_scheduler,
+            stats=stats,
+            args=args,
+            input_dim=input_dim,
+            condition=cond_dict,
+        )
+        model_rewards = evaluate_policy_mpc(
+            env=env,
+            planner_fn=diffusion_planner,
+            num_episodes=10,
+            replan_freq=1,
+            render=False,
+            max_episode_length=300,
+            condition_type="start_obs_goal",
+            goal_obs =goal_obs
+        )
+        return model_rewards
 
 
 def train(config, args, dataset, env, run_name=None, logger=None):
@@ -327,7 +356,7 @@ def main():
         run_name=run_name,
         logger=logger,
     )
-    # evaluate(env, model, stats, input_dim, args, logger=logger)
+    evaluate(env, model, stats, input_dim, args, logger=logger, eval_mode="mpc")
     if logger:
         logger.finish()
 

@@ -10,6 +10,7 @@ from src.pipelines.lunarlander.visualizers import plot_reward_histogram
 from src.utils.loggers import EpisodeTimer
 import numpy as np
 import wandb
+import matplotlib.pyplot as plt
 
 
 class WrappedModel(ModelWrapper):
@@ -176,6 +177,6 @@ def evaluate_policy_mpc(
     )
     if visualize:
         plot_title = f"Reward Distribution (Replan Freq: {replan_freq})"
-        plt = plot_reward_histogram(rewards, title=plot_title)
-        plt.close()
-    return rewards
+        fig = plot_reward_histogram(rewards, title=plot_title)
+        plt.close(fig) if fig is not None else None
+    return rewards, fig
