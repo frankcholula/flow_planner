@@ -213,7 +213,12 @@ def evaluate(
         plt.close(fig)
         return fig, ax
     if eval_mode == "mpc":
-        if args.condition_on == "start_obs_goal":
+        if args.condition_on is None:
+            condition_type = "unconditional"
+        else:
+            condition_type = args.condition_on
+
+        if condition_type == "start_obs_goal":
             goal_obs = torch.tensor([0, 0, 0, 0, 0, 0, 1, 1], dtype=torch.float32)
         else:
             goal_obs = None
@@ -233,7 +238,7 @@ def evaluate(
             replan_freq=1,
             render=False,
             max_episode_length=300,
-            condition_type="start_obs_goal",
+            condition_type=condition_type,
             goal_obs=goal_obs,
         )
         return model_rewards

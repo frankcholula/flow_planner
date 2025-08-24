@@ -156,7 +156,10 @@ def evaluate_policy_mpc(
                             "goal_obs must be provided for start_obs_goal conditioning"
                         )
                     cond_dict = {"start_obs_goal": (start_obs_tensor, goal_obs)}
-
+                elif condition_type == "unconditional":
+                    cond_dict = None
+                else:
+                    raise ValueError(f"Unknown condition type: {condition_type}")
                 _, actions_plan = timed_planner_fn(cond_dict)
 
             action_index_in_plan = t % replan_freq
