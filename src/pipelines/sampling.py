@@ -147,9 +147,11 @@ def generate_diffusion_trajectory(
 
     for t in noise_scheduler.timesteps:
         timestep_tensor = t.repeat(batch_size).to(device)
-
+        if c_tensor is not None:
+            predicted_noise = model(sample, timestep_tensor, c=c_tensor)
+        else:
+            predicted_noise = model(sample, timestep_tensor)
         # The model receives the final, processed c_tensor
-        predicted_noise = model(sample, timestep_tensor, c=c_tensor)
         sample = noise_scheduler.step(predicted_noise, t, sample).prev_sample
 
     obs_dim = stats["obs_mean"].shape[0]

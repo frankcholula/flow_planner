@@ -10,7 +10,6 @@ import torch
 from torch.utils.data import DataLoader
 
 from src.models.backbone import MLP, CNN, ConditionalCNN, ConditionalUNet1D
-from src.utils import args
 from src.utils.args import parse_diffusion_args
 from src.utils.loggers import WandBLogger
 from src.pipelines.sampling import generate_diffusion_trajectory
@@ -218,7 +217,7 @@ def evaluate(
             goal_obs = torch.tensor([0, 0, 0, 0, 0, 0, 1, 1], dtype=torch.float32)
         else:
             goal_obs = None
-        
+
         diffusion_planner = lambda cond_dict: generate_diffusion_trajectory(
             model=model,
             noise_scheduler=noise_scheduler,
@@ -235,12 +234,12 @@ def evaluate(
             render=False,
             max_episode_length=300,
             condition_type="start_obs_goal",
-            goal_obs =goal_obs
+            goal_obs=goal_obs,
         )
         return model_rewards
 
 
-def train(config, args, dataset, env, run_name=None, logger=None):
+def train(config, args, dataset, env, noise_scheduler, run_name=None, logger=None):
     # creating the model
     obs_dim = config.obs_dim
     action_dim = config.action_dim
@@ -249,8 +248,6 @@ def train(config, args, dataset, env, run_name=None, logger=None):
     # getting the dataloader and dataset statistics
     dataloader, stats = build_dataloader(dataset, args)
     # TODO: replace path with a noise scheduler
-    noise_scheduler = scheduler_map[args.scheduler](args.num_train_timesteps)
-
     optim = torch.optim.Adam(model.parameters(), lr=args.lr)
 
     save_dir = "src/checkpoints"
@@ -311,7 +308,6 @@ def runname_builder(args) -> str:
         parts.append(f"target-{model_target}")
     if (condition_on := getattr(args, "condition_on", None)) is not None:
         parts.append(f"cond-{condition_on}")
-
     return "_".join(parts)
 
 
@@ -348,15 +344,27 @@ def main():
             },
             run_name=run_name,
         )
+    noise_scheduler = scheduler_map[args.scheduler](args.num_train_timesteps)
     model, stats, input_dim = train(
         config=config,
         args=args,
         dataset=dataset,
         env=env,
+        noise_scheduler=noise_scheduler,
         run_name=run_name,
         logger=logger,
     )
-    evaluate(env, model, stats, input_dim, args, logger=logger, eval_mode="mpc")
+
+    evaluate(
+        env=env,
+        model=model,
+        noise_scheduler=noise_scheduler,
+        stats=stats,
+        input_dim=input_dim,
+        args=args,
+        logger=logger,
+        eval_mode="mpc",
+    )
     if logger:
         logger.finish()
 
