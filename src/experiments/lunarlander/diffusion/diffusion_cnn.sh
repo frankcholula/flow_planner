@@ -1,6 +1,5 @@
 #!/bin/bash
-
-python -m src.run \
+python -m src.diffusion \
     --environment "LunarLander-v3" \
     --horizon 100 \
     --batch-size 32 \
@@ -11,6 +10,7 @@ python -m src.run \
     --model-type "cnn" \
     --kernel-size 5 \
     --hidden-dim 128 \
-    --step-size 0.05 \
-    --solver-method "midpoint" \
+    --scheduler "ddpm" \
+    --num-train-timesteps 1000 \
+    --num-inference-steps 100 \
     --inference-batch-size 1

@@ -2,6 +2,7 @@ import torch
 from torch import nn, Tensor
 from einops import rearrange, repeat
 from src.models.positional_embedding import SinusoidalPosEmb
+from typing import Optional
 
 
 class Swish(nn.Module):
@@ -33,10 +34,11 @@ class MLP(nn.Module):
             nn.Linear(hidden_dim, input_dim),
         )
 
-    def forward(self, x: Tensor, t: Tensor) -> Tensor:
+    def forward(self, x: Tensor, t: Tensor, c: Tensor = None) -> Tensor:
         original_shape = x.shape
         x = x.view(-1, self.input_dim)
-        t = t.unsqueeze(1).float()
+        # t = t.unsqueeze(1).float()
+        t = t.reshape(-1, 1).float()
         h = torch.cat([x, t], dim=1)
         output = self.main(h)
         return output.view(original_shape)
@@ -265,41 +267,35 @@ class ConditionalUNet1D(nn.Module):
         # Final convolution to map back to the original transition dimension
         self.final_conv = nn.Conv1d(hidden_dim, self.transition_dim, kernel_size=1)
 
-    def forward(self, x: Tensor, t: Tensor, c: Tensor) -> Tensor:
+    def forward(self, x: Tensor, t: Tensor, c: Optional[Tensor] = None) -> Tensor:
         x_initial = self.initial_conv(rearrange(x, "b (h d) -> b d h", h=self.horizon))
 
-        # Adaptive time scaling based on input range
         t_float = t.float()
-        if t_float.max() <= 1.0:
-            # Flow matching case: scale up for better resolution
-            t_scaled = t_float * 1000.0
-        else:
-            # Diffusion case: use as-is (already well-scaled)
-            t_scaled = t_float
-
+        t_scaled = t_float * 1000.0 if t_float.max() <= 1.0 else t_float
         t_emb = self.time_embedding(t_scaled)
-        c_emb = self.cond_embedding(c.float())
 
-        if self.fusion_strategy == "concat":
-            combined_emb = torch.cat([t_emb, c_emb], dim=-1)
-            final_emb = self.feature_projection(combined_emb)
-        elif self.fusion_strategy == "add":
-            final_emb = t_emb + c_emb
+        if c is not None:
+            c_emb = self.cond_embedding(c.float())
+
+            if self.fusion_strategy == "concat":
+                combined_emb = torch.cat([t_emb, c_emb], dim=-1)
+                final_emb = self.feature_projection(combined_emb)
+            elif self.fusion_strategy == "add":
+                final_emb = t_emb + c_emb
+            else:
+                raise ValueError(f"Unknown fusion strategy: {self.fusion_strategy}")
         else:
-            raise ValueError(f"Unknown fusion strategy: {self.fusion_strategy}")
+            final_emb = t_emb
 
         time_cond_emb = repeat(final_emb, "b d -> b d h", h=self.horizon)
         h = x_initial + time_cond_emb
 
         skip1, h = self.down1(h)
         skip2, h = self.down2(h)
-
         h = self.bottleneck(h)
-
         h = self.up1(h, skip2)
         h = self.up2(h, skip1)
 
-        # Final Layer and Reshape
         output_reshaped = self.final_conv(h)
         output_flat = rearrange(output_reshaped, "b d h -> b (h d)")
         return output_flat

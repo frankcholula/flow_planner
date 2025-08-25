@@ -12,7 +12,6 @@ def unnormalize_trajectory(
     )
 
     obs, act = None, None
-
     if model_target == "obs_act":
         reshaped = chunk.reshape(horizon, obs_dim + action_dim)
         norm_obs = reshaped[:, :obs_dim]
@@ -46,37 +45,38 @@ def generate_trajectory(
     model_target: str = "obs_act",
 ):
     # infer obs and action dim from stats
+    c_tensor = None
     obs_dim = stats["obs_mean"].shape[0]
     action_dim = stats["act_mean"].shape[0]
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    if condition:
+        if "reward" in condition:
+            rew_mean = stats["rew_mean"].to(device)
+            rew_std = stats["rew_std"].to(device)
+            norm_c = (
+                torch.tensor([condition["reward"]], device=device) - rew_mean
+            ) / rew_std
+            c_tensor = norm_c.view(1, 1).expand(batch_size, -1)
 
-    if "reward" in condition:
-        rew_mean = stats["rew_mean"].to(device)
-        rew_std = stats["rew_std"].to(device)
-        norm_c = (
-            torch.tensor([condition["reward"]], device=device) - rew_mean
-        ) / rew_std
-        c_tensor = norm_c.view(1, 1).expand(batch_size, -1)
-
-    elif "start_obs" in condition:
-        obs_mean = stats["obs_mean"].to(device)
-        obs_std = stats["obs_std"].to(device)
-        start_obs_tensor = condition["start_obs"].float().to(device)
-        norm_c = (start_obs_tensor - obs_mean) / obs_std
-        c_tensor = norm_c.unsqueeze(0).expand(batch_size, -1)
-    elif "start_obs_goal" in condition:
-        obs_mean = stats["obs_mean"].to(device)
-        obs_std = stats["obs_std"].to(device)
-        start_obs, goal_obs = condition["start_obs_goal"]
-        start_obs_tensor = start_obs.float().to(device)
-        goal_obs_tensor = goal_obs.float().to(device)
-        norm_start = (start_obs_tensor - obs_mean) / obs_std
-        norm_goal = (goal_obs_tensor - obs_mean) / obs_std
-        norm_c = torch.cat([norm_start, norm_goal])
-        c_tensor = norm_c.unsqueeze(0).expand(batch_size, -1)
-    else:
-        c_tensor = None
-        raise ValueError("Condition type not recognized.")
+        elif "start_obs" in condition:
+            obs_mean = stats["obs_mean"].to(device)
+            obs_std = stats["obs_std"].to(device)
+            start_obs_tensor = condition["start_obs"].float().to(device)
+            norm_c = (start_obs_tensor - obs_mean) / obs_std
+            c_tensor = norm_c.unsqueeze(0).expand(batch_size, -1)
+        elif "start_obs_goal" in condition:
+            obs_mean = stats["obs_mean"].to(device)
+            obs_std = stats["obs_std"].to(device)
+            start_obs, goal_obs = condition["start_obs_goal"]
+            start_obs_tensor = start_obs.float().to(device)
+            goal_obs_tensor = goal_obs.float().to(device)
+            norm_start = (start_obs_tensor - obs_mean) / obs_std
+            norm_goal = (goal_obs_tensor - obs_mean) / obs_std
+            norm_c = torch.cat([norm_start, norm_goal])
+            c_tensor = norm_c.unsqueeze(0).expand(batch_size, -1)
+        else:
+            print(condition)
+            raise ValueError(f"Condition type not recognized.")
 
     x_init = torch.randn((batch_size, input_dim), dtype=torch.float32, device=device)
 
@@ -147,9 +147,11 @@ def generate_diffusion_trajectory(
 
     for t in noise_scheduler.timesteps:
         timestep_tensor = t.repeat(batch_size).to(device)
-
+        if c_tensor is not None:
+            predicted_noise = model(sample, timestep_tensor, c=c_tensor)
+        else:
+            predicted_noise = model(sample, timestep_tensor)
         # The model receives the final, processed c_tensor
-        predicted_noise = model(sample, timestep_tensor, c=c_tensor)
         sample = noise_scheduler.step(predicted_noise, t, sample).prev_sample
 
     obs_dim = stats["obs_mean"].shape[0]

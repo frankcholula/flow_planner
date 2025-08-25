@@ -70,6 +70,7 @@ def evaluate_open_loop_diffusion(
 
 def evaluate_open_loop(env, model, stats, input_dim, args, logger=None):
     model.eval()
+    cond_dict = None
     if args.condition_on == "start_obs":
         start_observation, _ = env.reset()
         cond_dict = {"start_obs": torch.from_numpy(start_observation)}
@@ -91,7 +92,10 @@ def evaluate_open_loop(env, model, stats, input_dim, args, logger=None):
     elif args.condition_on == "reward":
         # TODO: implement reward conditioning
         pass
-    wrapped_vf = WrappedConditionalModel(model)
+    if cond_dict is not None:
+        wrapped_vf = WrappedConditionalModel(model)
+    else:
+        wrapped_vf = WrappedModel(model)
     T = torch.linspace(0, 1, 10)
     solver = ODESolver(velocity_model=wrapped_vf)
     trajectory_fn = lambda: generate_trajectory(
@@ -100,7 +104,7 @@ def evaluate_open_loop(env, model, stats, input_dim, args, logger=None):
         T=T,
         input_dim=input_dim,
         horizon=args.horizon,
-        condition=cond_dict if args.condition_on else None,
+        condition=cond_dict,
         solver_method=args.solver_method,
         batch_size=args.inference_batch_size,
         step_size=args.step_size,
@@ -152,7 +156,10 @@ def evaluate_policy_mpc(
                             "goal_obs must be provided for start_obs_goal conditioning"
                         )
                     cond_dict = {"start_obs_goal": (start_obs_tensor, goal_obs)}
-
+                elif condition_type == "unconditional":
+                    cond_dict = None
+                else:
+                    raise ValueError(f"Unknown condition type: {condition_type}")
                 _, actions_plan = timed_planner_fn(cond_dict)
 
             action_index_in_plan = t % replan_freq
