@@ -26,6 +26,7 @@ from src.pipelines.preprocessing import (
 )
 from src.pipelines.eval import (
     WrappedConditionalModel,
+    WrappedModel,
     evaluate_open_loop,
     evaluate_policy_mpc,
 )
@@ -189,11 +190,20 @@ def evaluate(env, model, stats, input_dim, args, logger=None, eval_mode="open_lo
         plt.close(fig)
         return fig, ax
     if eval_mode == "mpc":
-        if args.condition_on == "start_obs_goal":
+        if args.condition_on is None:
+            condition_type = "unconditional"
+        else:
+            condition_type = args.condition_on
+
+        if condition_type == "start_obs_goal":
             goal_obs = torch.tensor([0, 0, 0, 0, 0, 0, 1, 1], dtype=torch.float32)
         else:
             goal_obs = None
-        wrapped_vf = WrappedConditionalModel(model)
+        if condition_type == "unconditional":
+            wrapped_vf = WrappedModel(model)
+        else:
+            wrapped_vf = WrappedConditionalModel(model)
+
         T = torch.linspace(0, 1, 10)
         T = T.to(device=args.device)
         solver = ODESolver(velocity_model=wrapped_vf)
@@ -215,11 +225,12 @@ def evaluate(env, model, stats, input_dim, args, logger=None, eval_mode="open_lo
             replan_freq=1,
             render=False,
             max_episode_length=300,
-            condition_type=args.condition_on,
+            condition_type=condition_type,
             goal_obs=goal_obs,
         )
-        logger.log({"reward_mean": np.mean(model_rewards)})
-        logger.log({"reward_std": np.std(model_rewards)})
+        if logger:
+            logger.log({"reward_mean": np.mean(model_rewards)})
+            logger.log({"reward_std": np.std(model_rewards)})
     return model_rewards
 
 
@@ -268,6 +279,25 @@ def train(config, args, dataset, env, run_name=None, logger=None):
     return model, stats, input_dim
 
 
+def runname_builder(args) -> str:
+    parts = ["FM"]
+    if (env := getattr(args, "environment", None)) is not None:
+        parts.append(env)
+    if (model_type := getattr(args, "model_type", None)) is not None:
+        parts.append(model_type)
+    if (horizon := getattr(args, "horizon", None)) is not None:
+        parts.append(f"h{horizon}")
+    if (num_epochs := getattr(args, "num_epochs", None)) is not None:
+        parts.append(f"e{num_epochs}")
+    if (kernel_size := getattr(args, "kernel_size", None)) is not None:
+        parts.append(f"k{kernel_size}")
+    if (model_target := getattr(args, "model_target", None)) is not None:
+        parts.append(f"target-{model_target}")
+    if (condition_on := getattr(args, "condition_on", None)) is not None:
+        parts.append(f"cond-{condition_on}")
+    return "_".join(parts)
+
+
 def main():
     args = parse_fm_args()
     torch.manual_seed(args.seed)
@@ -277,11 +307,7 @@ def main():
         torch.set_default_device(args.device)
         print(f"Using device: {args.device}")
     config, dataset, env = load_dataset(args)
-    cond = args.condition_on if args.condition_on else "none"
-    run_name = (
-        f"{args.environment}_{args.model_type}_h{args.horizon}_e{args.num_epochs}_"
-        f"k{args.kernel_size}_target-{args.model_target}_cond-{cond}"
-    )
+    run_name = runname_builder(args)
     logger = None
     if not args.no_wandb:
         logger = WandBLogger(
