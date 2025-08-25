@@ -101,16 +101,20 @@ def build_model(args, obs_dim, action_dim):
 
     elif args.model_type == "unet":
         print("Using UNet1D model for training...")
-        if args.condition_on == "reward":
-            cond_dim = 1
-        elif args.condition_on == "start_obs":
-            cond_dim = obs_dim
-        elif args.condition_on == "start_obs_goal":
-            cond_dim = obs_dim * 2
+        if args.condition_on:
+            if args.condition_on == "reward":
+                cond_dim = 1
+            elif args.condition_on == "start_obs":
+                cond_dim = obs_dim
+            elif args.condition_on == "start_obs_goal":
+                cond_dim = obs_dim * 2
+            else:
+                raise ValueError(
+                    f"UNet1D requires a valid --condition-on argument ('reward', 'start_obs', 'start_obs_goal'), but got: {args.condition_on!r}"
+                )
         else:
-            raise ValueError(
-                f"UNet1D requires a valid --condition-on argument ('reward', 'start_obs', 'start_obs_goal'), but got: {args.condition_on!r}"
-            )
+            print("Running unconditional UNet1D model...")
+            cond_dim = 1
         model = ConditionalUNet1D(
             input_dim=input_dim,
             horizon=horizon,
@@ -204,7 +208,7 @@ def evaluate(env, model, stats, input_dim, args, logger=None, eval_mode="open_lo
             batch_size=args.inference_batch_size,
             model_target=args.model_target,
         )
-        model_rewards, _= evaluate_policy_mpc(
+        model_rewards, _ = evaluate_policy_mpc(
             env=env,
             planner_fn=planner_fn,
             num_episodes=10,
