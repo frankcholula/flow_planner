@@ -245,6 +245,9 @@ def evaluate(
             condition_type=condition_type,
             goal_obs=goal_obs,
         )
+        if logger:
+            logger.log({"reward mean": model_rewards.mean()})
+            logger.log({"reward std": model_rewards.std()})
         return model_rewards
 
 
