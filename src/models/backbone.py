@@ -37,7 +37,6 @@ class MLP(nn.Module):
     def forward(self, x: Tensor, t: Tensor, c: Tensor = None) -> Tensor:
         original_shape = x.shape
         x = x.view(-1, self.input_dim)
-        # t = t.unsqueeze(1).float()
         t = t.reshape(-1, 1).float()
         h = torch.cat([x, t], dim=1)
         output = self.main(h)
