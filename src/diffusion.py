@@ -202,6 +202,7 @@ def evaluate(
     args,
     logger=None,
     eval_mode="diffusion_open_loop",
+    dataset=None
 ):
     print("Evaluating model...")
     if eval_mode == "open_loop":
@@ -217,6 +218,7 @@ def evaluate(
             input_dim=input_dim,
             args=args,
             logger=logger,
+            dataset=dataset
         )
         plt.close(fig)
         return fig, ax
@@ -298,6 +300,7 @@ def train(config, args, dataset, env, noise_scheduler, run_name=None, logger=Non
                 input_dim=input_dim,
                 args=args,
                 logger=logger,
+                dataset=dataset
             )
     print("Training complete. Saving model...")
     os.makedirs(save_dir, exist_ok=True)

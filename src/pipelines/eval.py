@@ -11,6 +11,7 @@ from src.utils.loggers import EpisodeTimer
 import numpy as np
 import wandb
 import matplotlib.pyplot as plt
+import random
 
 
 class WrappedModel(ModelWrapper):
@@ -27,20 +28,30 @@ class WrappedConditionalModel(ModelWrapper):
 
 
 def evaluate_open_loop_diffusion(
-    env, model, noise_scheduler, stats, input_dim, args, logger=None
+    env, model, noise_scheduler, stats, input_dim, args, logger=None, dataset=None
 ):
+
     model.eval()
     cond_dict = None
-
     if args.condition_on == "start_obs":
         start_observation, _ = env.reset()
         cond_dict = {"start_obs": torch.from_numpy(start_observation)}
+
     elif args.condition_on == "start_obs_goal":
         start_observation, _ = env.reset()
         if args.environment == "LunarLander-v3":
-            goal_observation = torch.tensor(
-                [0, 0, 0, 0, 0, 0, 1, 1], dtype=torch.float32
+            # goal_observation = torch.tensor(
+            #     [0, 0, 0, 0, 0, 0, 1, 1], dtype=torch.float32
+            # )
+            episode = dataset[random.choice(range(len(dataset)))]
+            x_start, y_start = start_observation[0], start_observation[1]
+            goal_observation = torch.from_numpy(episode.observations[args.horizon]).to(
+                args.device
             )
+            x_goal, y_goal = goal_observation[0], goal_observation[1]
+            print(f"Target Start obs: (x={float(x_start):.4f}, y={float(y_start):.4f})")
+            print(f"Target Goal obs:  (x={x_goal.item():.4f}, y={y_goal.item():.4f})")
+            print("------------------------------")
         elif (
             args.environment == "BipedalWalker-v3" or args.environment == "CarRacing-v3"
         ):

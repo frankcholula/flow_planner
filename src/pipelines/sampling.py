@@ -75,8 +75,7 @@ def generate_trajectory(
             norm_c = torch.cat([norm_start, norm_goal])
             c_tensor = norm_c.unsqueeze(0).expand(batch_size, -1)
         else:
-            print(condition)
-            raise ValueError(f"Condition type not recognized.")
+            raise ValueError(f"Condition type not recognized: {condition.keys()}")
 
     x_init = torch.randn((batch_size, input_dim), dtype=torch.float32, device=device)
 
@@ -171,7 +170,9 @@ def generate_diffusion_trajectory(
 
     obs_dim = stats["obs_mean"].shape[0]
     action_dim = stats["act_mean"].shape[0]
-
+    # reshaped = sample.reshape(args.horizon, obs_dim + action_dim)
+    # obs = reshaped[:, :obs_dim]
+    # act = reshaped[:, action_dim:]
     obs, act = unnormalize_trajectory(
         chunk=sample,
         stats=stats,
@@ -180,4 +181,11 @@ def generate_diffusion_trajectory(
         action_dim=action_dim,
         model_target=args.model_target,
     )
+    # some debugging
+    start = obs[0, :2]
+    end   = obs[-1, :2] 
+    
+    print(f"Start (x,y): ({start[0].item():.4f}, {start[1].item():.4f})")
+    print(f"End   (x,y): ({end[0].item():.4f}, {end[1].item():.4f})")
+    print("------------------------------")
     return obs, act

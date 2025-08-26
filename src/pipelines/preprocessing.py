@@ -132,10 +132,12 @@ def create_normalized_chunks(
 
                 elif cond_type == "start_obs_goal":
                     start_obs = obs_chunk[0]
-                    if model_target == "obs_act" or model_target == "obs_only":
-                        end_obs = obs[length - 1]
-                    elif model_target == "act_only":
-                        end_obs = obs_chunk[-1]
+                    # if model_target == "obs_act" or model_target == "obs_only":
+                    #     end_obs = obs[length - 1]
+                    # elif model_target == "act_only":
+                    #     end_obs = obs_chunk[-1]
+                    # TODO: implement waypoint conditioning if this works
+                    end_obs = obs_chunk[-1] 
                     norm_start = (start_obs - obs_mean) / obs_std
                     norm_end = (end_obs - obs_mean) / obs_std
                     norm_cond = torch.cat([norm_start, norm_end])
