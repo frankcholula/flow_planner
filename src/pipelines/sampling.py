@@ -146,7 +146,11 @@ def generate_diffusion_trajectory(
     noise_scheduler.set_timesteps(args.num_inference_steps)
 
     for t in noise_scheduler.timesteps:
-        timestep_tensor = t.repeat(batch_size).to(device)
+        if args.cfg and c_tensor is not None:
+            model_batch_size = 2 * batch_size
+        else:
+            model_batch_size = batch_size
+        timestep_tensor = t.repeat(model_batch_size).to(device)
         if args.cfg and c_tensor is not None:
             # clever way to bypass 2 stage
             latent_model_input = torch.cat([sample] * 2)
