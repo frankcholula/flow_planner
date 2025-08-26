@@ -147,11 +147,22 @@ def generate_diffusion_trajectory(
 
     for t in noise_scheduler.timesteps:
         timestep_tensor = t.repeat(batch_size).to(device)
-        if c_tensor is not None:
-            predicted_noise = model(sample, timestep_tensor, c=c_tensor)
+        if args.cfg and c_tensor is not None:
+            # clever way to bypass 2 stage
+            latent_model_input = torch.cat([sample] * 2)
+            null_condition = torch.zeros_like(c_tensor)
+            c_double = torch.cat([null_condition, c_tensor])
+
+            noise_pred_double = model(latent_model_input, timestep_tensor, c=c_double)
+            noise_pred_uncond, noise_pred_cond = noise_pred_double.chunk(2)
+            predicted_noise = noise_pred_uncond + args.guidance_scale * (
+                noise_pred_cond - noise_pred_uncond
+            )
         else:
-            predicted_noise = model(sample, timestep_tensor)
-        # The model receives the final, processed c_tensor
+            if c_tensor is not None:
+                predicted_noise = model(sample, timestep_tensor, c=c_tensor)
+            else:
+                predicted_noise = model(sample, timestep_tensor)
         sample = noise_scheduler.step(predicted_noise, t, sample).prev_sample
 
     obs_dim = stats["obs_mean"].shape[0]

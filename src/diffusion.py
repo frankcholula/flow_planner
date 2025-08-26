@@ -147,7 +147,6 @@ def run_epoch(model, dataloader, noise_scheduler, optim, args, stats):
     total_chunks = 0
     for batch in dataloader:
         optim.zero_grad()
-
         # same conditioning logic, but we use x_0 as clean data
         if args.condition_on:
             x0, c = create_normalized_chunks(
@@ -160,6 +159,9 @@ def run_epoch(model, dataloader, noise_scheduler, optim, args, stats):
             if x0 is None:
                 continue
             x0, c = x0.to(args.device), c.to(args.device)
+
+            if args.cfg and random.random() < args.cfg_dropout_prob:
+                c = torch.zeros_like(c)
         else:
             x0 = create_normalized_chunks(
                 batch, args.horizon, stats, model_target=args.model_target
@@ -320,6 +322,8 @@ def runname_builder(args) -> str:
         parts.append(f"target-{model_target}")
     if (condition_on := getattr(args, "condition_on", None)) is not None:
         parts.append(f"cond-{condition_on}")
+    if (cfg := getattr(args, "cfg", None)) is not None and cfg:
+        parts.append("cfg")
     return "_".join(parts)
 
 
