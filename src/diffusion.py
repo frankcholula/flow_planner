@@ -235,7 +235,7 @@ def evaluate(
             input_dim=input_dim,
             condition=cond_dict,
         )
-        model_rewards = evaluate_policy_mpc(
+        model_rewards, _ = evaluate_policy_mpc(
             env=env,
             planner_fn=diffusion_planner,
             num_episodes=10,
@@ -257,7 +257,7 @@ def train(config, args, dataset, env, noise_scheduler, run_name=None, logger=Non
     action_dim = config.action_dim
     model, input_dim = build_model(args, obs_dim, action_dim)
 
-    # getting the dataloader and dataset statistics
+    # getting the dataloadergit p and dataset statistics
     dataloader, stats = build_dataloader(dataset, args)
     # TODO: replace path with a noise scheduler
     optim = torch.optim.Adam(model.parameters(), lr=args.lr)
