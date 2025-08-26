@@ -246,8 +246,8 @@ def evaluate(
             goal_obs=goal_obs,
         )
         if logger:
-            logger.log({"reward mean": model_rewards.mean()})
-            logger.log({"reward std": model_rewards.std()})
+            logger.log({"reward mean": np.mean(model_rewards)})
+            logger.log({"reward std": np.std(model_rewards)})
         return model_rewards
 
 
