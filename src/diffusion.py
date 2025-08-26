@@ -161,6 +161,7 @@ def run_epoch(model, dataloader, noise_scheduler, optim, args, stats):
             x0, c = x0.to(args.device), c.to(args.device)
 
             if args.cfg and random.random() < args.cfg_dropout_prob:
+                print("--- Dropping condition for CFG training ---") 
                 c = torch.zeros_like(c)
         else:
             x0 = create_normalized_chunks(
@@ -168,6 +169,7 @@ def run_epoch(model, dataloader, noise_scheduler, optim, args, stats):
             )
             if x0 is None:
                 continue
+            c = None
             x0 = x0.to(args.device)
 
         noise = torch.randn_like(x0)
