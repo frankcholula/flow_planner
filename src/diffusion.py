@@ -147,7 +147,6 @@ def run_epoch(model, dataloader, noise_scheduler, optim, args, stats):
     total_chunks = 0
     for batch in dataloader:
         optim.zero_grad()
-
         # same conditioning logic, but we use x_0 as clean data
         if args.condition_on:
             x0, c = create_normalized_chunks(
@@ -160,12 +159,17 @@ def run_epoch(model, dataloader, noise_scheduler, optim, args, stats):
             if x0 is None:
                 continue
             x0, c = x0.to(args.device), c.to(args.device)
+
+            if args.cfg and random.random() < args.cfg_dropout_prob:
+                print("--- Dropping condition for CFG training ---") 
+                c = torch.zeros_like(c)
         else:
             x0 = create_normalized_chunks(
                 batch, args.horizon, stats, model_target=args.model_target
             )
             if x0 is None:
                 continue
+            c = None
             x0 = x0.to(args.device)
 
         noise = torch.randn_like(x0)
@@ -235,7 +239,7 @@ def evaluate(
             input_dim=input_dim,
             condition=cond_dict,
         )
-        model_rewards = evaluate_policy_mpc(
+        model_rewards, _ = evaluate_policy_mpc(
             env=env,
             planner_fn=diffusion_planner,
             num_episodes=10,
@@ -245,6 +249,9 @@ def evaluate(
             condition_type=condition_type,
             goal_obs=goal_obs,
         )
+        if logger:
+            logger.log({"reward mean": np.mean(model_rewards)})
+            logger.log({"reward std": np.std(model_rewards)})
         return model_rewards
 
 
@@ -254,7 +261,7 @@ def train(config, args, dataset, env, noise_scheduler, run_name=None, logger=Non
     action_dim = config.action_dim
     model, input_dim = build_model(args, obs_dim, action_dim)
 
-    # getting the dataloader and dataset statistics
+    # getting the dataloadergit p and dataset statistics
     dataloader, stats = build_dataloader(dataset, args)
     # TODO: replace path with a noise scheduler
     optim = torch.optim.Adam(model.parameters(), lr=args.lr)
@@ -317,6 +324,8 @@ def runname_builder(args) -> str:
         parts.append(f"target-{model_target}")
     if (condition_on := getattr(args, "condition_on", None)) is not None:
         parts.append(f"cond-{condition_on}")
+    if (cfg := getattr(args, "cfg", None)) is not None and cfg:
+        parts.append("cfg")
     return "_".join(parts)
 
 

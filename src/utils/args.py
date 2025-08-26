@@ -82,7 +82,15 @@ def parse_diffusion_args() -> argparse.Namespace:
         choices=["reward", "start_obs", "start_obs_goal"],
         help="Condition type for trajectory generation.",
     )
-
+    conditional_args.add_argument(
+        "--cfg", type=bool, default=False, help="Classifier-free guidance"
+    )
+    conditional_args.add_argument(
+        "--cfg_dropout_prob",
+        type=float,
+        default=0.1,
+        help="Dropout probability for classifier-free guidance",
+    )
     inference_args = parser.add_argument_group("Inference arguments")
     inference_args.add_argument(
         "--num-inference-steps", type=int, default=50, help="Number of inference steps"
@@ -92,6 +100,12 @@ def parse_diffusion_args() -> argparse.Namespace:
         type=int,
         default=1,
         help="Batch size for inference",
+    )
+    inference_args.add_argument(
+        "--guidance_scale",
+        type=float,
+        default=1.5,
+        help="Guidance scale for classifier-free guidance",
     )
     return parser.parse_args()
 

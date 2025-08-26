@@ -169,7 +169,6 @@ def run_epoch(model, dataloader, path, optim, args, stats):
         x0 = torch.randn_like(x1)
         t = torch.rand(x1.shape[0], device=args.device)
         sample = path.sample(t=t, x_0=x0, x_1=x1)
-
         if args.condition_on:
             pred = model(sample.x_t, sample.t, c=c)
         else:
