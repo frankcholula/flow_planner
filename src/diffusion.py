@@ -172,6 +172,23 @@ def run_epoch(model, dataloader, noise_scheduler, optim, args, stats):
             c = None
             x0 = x0.to(args.device)
 
+        obs_dim = stats["obs_mean"].shape[0]
+        action_dim = stats["act_mean"].shape[0]
+        feature_dim = {
+            "obs_act": obs_dim + action_dim,
+            "obs_only": obs_dim,
+            "act_only": action_dim,
+        }[args.model_target]
+
+        x0 = x0.reshape(-1, args.horizon, feature_dim)
+
+        mask = torch.ones_like(x0)
+        if args.model_target != "act_only":
+            mask[:, 0, :obs_dim] = 0
+            mask[:, -1, :obs_dim] = 0
+
+        fixed = x0.clone()
+
         noise = torch.randn_like(x0)
         timesteps = torch.randint(
             0,
@@ -181,11 +198,18 @@ def run_epoch(model, dataloader, noise_scheduler, optim, args, stats):
         ).long()
 
         x_t = noise_scheduler.add_noise(x0, noise, timesteps)
+        x_t = x_t * mask + fixed * (1 - mask)
+
+        x_t_flat = x_t.reshape(x_t.shape[0], -1)
+        noise_flat = noise.reshape(noise.shape[0], -1)
+        mask_flat = mask.reshape(mask.shape[0], -1)
+
         if args.condition_on:
-            predicted_noise = model(x_t, timesteps, c=c)
+            predicted_noise = model(x_t_flat, timesteps, c=c)
         else:
-            predicted_noise = model(x_t, timesteps)
-        loss = torch.nn.functional.mse_loss(predicted_noise, noise)
+            predicted_noise = model(x_t_flat, timesteps)
+
+        loss = ((predicted_noise - noise_flat) ** 2 * mask_flat).sum() / mask_flat.sum()
         loss.backward()
         optim.step()
         total_loss += loss.item()
