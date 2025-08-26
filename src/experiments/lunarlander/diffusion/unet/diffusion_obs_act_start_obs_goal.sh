@@ -3,9 +3,9 @@ python -m src.diffusion \
     --environment "LunarLander-v3" \
     --horizon 100 \
     --batch-size 32 \
-    --num-epochs 50 \
+    --num-epochs 200 \
     --print-every 1 \
-    --eval-every 1 \
+    --eval-every 2 \
     --lr 1e-4 \
     --model-type "unet" \
     --hidden-dim 64 \
