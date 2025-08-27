@@ -364,7 +364,7 @@ def main():
         )
     noise_scheduler = scheduler_map[args.scheduler](
         num_train_timesteps=args.num_train_timesteps,
-        # beta_schedule="squaredcos_cap_v2",
+        beta_schedule="squaredcos_cap_v2",
         clip_sample=False,
     )
     model, stats, input_dim = train(
