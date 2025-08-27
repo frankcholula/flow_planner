@@ -5,7 +5,7 @@ python -m src.diffusion \
     --batch-size 32 \
     --num-epochs 100 \
     --print-every 1 \
-    --eval-every 5 \
+    --eval-every 1 \
     --lr 1e-3 \
     --model-type "cnn" \
     --kernel-size 5 \
