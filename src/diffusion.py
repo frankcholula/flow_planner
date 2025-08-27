@@ -362,11 +362,10 @@ def main():
             },
             run_name=run_name,
         )
-    # noise_scheduler = scheduler_map[args.scheduler](args.num_train_timesteps)
     noise_scheduler = scheduler_map[args.scheduler](
         num_train_timesteps=args.num_train_timesteps,
-        beta_schedule="squaredcos_cap_v2",  # A more modern and stable schedule
-        clip_sample=False,  # Often better for non-image data
+        beta_schedule="squaredcos_cap_v2",
+        clip_sample=False,
     )
     model, stats, input_dim = train(
         config=config,
