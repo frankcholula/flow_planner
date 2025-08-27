@@ -161,7 +161,7 @@ def run_epoch(model, dataloader, noise_scheduler, optim, args, stats):
             x0, c = x0.to(args.device), c.to(args.device)
 
             if args.cfg and random.random() < args.cfg_dropout_prob:
-                print("--- Dropping condition for CFG training ---") 
+                print("--- Dropping condition for CFG training ---")
                 c = torch.zeros_like(c)
         else:
             x0 = create_normalized_chunks(
@@ -362,7 +362,12 @@ def main():
             },
             run_name=run_name,
         )
-    noise_scheduler = scheduler_map[args.scheduler](args.num_train_timesteps)
+    # noise_scheduler = scheduler_map[args.scheduler](args.num_train_timesteps)
+    noise_scheduler = scheduler_map[args.scheduler](
+        num_train_timesteps=args.num_train_timesteps,
+        beta_schedule="squaredcos_cap_v2",  # A more modern and stable schedule
+        clip_sample=False,  # Often better for non-image data
+    )
     model, stats, input_dim = train(
         config=config,
         args=args,
