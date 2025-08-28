@@ -1,6 +1,6 @@
 <mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36" version="28.1.1">
   <diagram name="Page-1" id="Z_Joj0WRkzHGWHMlCn8S">
-    <mxGraphModel dx="2804" dy="2056" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+    <mxGraphModel dx="1142" dy="838" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -335,6 +335,23 @@
         </mxCell>
         <mxCell id="RIU2FXlWZN0ZZ8TZ6c9n-81" value="Solution State 3" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
           <mxGeometry x="2253" y="405.87" width="103" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="RIU2FXlWZN0ZZ8TZ6c9n-82" value="Optimal Action 1" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="3017" y="420.62" width="93" height="57.38" as="geometry" />
+        </mxCell>
+        <mxCell id="RIU2FXlWZN0ZZ8TZ6c9n-83" value="Optimal Action 2" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="3264" y="390.12" width="102" height="31" as="geometry" />
+        </mxCell>
+        <mxCell id="RIU2FXlWZN0ZZ8TZ6c9n-88" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="1" source="RIU2FXlWZN0ZZ8TZ6c9n-84">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="3066.8888888888887" y="638.2962962962963" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="RIU2FXlWZN0ZZ8TZ6c9n-84" value="" style="shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;imageAspect=0;aspect=fixed;image=https://icons.diagrams.net/icon-cache1/Essential_Web_5-2055/point-left-arrow-curve-back-940.svg;rotation=-60;" vertex="1" parent="1">
+          <mxGeometry x="3033" y="466.87" width="50" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="RIU2FXlWZN0ZZ8TZ6c9n-85" value="" style="shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;imageAspect=0;aspect=fixed;image=https://icons.diagrams.net/icon-cache1/Essential_Web_5-2055/point-right-arrow-curve-forward-941.svg;rotation=100;" vertex="1" parent="1">
+          <mxGeometry x="3306" y="425" width="50" height="50" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
