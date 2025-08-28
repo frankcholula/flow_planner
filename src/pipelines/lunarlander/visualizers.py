@@ -13,7 +13,7 @@ def visualize_trajectories(trajectory_fn, num_trajectories=5):
 
 
 def visualize_chunk(
-    ax, chunk, color, x_limits=(-0.6, 0.6), y_limits=(-0.2, 1.6), mode="line"
+    ax, chunk, color, x_limits=(-1.5, 1.5), y_limits=(-0.2, 1.8), mode="line"
 ):
     ax.fill_between(
         [-0.2, 0.2], -0.02, 0, color="gold", alpha=0.8, zorder=1, label="Landing Pad"

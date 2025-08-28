@@ -6,7 +6,7 @@ python -m src.diffusion \
     --num-epochs 200 \
     --print-every 1 \
     --eval-every 5 \
-    --lr 1e-4 \
+    --lr 1e-3 \
     --model-type "unet" \
     --hidden-dim 64 \
     --scheduler "ddpm" \

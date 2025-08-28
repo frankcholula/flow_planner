@@ -48,38 +48,40 @@ class CNN(nn.Module):
         self,
         input_dim: int,
         horizon: int,
-        time_dim: int = 1,
         hidden_dim: int = 128,
         kernel_size: int = 5,
     ):
         super().__init__()
         self.horizon = horizon
-
-        # calculate the transition dim
         assert input_dim % horizon == 0, "input_dim must be divisible by horizon"
         self.transition_dim = input_dim // horizon
 
-        input_channels = self.transition_dim + time_dim
-        self.main = nn.Sequential(
-            nn.Conv1d(
-                input_channels, hidden_dim, kernel_size=kernel_size, padding="same"
-            ),
+        self.time_embedding = nn.Sequential(
+            SinusoidalPosEmb(hidden_dim),
+            nn.Linear(hidden_dim, hidden_dim * 4),
             Swish(),
-            nn.Conv1d(hidden_dim, hidden_dim, kernel_size=kernel_size, padding="same"),
-            Swish(),
-            nn.Conv1d(hidden_dim, hidden_dim, kernel_size=kernel_size, padding="same"),
-            Swish(),
-            nn.Conv1d(
-                hidden_dim, self.transition_dim, kernel_size=kernel_size, padding="same"
-            ),
+            nn.Linear(hidden_dim * 4, hidden_dim),
         )
 
+        self.initial_conv = nn.Conv1d(self.transition_dim, hidden_dim, kernel_size=1)
+        self.main = nn.Sequential(
+            nn.Conv1d(hidden_dim, hidden_dim, kernel_size=kernel_size, padding="same"),
+            Swish(),
+            nn.Conv1d(hidden_dim, hidden_dim, kernel_size=kernel_size, padding="same"),
+            Swish(),
+            nn.Conv1d(hidden_dim, hidden_dim, kernel_size=kernel_size, padding="same"),
+            Swish(),
+        )
+        self.final_conv = nn.Conv1d(hidden_dim, self.transition_dim, kernel_size=1)
+
     def forward(self, x: Tensor, t: Tensor) -> Tensor:
-        x_reshaped = x.view(-1, self.horizon, self.transition_dim).permute(0, 2, 1)
-        t_expanded = t.view(-1, 1, 1).expand(-1, 1, self.horizon)
-        h = torch.cat([x_reshaped, t_expanded], dim=1)
-        out = self.main(h)
-        return out.permute(0, 2, 1).reshape(x.shape)
+        x_reshaped = rearrange(x, "b (h d) -> b d h", h=self.horizon)
+        h = self.initial_conv(x_reshaped)
+        t_emb = self.time_embedding(t)
+        h = h + rearrange(t_emb, "b d -> b d 1")
+        h = self.main(h)
+        out_reshaped = self.final_conv(h)
+        return rearrange(out_reshaped, "b d h -> b (h d)")
 
 
 class ConditionalCNN(torch.nn.Module):
