@@ -336,11 +336,11 @@
         <mxCell id="RIU2FXlWZN0ZZ8TZ6c9n-81" value="&lt;b&gt;&lt;font style=&quot;font-size: 13px;&quot;&gt;Solution State 3&lt;/font&gt;&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;strokeWidth=13;" vertex="1" parent="1">
           <mxGeometry x="2247" y="404.87" width="116" height="28" as="geometry" />
         </mxCell>
-        <mxCell id="RIU2FXlWZN0ZZ8TZ6c9n-82" value="Optimal Action 1" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
-          <mxGeometry x="3037" y="407.5" width="93" height="57.38" as="geometry" />
+        <mxCell id="RIU2FXlWZN0ZZ8TZ6c9n-82" value="&lt;b&gt;&lt;font style=&quot;font-size: 13px;&quot;&gt;Optimal Action 1&lt;/font&gt;&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="3037" y="407.5" width="104" height="57.38" as="geometry" />
         </mxCell>
-        <mxCell id="RIU2FXlWZN0ZZ8TZ6c9n-83" value="Optimal Action 2" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
-          <mxGeometry x="3248" y="340" width="102" height="31" as="geometry" />
+        <mxCell id="RIU2FXlWZN0ZZ8TZ6c9n-83" value="&lt;b&gt;&lt;font style=&quot;font-size: 13px;&quot;&gt;Optimal Action 2&lt;/font&gt;&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="3248" y="340" width="113" height="31" as="geometry" />
         </mxCell>
         <mxCell id="RIU2FXlWZN0ZZ8TZ6c9n-92" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;dashed=1;" edge="1" parent="1" source="RIU2FXlWZN0ZZ8TZ6c9n-84">
           <mxGeometry relative="1" as="geometry">
