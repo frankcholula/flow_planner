@@ -207,3 +207,15 @@ download-agents:
 	python -m rl_zoo3.load_from_hub --algo ${ALGO} --env ${BIPEDAL_ENV} -orga frankcholula -f logs/
 	python -m rl_zoo3.load_from_hub --algo ${ALGO} --env ${CAR_ENV} -orga frankcholula -f logs/
 	python -m rl_zoo3.load_from_hub --algo ${ALGO} --env ${MOUNTAIN_ENV} -orga frankcholula -f logs/
+
+diffusion-unconditional:
+	@echo "Running Unconditional Diffusion Experiments..."
+	./src/experiments/lunarlander/diffusion/diffusion_mlp.sh
+	./src/experiments/lunarlander/diffusion/diffusion_cnn.sh
+	./src/experiments/lunarlander/diffusion/diffusion_unet.sh
+
+fm-unconditional:
+	@echo "Running Unconditional Flow Matching Experiments..."
+	./src/experiments/lunarlander/fm/fm_mlp.sh
+	./src/experiments/lunarlander/fm/fm_cnn.sh
+	./src/experiments/lunarlander/fm/fm_unet.sh

@@ -10,6 +10,6 @@ python -m src.diffusion \
     --model-type "mlp" \
     --hidden-dim 128 \
     --scheduler "ddpm" \
-    --num-train-timesteps 1000 \
+    --num-train-timesteps 1000  \
     --num-inference-steps 100 \
     --inference-batch-size 1
