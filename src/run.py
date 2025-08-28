@@ -228,8 +228,8 @@ def evaluate(env, model, stats, input_dim, args, logger=None, eval_mode="open_lo
             goal_obs=goal_obs,
         )
         if logger:
-            logger.log({"reward_mean": np.mean(model_rewards)})
-            logger.log({"reward_std": np.std(model_rewards)})
+            logger.log({"reward mean": np.mean(model_rewards)})
+            logger.log({"reward std": np.std(model_rewards)})
     return model_rewards
 
 
