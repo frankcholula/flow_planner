@@ -147,6 +147,8 @@ def evaluate_policy_mpc(
     replan_freq=1,
     render=False,
     visualize=True,
+    dataset=None,
+    horizon=None,
 ):
     rewards = []
     print(
@@ -158,30 +160,67 @@ def evaluate_policy_mpc(
         obs, _ = env.reset()
         total_rew = 0
         actions_plan = None
+        plan_start_step = -1
+
+        reference_episode = None
+        if condition_type == "start_obs_waypoint":
+            if dataset is None or horizon is None:
+                raise ValueError(
+                    "Dataset and horizon must be provided for waypoint MPC."
+                )
+            # Find an episode that is long enough to serve as a reference
+            valid_episode_found = False
+            while not valid_episode_found:
+                reference_episode = dataset[random.choice(range(len(dataset)))]
+                if (
+                    len(reference_episode.observations) > 1
+                ):  # Just need more than 1 step
+                    valid_episode_found = True
 
         for t in range(max_episode_length):
             if render:
                 env.render()
 
             if t % replan_freq == 0:
-                start_obs_tensor = torch.from_numpy(obs)
-
+                start_obs_tensor = torch.from_numpy(obs).to(
+                    env.device
+                )  # Ensure tensor is on correct device
                 cond_dict = {}
+
                 if condition_type == "start_obs":
                     cond_dict = {"start_obs": start_obs_tensor}
+
+                elif condition_type == "start_obs_waypoint":
+                    # The waypoint is 'horizon' steps ahead in the expert reference trajectory
+                    waypoint_index = t + horizon - 1
+                    # Clamp the index to the end of the reference trajectory if we go past it
+                    if waypoint_index >= len(reference_episode.observations):
+                        waypoint_index = len(reference_episode.observations) - 1
+
+                    waypoint_obs = torch.from_numpy(
+                        reference_episode.observations[waypoint_index]
+                    ).to(env.device)
+                    cond_dict = {"start_obs_goal": (start_obs_tensor, waypoint_obs)}
+
                 elif condition_type == "start_obs_goal":
                     if goal_obs is None:
-                        raise ValueError(
-                            "goal_obs must be provided for start_obs_goal conditioning"
-                        )
-                    cond_dict = {"start_obs_goal": (start_obs_tensor, goal_obs)}
+                        raise ValueError("goal_obs must be provided for start_obs_goal")
+                    cond_dict = {
+                        "start_obs_goal": (start_obs_tensor, goal_obs.to(env.device))
+                    }
+
                 elif condition_type == "unconditional":
                     cond_dict = None
                 else:
                     raise ValueError(f"Unknown condition type: {condition_type}")
-                _, actions_plan = timed_planner_fn(cond_dict)
 
-            action_index_in_plan = t % replan_freq
+                _, actions_plan = timed_planner_fn(cond_dict)
+                plan_start_step = t
+
+            action_index_in_plan = t - plan_start_step
+            if actions_plan is None or action_index_in_plan >= len(actions_plan):
+                break
+
             action_to_take = actions_plan[action_index_in_plan].cpu().numpy()
 
             obs, rew, terminated, truncated, info = env.step(action_to_take)
@@ -194,6 +233,7 @@ def evaluate_policy_mpc(
         print(
             f"Episode {eps + 1}/{num_episodes} finished. Total Reward: {total_rew:.2f}"
         )
+
         timed_planner_fn.report_average_time()
         timed_planner_fn.reset()
 
@@ -202,8 +242,13 @@ def evaluate_policy_mpc(
     print(
         f"Average MPC Reward over {num_episodes} episodes: {avg_model_reward:.2f} +/- {std_model_reward:.2f}"
     )
+
+    fig = None
     if visualize:
-        plot_title = f"Reward Distribution (Replan Freq: {replan_freq})"
-        fig = plot_reward_histogram(rewards, title=plot_title)
-        plt.close(fig) if fig is not None else None
+        fig = plot_reward_histogram(
+            rewards, title=f"Reward Distribution (Replan Freq: {replan_freq})"
+        )
+        if fig:
+            plt.close(fig)
+
     return rewards, fig
