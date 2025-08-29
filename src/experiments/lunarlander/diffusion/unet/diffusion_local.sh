@@ -12,7 +12,7 @@ python -m src.run \
     --hidden-dim 64 \
     --scheduler "ddpm" \
     --num-train-timesteps 1000 \
-    --num-inference-steps 1000 \
+    --num-inference-steps 100 \
     --inference-batch-size 1 \
     --condition-on "start_obs_goal" \
     --model-target "act_only"
