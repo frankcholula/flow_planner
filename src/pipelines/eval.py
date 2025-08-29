@@ -142,6 +142,7 @@ def evaluate_policy_mpc(
     planner_fn,
     num_episodes,
     condition_type: str,
+    args,
     goal_obs=None,
     max_episode_length=300,
     replan_freq=1,
@@ -183,7 +184,7 @@ def evaluate_policy_mpc(
 
             if t % replan_freq == 0:
                 start_obs_tensor = torch.from_numpy(obs).to(
-                    env.device
+                    args.device
                 )  # Ensure tensor is on correct device
                 cond_dict = {}
 
@@ -199,14 +200,14 @@ def evaluate_policy_mpc(
 
                     waypoint_obs = torch.from_numpy(
                         reference_episode.observations[waypoint_index]
-                    ).to(env.device)
+                    ).to(args.device)
                     cond_dict = {"start_obs_goal": (start_obs_tensor, waypoint_obs)}
 
                 elif condition_type == "start_obs_goal":
                     if goal_obs is None:
                         raise ValueError("goal_obs must be provided for start_obs_goal")
                     cond_dict = {
-                        "start_obs_goal": (start_obs_tensor, goal_obs.to(env.device))
+                        "start_obs_goal": (start_obs_tensor, goal_obs.to(args.device))
                     }
 
                 elif condition_type == "unconditional":

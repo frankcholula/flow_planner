@@ -230,6 +230,7 @@ def evaluate(
             max_episode_length=300,
             condition_type=condition_type,
             goal_obs=goal_obs,
+            args=args,
         )
         if logger:
             logger.log({"reward mean": np.mean(model_rewards)})
