@@ -230,3 +230,4 @@ cfm-joint:
 	@echo "Running CFM on joint state-action space..."
 # 	./src/experiments/lunarlander/cfm/cnn/cfm_obs_act_start_obs_goal.sh
 	./src/experiments/lunarlander/cfm/unet/cfm_obs_act_start_obs_goal.sh
+	./src/experiments/lunarlander/cfm/unet/cfm_obs_act_start_obs_waypoint.sh
