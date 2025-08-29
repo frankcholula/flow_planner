@@ -20,7 +20,6 @@ from src.pipelines.preprocessing import (
     create_normalized_chunks,
 )
 from src.pipelines.eval import (
-    evaluate_open_loop,
     evaluate_open_loop_diffusion,
     evaluate_policy_mpc,
 )
@@ -187,12 +186,9 @@ def evaluate(
     args,
     logger=None,
     eval_mode="diffusion_open_loop",
+    dataset=None,
 ):
     print("Evaluating model...")
-    if eval_mode == "open_loop":
-        fig, ax = evaluate_open_loop(env, model, stats, input_dim, args, logger=logger)
-        plt.close(fig)
-        return fig, ax
     if eval_mode == "diffusion_open_loop":
         fig, ax = evaluate_open_loop_diffusion(
             env=env,
@@ -202,6 +198,7 @@ def evaluate(
             input_dim=input_dim,
             args=args,
             logger=logger,
+            dataset=dataset,
         )
         plt.close(fig)
         return fig, ax
