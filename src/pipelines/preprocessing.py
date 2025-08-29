@@ -129,18 +129,20 @@ def create_normalized_chunks(
                     start_obs = obs_chunk[0]
                     norm_cond = (start_obs - obs_mean) / obs_std
                     all_conds.append(norm_cond)
-
+                elif cond_type == "start_obs_waypoint":
+                    start_obs = obs_chunk[0]
+                    end_obs_of_chunk = obs_chunk[-1] # Goal is the end of the chunk, hence waypoints
+                    norm_start = (start_obs - obs_mean) / obs_std
+                    norm_end = (end_obs_of_chunk - obs_mean) / obs_std
+                    norm_cond = torch.cat([norm_start, norm_end])
+                    all_conds.append(norm_cond)
                 elif cond_type == "start_obs_goal":
                     start_obs = obs_chunk[0]
-                    if model_target == "obs_act" or model_target == "obs_only":
-                        end_obs = obs[length - 1]
-                    elif model_target == "act_only":
-                        end_obs = obs_chunk[-1]
+                    end_obs = obs[length - 1] # the goal means the actual goal, not the end of a chunk
                     norm_start = (start_obs - obs_mean) / obs_std
                     norm_end = (end_obs - obs_mean) / obs_std
                     norm_cond = torch.cat([norm_start, norm_end])
                     all_conds.append(norm_cond)
-
                 elif cond_type == "reward":
                     rew_mean, rew_std = stats["rew_mean"], stats["rew_std"]
                     total_reward = batch["total_rewards"][i]

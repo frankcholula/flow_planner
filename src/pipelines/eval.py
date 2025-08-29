@@ -27,7 +27,7 @@ class WrappedConditionalModel(ModelWrapper):
 
 
 def evaluate_open_loop_diffusion(
-    env, model, noise_scheduler, stats, input_dim, args, logger=None
+    env, model, noise_scheduler, stats, input_dim, args, logger=None, dataset=None
 ):
     model.eval()
     cond_dict = None
@@ -50,6 +50,9 @@ def evaluate_open_loop_diffusion(
         cond_dict = {
             args.condition_on: (torch.from_numpy(start_observation), goal_observation)
         }
+    elif args.condition_on == "start_obs_waypoint":
+        start_observation, _ = env.reset()
+        goal_observation = 
 
     trajectory_fn = lambda: generate_diffusion_trajectory(
         model=model,
