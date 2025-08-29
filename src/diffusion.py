@@ -79,51 +79,37 @@ def build_model(args, obs_dim, action_dim):
         ).to(args.device)
 
     # conditional models
-    elif args.model_type == "ccnn":
-        print("Using CCNN for training...")
-        # setting conditioning dimension
-        if args.condition_on == "reward":
-            cond_dim = 1
-        elif args.condition_on == "start_obs":
-            cond_dim = obs_dim
-        elif args.condition_on == "start_obs_goal" or args.condition_on == "start_obs_waypoint":
-            cond_dim = obs_dim * 2
-        else:
-            raise ValueError(
-                f"ConditionalCNN requires a valid --condition-on argument ('reward', 'start_obs', 'start_obs_goal', 'start_obs_waypoint'). but got: {args.condition_on!r}"
-            )
-        model = ConditionalCNN(
-            input_dim=input_dim,
-            horizon=horizon,
-            hidden_dim=args.hidden_dim,
-            kernel_size=args.kernel_size,
-            cond_dim=cond_dim,
-        ).to(args.device)
-
-    elif args.model_type == "unet":
-        print("Using UNet1D model for training...")
+    elif args.model_type in ["ccnn", "unet"]:
+        print(f"Using {args.model_type.upper()} for training...")
+        cond_dim = 0
         if args.condition_on:
             if args.condition_on == "reward":
                 cond_dim = 1
             elif args.condition_on == "start_obs":
                 cond_dim = obs_dim
-            elif args.condition_on == "start_obs_goal" or args.condition_on == "start_obs_waypoint":
+            elif args.condition_on in ["start_obs_goal", "start_obs_waypoint"]:
                 cond_dim = obs_dim * 2
             else:
-                raise ValueError(
-                    f"UNet1D requires a valid --condition-on argument ('reward', 'start_obs', 'start_obs_goal', 'start_obs_waypoint'), but got: {args.condition_on!r}"
-                )
+                raise ValueError(f"Invalid condition_on type: {args.condition_on}")
         else:
-            print("Running unconditional UNet1D model...")
-            cond_dim = 1
-        model = ConditionalUNet1D(
-            input_dim=input_dim,
-            horizon=horizon,
-            hidden_dim=args.hidden_dim,
-            cond_dim=cond_dim,
-            fusion_strategy="concat",
-            use_mlp_embedding=False,
-        ).to(args.device)
+            print(f"Running unconditional {args.model_type.upper()} model...")
+            cond_dim = 1  # Placeholder for unconditional model init
+
+        if args.model_type == "ccnn":
+            model = ConditionalCNN(
+                input_dim=input_dim,
+                horizon=horizon,
+                hidden_dim=args.hidden_dim,
+                kernel_size=args.kernel_size,
+                cond_dim=cond_dim,
+            ).to(args.device)
+        elif args.model_type == "unet":
+            model = ConditionalUNet1D(
+                input_dim=input_dim,
+                horizon=horizon,
+                hidden_dim=args.hidden_dim,
+                cond_dim=cond_dim,
+            ).to(args.device)
     else:
         raise ValueError(f"Invalid model_type: {args.model_type}")
     return model, input_dim
@@ -147,7 +133,8 @@ def run_epoch(model, dataloader, noise_scheduler, optim, args, stats):
     total_chunks = 0
     for batch in dataloader:
         optim.zero_grad()
-        # same conditioning logic, but we use x_0 as clean data
+
+        c = None
         if args.condition_on:
             x0, c = create_normalized_chunks(
                 batch,
@@ -161,7 +148,6 @@ def run_epoch(model, dataloader, noise_scheduler, optim, args, stats):
             x0, c = x0.to(args.device), c.to(args.device)
 
             if args.cfg and random.random() < args.cfg_dropout_prob:
-                print("--- Dropping condition for CFG training ---")
                 c = torch.zeros_like(c)
         else:
             x0 = create_normalized_chunks(
@@ -169,7 +155,6 @@ def run_epoch(model, dataloader, noise_scheduler, optim, args, stats):
             )
             if x0 is None:
                 continue
-            c = None
             x0 = x0.to(args.device)
 
         noise = torch.randn_like(x0)
@@ -386,6 +371,7 @@ def main():
         args=args,
         logger=logger,
         eval_mode="mpc",
+        dataset=dataset,
     )
     if logger:
         logger.finish()

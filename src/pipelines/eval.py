@@ -11,6 +11,7 @@ from src.utils.loggers import EpisodeTimer
 import numpy as np
 import wandb
 import matplotlib.pyplot as plt
+import random
 
 
 class WrappedModel(ModelWrapper):
@@ -34,25 +35,40 @@ def evaluate_open_loop_diffusion(
 
     if args.condition_on == "start_obs":
         start_observation, _ = env.reset()
-        cond_dict = {"start_obs": torch.from_numpy(start_observation)}
+        cond_dict = {"start_obs": torch.from_numpy(start_observation).to(args.device)}
+
+    elif args.condition_on == "start_obs_waypoint":
+        if dataset is None:
+            raise ValueError("Dataset must be provided for waypoint evaluation.")
+        print("Evaluating with a realistic start/end waypoint from the dataset...")
+
+        valid_episode_found = False
+        while not valid_episode_found:
+            episode = dataset[random.choice(range(len(dataset)))]
+            if len(episode.observations) > args.horizon:
+                valid_episode_found = True
+
+        start_observation = episode.observations[0]
+        goal_observation = episode.observations[args.horizon - 1]
+
+        cond_dict = {
+            "start_obs_goal": (
+                torch.from_numpy(start_observation).to(args.device),
+                torch.from_numpy(goal_observation).to(args.device),
+            )
+        }
+
     elif args.condition_on == "start_obs_goal":
         start_observation, _ = env.reset()
-        if args.environment == "LunarLander-v3":
-            goal_observation = torch.tensor(
-                [0, 0, 0, 0, 0, 0, 1, 1], dtype=torch.float32
-            )
-        elif (
-            args.environment == "BipedalWalker-v3" or args.environment == "CarRacing-v3"
-        ):
-            goal_observation = torch.from_numpy(start_observation)
-        else:
-            raise ValueError(f"Unknown environment: {args.environment}")
+        goal_observation = torch.tensor(
+            [0, 0, 0, 0, 0, 0, 1, 1], dtype=torch.float32
+        ).to(args.device)
         cond_dict = {
-            args.condition_on: (torch.from_numpy(start_observation), goal_observation)
+            "start_obs_goal": (
+                torch.from_numpy(start_observation).to(args.device),
+                goal_observation,
+            )
         }
-    elif args.condition_on == "start_obs_waypoint":
-        start_observation, _ = env.reset()
-        goal_observation = 
 
     trajectory_fn = lambda: generate_diffusion_trajectory(
         model=model,
@@ -64,7 +80,7 @@ def evaluate_open_loop_diffusion(
     )
 
     fig, ax = lvt(trajectory_fn=trajectory_fn, num_trajectories=5)
-    if logger is not None:
+    if logger is not None and fig is not None:
         logger.log({"diffusion_trajectory_plot": wandb.Image(fig)})
 
     model.train()
