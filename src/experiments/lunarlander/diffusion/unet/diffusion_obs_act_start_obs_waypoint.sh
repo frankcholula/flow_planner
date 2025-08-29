@@ -3,7 +3,7 @@ python -m src.diffusion \
     --environment "LunarLander-v3" \
     --horizon 100 \
     --batch-size 32 \
-    --num-epochs 10\
+    --num-epochs 10 \
     --print-every 1 \
     --eval-every 1 \
     --lr 1e-3 \
@@ -13,7 +13,7 @@ python -m src.diffusion \
     --num-train-timesteps 1000 \
     --num-inference-steps 100 \
     --inference-batch-size 1 \
-    --condition-on "start_obs_goal" \
+    --condition-on "start_obs_waypoint" \
     --model-target "obs_act" \
     --cfg true \
     --cfg_dropout_prob 0.1 \

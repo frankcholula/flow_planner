@@ -40,7 +40,6 @@ def evaluate_open_loop_diffusion(
     elif args.condition_on == "start_obs_waypoint":
         if dataset is None:
             raise ValueError("Dataset must be provided for waypoint evaluation.")
-        print("Evaluating with a realistic start/end waypoint from the dataset...")
 
         valid_episode_found = False
         while not valid_episode_found:
@@ -51,6 +50,12 @@ def evaluate_open_loop_diffusion(
         start_observation = episode.observations[0]
         goal_observation = episode.observations[args.horizon - 1]
 
+        print(
+            f"Start obs (x,y): ({start_observation[0]:.4f}, {start_observation[1]:.4f})"
+        )
+        print(
+            f"Goal obs (x,y):  ({goal_observation[0]:.4f}, {goal_observation[1]:.4f})"
+        )
         cond_dict = {
             "start_obs_goal": (
                 torch.from_numpy(start_observation).to(args.device),
@@ -149,7 +154,6 @@ def evaluate_policy_mpc(
     render=False,
     visualize=True,
     dataset=None,
-    horizon=None,
 ):
     rewards = []
     print(
@@ -165,10 +169,8 @@ def evaluate_policy_mpc(
 
         reference_episode = None
         if condition_type == "start_obs_waypoint":
-            if dataset is None or horizon is None:
-                raise ValueError(
-                    "Dataset and horizon must be provided for waypoint MPC."
-                )
+            if dataset is None:
+                raise ValueError("Dataset must be provided for waypoint MPC.")
             # Find an episode that is long enough to serve as a reference
             valid_episode_found = False
             while not valid_episode_found:
@@ -192,8 +194,7 @@ def evaluate_policy_mpc(
                     cond_dict = {"start_obs": start_obs_tensor}
 
                 elif condition_type == "start_obs_waypoint":
-                    # The waypoint is 'horizon' steps ahead in the expert reference trajectory
-                    waypoint_index = t + horizon - 1
+                    waypoint_index = t + args.horizon - 1
                     # Clamp the index to the end of the reference trajectory if we go past it
                     if waypoint_index >= len(reference_episode.observations):
                         waypoint_index = len(reference_episode.observations) - 1

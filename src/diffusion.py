@@ -281,6 +281,7 @@ def train(config, args, dataset, env, noise_scheduler, run_name=None, logger=Non
                 input_dim=input_dim,
                 args=args,
                 logger=logger,
+                dataset=dataset,
             )
     print("Training complete. Saving model...")
     os.makedirs(save_dir, exist_ok=True)
