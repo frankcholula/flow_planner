@@ -231,6 +231,7 @@ def evaluate(
             condition_type=condition_type,
             goal_obs=goal_obs,
             args=args,
+            dataset=dataset
         )
         if logger:
             logger.log({"reward mean": np.mean(model_rewards)})
