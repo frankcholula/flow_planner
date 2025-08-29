@@ -224,6 +224,7 @@ diffusion-joint:
 	@echo "Running Diffusion on joint state-action space..."
 # 	./src/experiments/lunarlander/diffusion/cnn/diffusion_obs_act_start_obs_goal.sh
 	./src/experiments/lunarlander/diffusion/unet/diffusion_obs_act_start_obs_goal.sh
+	./src/experiments/lunarlander/diffusion/unet/diffusion_obs_act_start_obs_waypoint.sh
 
 cfm-joint:
 	@echo "Running CFM on joint state-action space..."
