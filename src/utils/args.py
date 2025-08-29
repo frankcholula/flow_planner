@@ -79,7 +79,7 @@ def parse_diffusion_args() -> argparse.Namespace:
         "--condition-on",
         type=str,
         default=None,
-        choices=["reward", "start_obs", "start_obs_goal"],
+        choices=["reward", "start_obs", "start_obs_goal", "start_obs_waypoint"],
         help="Condition type for trajectory generation.",
     )
     conditional_args.add_argument(
@@ -177,7 +177,7 @@ def parse_fm_args() -> argparse.Namespace:
         "--condition-on",
         type=str,
         default=None,
-        choices=["reward", "start_obs", "start_obs_goal"],
+        choices=["reward", "start_obs", "start_obs_goal", "start_obs_waypoint"],
         help="Condition type for trajectory generation.",
     )
     return parser.parse_args()
