@@ -246,7 +246,6 @@ class ConditionalUNet1D(nn.Module):
         if time_dim is None:
             time_dim = hidden_dim
 
-        # Dedicated embedding networks
         self.time_embedding = nn.Sequential(
             SinusoidalPosEmb(time_dim),
             nn.Linear(time_dim, hidden_dim),
