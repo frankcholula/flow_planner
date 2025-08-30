@@ -222,15 +222,18 @@ class ConditionalUNet1D(nn.Module):
         cond_dim: int,
         hidden_dim: int = 128,
         time_dim: Optional[int] = None,
+        fusion_strategy: str = "add",
     ):
         super().__init__()
         self.horizon = horizon
+        self.fusion_strategy = fusion_strategy
         assert input_dim % horizon == 0, "input_dim must be divisible by horizon"
         self.transition_dim = input_dim // horizon
 
         if time_dim is None:
             time_dim = hidden_dim
 
+        # Dedicated embedding networks
         self.time_embedding = nn.Sequential(
             SinusoidalPosEmb(time_dim),
             nn.Linear(time_dim, hidden_dim),
@@ -242,6 +245,9 @@ class ConditionalUNet1D(nn.Module):
             Swish(),
             nn.Linear(hidden_dim, hidden_dim),
         )
+
+        if self.fusion_strategy == "concat":
+            self.feature_projection = nn.Linear(hidden_dim * 2, hidden_dim)
 
         self.initial_conv = nn.Conv1d(self.transition_dim, hidden_dim, kernel_size=1)
         self.down1 = DownBlock(hidden_dim, hidden_dim * 2)
@@ -258,17 +264,26 @@ class ConditionalUNet1D(nn.Module):
         t_float = t.float()
         t_scaled = t_float * 1000.0 if t_float.max() <= 1.0 else t_float
         t_emb = self.time_embedding(t_scaled)
-        h = h + rearrange(t_emb, "b d -> b d 1")
-
+        
+        final_emb = t_emb
         if c is not None:
             c_emb = self.cond_embedding(c)
-            h = h + rearrange(c_emb, "b d -> b d 1")
-
+            if self.fusion_strategy == "add":
+                final_emb = t_emb + c_emb
+            elif self.fusion_strategy == "concat":
+                combined = torch.cat([t_emb, c_emb], dim=-1)
+                final_emb = self.feature_projection(combined)
+            else:
+                raise ValueError(f"Unknown fusion strategy: {self.fusion_strategy}")
+        
+        h = h + rearrange(final_emb, "b d -> b d 1")
+        
         skip1, h = self.down1(h)
         skip2, h = self.down2(h)
         h = self.bottleneck(h)
         h = self.up1(h, skip2)
         h = self.up2(h, skip1)
-
+        
         out_reshaped = self.final_conv(h)
+        
         return rearrange(out_reshaped, "b d h -> b (h d)")
