@@ -95,10 +95,10 @@ class ConditionalCNN(torch.nn.Module):
         self,
         input_dim: int,
         horizon: int,
-        time_dim: int = 32,
-        cond_dim: int = 1,
+        cond_dim: int,
         hidden_dim: int = 128,
         kernel_size: int = 5,
+        time_dim: int = 128,
     ):
         super().__init__()
         self.horizon = horizon
@@ -107,51 +107,49 @@ class ConditionalCNN(torch.nn.Module):
         assert input_dim % horizon == 0, "input_dim must be divisible by horizon"
         self.transition_dim = input_dim // horizon
 
-        self.time_mlp = SinusoidalPosEmb(time_dim)
-        input_channels = self.transition_dim + time_dim + cond_dim
-
-        self.main = torch.nn.Sequential(
-            torch.nn.Conv1d(
-                input_channels, hidden_dim, kernel_size=kernel_size, padding="same"
-            ),
-            torch.nn.SiLU(),
-            torch.nn.Conv1d(
-                hidden_dim, hidden_dim, kernel_size=kernel_size, padding="same"
-            ),
-            torch.nn.SiLU(),
-            torch.nn.Conv1d(
-                hidden_dim, hidden_dim, kernel_size=kernel_size, padding="same"
-            ),
-            torch.nn.SiLU(),
-            torch.nn.Conv1d(
-                hidden_dim, self.transition_dim, kernel_size=kernel_size, padding="same"
-            ),
+        self.time_embedding = nn.Sequential(
+            SinusoidalPosEmb(time_dim),
+            nn.Linear(time_dim, hidden_dim),
+            Swish(),
+            nn.Linear(hidden_dim, hidden_dim),
         )
 
-    def forward(
-        self, x: torch.Tensor, t: torch.Tensor, c: torch.Tensor
-    ) -> torch.Tensor:
+        self.cond_embedding = nn.Sequential(
+            nn.Linear(cond_dim, time_dim),
+            Swish(),
+            nn.Linear(time_dim, hidden_dim),
+        )
+
+        self.initial_conv = nn.Conv1d(self.transition_dim, hidden_dim, kernel_size=1)
+        self.final_conv = nn.Conv1d(hidden_dim, self.transition_dim, kernel_size=1)
+
+        # 3. Main convolutional blocks
+        self.main = nn.Sequential(
+            nn.Conv1d(hidden_dim, hidden_dim, kernel_size=kernel_size, padding="same"),
+            Swish(),
+            nn.Conv1d(hidden_dim, hidden_dim, kernel_size=kernel_size, padding="same"),
+            Swish(),
+            nn.Conv1d(hidden_dim, hidden_dim, kernel_size=kernel_size, padding="same"),
+            Swish(),
+        )
+
+    def forward(self, x: Tensor, t: Tensor, c: Optional[Tensor] = None) -> Tensor:
         x_reshaped = x.view(-1, self.horizon, self.transition_dim).permute(0, 2, 1)
+        h = self.initial_conv(x_reshaped)
 
-        # scaling my time embedding
         t_float = t.float()
-        if t_float.max() <= 1.0:
-            t_scaled = t_float * 1000.0
-        else:
-            t_scaled = t_float
+        t_scaled = t_float * 1000.0 if t_float.max() <= 1.0 else t_float
+        t_emb = self.time_embedding(t_scaled)
 
-        t_emb = self.time_mlp(t_scaled)  # Shape: (batch_size, time_dim)
+        h = h + t_emb.view(-1, h.shape[1], 1)
 
-        t_emb_expanded = t_emb.unsqueeze(-1).expand(-1, -1, self.horizon)
+        if c is not None:
+            c_emb = self.cond_embedding(c)
+            h = h + c_emb.view(-1, h.shape[1], 1)
 
-        # Reshape and expand the condition
-        c_expanded = c.view(-1, self.cond_dim, 1).expand(
-            -1, self.cond_dim, self.horizon
-        )
+        h = self.main(h)
 
-        # Concatenate along the channel dimension
-        h = torch.cat([x_reshaped, t_emb_expanded, c_expanded], dim=1)
-        output_reshaped = self.main(h)
+        output_reshaped = self.final_conv(h)
 
         return output_reshaped.permute(0, 2, 1).reshape(x.shape)
 
