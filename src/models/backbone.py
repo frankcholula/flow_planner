@@ -16,16 +16,21 @@ class Mish(nn.Module):
 
 
 class MLP(nn.Module):
-    def __init__(self, input_dim: int, time_dim: int = 1, hidden_dim: int = 128):
+    def __init__(self, input_dim: int, time_dim: int = 128, hidden_dim: int = 128):
         super().__init__()
 
         self.input_dim = input_dim
-        self.time_dim = time_dim
 
-        self.main = nn.Sequential(
-            nn.Linear(input_dim + time_dim, hidden_dim),
+        self.time_embedding = nn.Sequential(
+            SinusoidalPosEmb(time_dim),
+            nn.Linear(time_dim, hidden_dim),
             Swish(),
             nn.Linear(hidden_dim, hidden_dim),
+        )
+
+        self.initial_projection = nn.Linear(input_dim, hidden_dim)
+
+        self.main = nn.Sequential(
             Swish(),
             nn.Linear(hidden_dim, hidden_dim),
             Swish(),
@@ -37,8 +42,9 @@ class MLP(nn.Module):
     def forward(self, x: Tensor, t: Tensor, c: Tensor = None) -> Tensor:
         original_shape = x.shape
         x = x.view(-1, self.input_dim)
-        t = t.reshape(-1, 1).float()
-        h = torch.cat([x, t], dim=1)
+        x_proj = self.initial_projection(x)
+        t_emb = self.time_embedding(t)
+        h = x_proj + t_emb
         output = self.main(h)
         return output.view(original_shape)
 
