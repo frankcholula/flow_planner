@@ -28,9 +28,7 @@ def build_model(args, obs_dim, action_dim):
     # setting the right model based on args
     # unconditional models
     if args.model_type == "mlp":
-        model = MLP(input_dim=input_dim, hidden_dim=args.hidden_dim).to(
-            args.device
-        )
+        model = MLP(input_dim=input_dim, hidden_dim=args.hidden_dim).to(args.device)
     elif args.model_type == "cnn":
         model = CNN(
             input_dim=input_dim,
