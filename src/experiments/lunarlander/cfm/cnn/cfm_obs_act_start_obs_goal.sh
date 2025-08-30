@@ -3,9 +3,9 @@ python -m src.run \
     --environment "LunarLander-v3" \
     --horizon 100 \
     --batch-size 32 \
-    --num-epochs 100 \
+    --num-epochs 2 \
     --print-every 1 \
-    --eval-every 5 \
+    --eval-every 1 \
     --lr 1e-3 \
     --model-type "ccnn" \
     --kernel-size 5 \

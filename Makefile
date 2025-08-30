@@ -211,23 +211,23 @@ download-agents:
 diffusion-unconditional:
 	@echo "Running Unconditional Diffusion Experiments..."
 	./src/experiments/lunarlander/uncond/diffusion_mlp.sh
-# 	./src/experiments/lunarlander/uncond/diffusion_cnn.sh
-# 	./src/experiments/lunarlander/uncond/diffusion_unet.sh
+	./src/experiments/lunarlander/uncond/diffusion_cnn.sh
+	./src/experiments/lunarlander/uncond/diffusion_unet.sh
 
 fm-unconditional:
 	@echo "Running Unconditional Flow Matching Experiments..."
 	./src/experiments/lunarlander/uncond/fm_mlp.sh
-# 	./src/experiments/lunarlander/uncond/fm_cnn.sh
-# 	./src/experiments/lunarlander/uncond/fm_unet.sh
+	./src/experiments/lunarlander/uncond/fm_cnn.sh
+	./src/experiments/lunarlander/uncond/fm_unet.sh
 
 diffusion-joint:
 	@echo "Running Diffusion on joint state-action space..."
 # 	./src/experiments/lunarlander/diffusion/cnn/diffusion_obs_act_start_obs_goal.sh
+	./src/experiments/lunarlander/diffusion/cnn/diffusion_obs_act_start_obs_waypoint.sh
 	./src/experiments/lunarlander/diffusion/unet/diffusion_obs_act_start_obs_goal.sh
 	./src/experiments/lunarlander/diffusion/unet/diffusion_obs_act_start_obs_waypoint.sh
 
 cfm-joint:
 	@echo "Running CFM on joint state-action space..."
-# 	./src/experiments/lunarlander/cfm/cnn/cfm_obs_act_start_obs_goal.sh
 	./src/experiments/lunarlander/cfm/unet/cfm_obs_act_start_obs_goal.sh
 	./src/experiments/lunarlander/cfm/unet/cfm_obs_act_start_obs_waypoint.sh
