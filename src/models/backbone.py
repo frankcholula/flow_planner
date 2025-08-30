@@ -113,7 +113,7 @@ class ConditionalCNN(nn.Module):
         hidden_dim: int = 128,
         time_dim: Optional[int] = None,
         kernel_size: int = 5,
-        fusion_strategy: str = "add",
+        fusion_strategy: str = "concat",
     ):
         super().__init__()
         self.horizon = horizon
@@ -235,7 +235,7 @@ class ConditionalUNet1D(nn.Module):
         cond_dim: int,
         hidden_dim: int = 128,
         time_dim: Optional[int] = None,
-        fusion_strategy: str = "add",
+        fusion_strategy: str = "concat",
     ):
         super().__init__()
         self.horizon = horizon
