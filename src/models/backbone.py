@@ -98,22 +98,23 @@ class CNN(nn.Module):
         return rearrange(out_reshaped, "b d h -> b (h d)")
 
 
-class ConditionalCNN(torch.nn.Module):
+class ConditionalCNN(nn.Module):
     def __init__(
         self,
         input_dim: int,
         horizon: int,
         cond_dim: int,
         hidden_dim: int = 128,
+        time_dim: Optional[int] = None,
         kernel_size: int = 5,
-        time_dim: int = 128,
     ):
         super().__init__()
         self.horizon = horizon
-        self.cond_dim = cond_dim
-
         assert input_dim % horizon == 0, "input_dim must be divisible by horizon"
         self.transition_dim = input_dim // horizon
+
+        if time_dim is None:
+            time_dim = hidden_dim
 
         self.time_embedding = nn.Sequential(
             SinusoidalPosEmb(time_dim),
@@ -121,17 +122,13 @@ class ConditionalCNN(torch.nn.Module):
             Swish(),
             nn.Linear(hidden_dim, hidden_dim),
         )
-
         self.cond_embedding = nn.Sequential(
-            nn.Linear(cond_dim, time_dim),
+            nn.Linear(cond_dim, hidden_dim),
             Swish(),
-            nn.Linear(time_dim, hidden_dim),
+            nn.Linear(hidden_dim, hidden_dim),
         )
 
         self.initial_conv = nn.Conv1d(self.transition_dim, hidden_dim, kernel_size=1)
-        self.final_conv = nn.Conv1d(hidden_dim, self.transition_dim, kernel_size=1)
-
-        # 3. Main convolutional blocks
         self.main = nn.Sequential(
             nn.Conv1d(hidden_dim, hidden_dim, kernel_size=kernel_size, padding="same"),
             Swish(),
@@ -140,29 +137,23 @@ class ConditionalCNN(torch.nn.Module):
             nn.Conv1d(hidden_dim, hidden_dim, kernel_size=kernel_size, padding="same"),
             Swish(),
         )
+        self.final_conv = nn.Conv1d(hidden_dim, self.transition_dim, kernel_size=1)
 
     def forward(self, x: Tensor, t: Tensor, c: Optional[Tensor] = None) -> Tensor:
-        x_reshaped = x.view(-1, self.horizon, self.transition_dim).permute(0, 2, 1)
+        x_reshaped = rearrange(x, "b (h d) -> b d h", h=self.horizon)
         h = self.initial_conv(x_reshaped)
 
-        t_float = t.float()
-        t_scaled = t_float * 1000.0 if t_float.max() <= 1.0 else t_float
-        t_emb = self.time_embedding(t_scaled)
-
-        h = h + t_emb.view(-1, h.shape[1], 1)
+        t_emb = self.time_embedding(t)
+        h = h + rearrange(t_emb, "b d -> b d 1")
 
         if c is not None:
             c_emb = self.cond_embedding(c)
-            h = h + c_emb.view(-1, h.shape[1], 1)
-
+            h = h + rearrange(c_emb, "b d -> b d 1")
         h = self.main(h)
-
-        output_reshaped = self.final_conv(h)
-
-        return output_reshaped.permute(0, 2, 1).reshape(x.shape)
+        out_reshaped = self.final_conv(h)
+        return rearrange(out_reshaped, "b d h -> b (h d)")
 
 
-# diffusers doesn't have a conditional Unet1D, so we implement our own.
 class ResidualBlock(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size=5):
         super().__init__()
