@@ -25,7 +25,6 @@ def build_model(args, obs_dim, action_dim):
         raise ValueError(f"Invalid model_target: {args.model_target}")
     print(f"Modeling {args.model_target} with an input_dim of {input_dim}")
 
-    # setting the right model based on args
     # unconditional models
     if args.model_type == "mlp":
         model = MLP(input_dim=input_dim, hidden_dim=args.hidden_dim).to(args.device)
@@ -61,6 +60,7 @@ def build_model(args, obs_dim, action_dim):
                 hidden_dim=args.hidden_dim,
                 kernel_size=args.kernel_size,
                 cond_dim=cond_dim,
+                fusion_strategy=args.fusion_strategy,
             ).to(args.device)
         elif args.model_type == "unet":
             model = ConditionalUNet1D(

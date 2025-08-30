@@ -17,4 +17,5 @@ python -m src.diffusion \
     --model-target "obs_act" \
     --cfg true \
     --cfg_dropout_prob 0.1 \
-    --guidance_scale 1.5
+    --guidance_scale 1.5 \
+    --fusion_strategy "concat"
