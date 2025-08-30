@@ -15,5 +15,5 @@ python -m src.diffusion \
     --num-train-timesteps 1000 \
     --num-inference-steps 100 \
     --inference-batch-size 1 \
-    --condition-on "start_obs_goal" \
+    --condition-on "start_obs_waypoint" \
     --model-target "obs_act"
