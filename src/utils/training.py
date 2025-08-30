@@ -70,6 +70,7 @@ def build_model(args, obs_dim, action_dim):
                 horizon=horizon,
                 hidden_dim=args.hidden_dim,
                 cond_dim=cond_dim,
+                fusion_strategy=args.fusion_strategy,
             ).to(args.device)
     else:
         raise ValueError(f"Invalid model_type: {args.model_type}")
