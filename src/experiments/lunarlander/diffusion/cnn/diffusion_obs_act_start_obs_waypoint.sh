@@ -16,4 +16,5 @@ python -m src.diffusion \
     --num-inference-steps 100 \
     --inference-batch-size 1 \
     --condition-on "start_obs_waypoint" \
-    --model-target "obs_act"
+    --model-target "obs_act" \
+    --fusion-strategy "concat"
