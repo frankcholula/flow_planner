@@ -16,6 +16,6 @@ python -m src.diffusion \
     --condition-on "start_obs_waypoint" \
     --model-target "obs_act" \
     --cfg true \
-    --cfg_dropout_prob 0.1 \
-    --guidance_scale 1.5 \
-    --fusion_strategy "concat"
+    --cfg-dropout-prob 0.1 \
+    --guidance-scale 1.5 \
+    --fusion-strategy "concat"
