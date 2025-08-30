@@ -182,10 +182,20 @@ def run_epoch(model, dataloader, path, optim, args, stats):
     return total_loss / total_chunks if total_chunks > 0 else 0.0
 
 
-def evaluate(env, model, stats, input_dim, args, logger=None, eval_mode="open_loop"):
+def evaluate(
+    env, model, stats, input_dim, args, logger=None, eval_mode="open_loop", dataset=None
+):
     print("Evaluating the model...")
     if eval_mode == "open_loop":
-        fig, ax = evaluate_open_loop(env, model, stats, input_dim, args, logger=logger)
+        fig, ax = evaluate_open_loop(
+            env=env,
+            model=model,
+            stats=stats,
+            input_dim=input_dim,
+            args=args,
+            logger=logger,
+            dataset=dataset,
+        )
         plt.close(fig)
         return fig, ax
     if eval_mode == "mpc":
@@ -334,7 +344,16 @@ def main():
         run_name=run_name,
         logger=logger,
     )
-    evaluate(env, model, stats, input_dim, args, logger=logger, eval_mode="mpc")
+    evaluate(
+        env=env,
+        model=model,
+        stats=stats,
+        input_dim=input_dim,
+        args=args,
+        logger=logger,
+        eval_mode="mpc",
+        dataset=dataset,
+    )
     if logger:
         logger.finish()
 
