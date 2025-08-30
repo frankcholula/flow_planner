@@ -220,14 +220,22 @@ fm-unconditional:
 	./src/experiments/lunarlander/uncond/fm_cnn.sh
 	./src/experiments/lunarlander/uncond/fm_unet.sh
 
-diffusion-joint:
-	@echo "Running Diffusion on joint state-action space..."
-# 	./src/experiments/lunarlander/diffusion/cnn/diffusion_obs_act_start_obs_goal.sh
-	./src/experiments/lunarlander/diffusion/cnn/diffusion_obs_act_start_obs_waypoint.sh
-	./src/experiments/lunarlander/diffusion/unet/diffusion_obs_act_start_obs_goal.sh
+diffusion-joint-unet:
+	@echo "Running Diffusion on joint state-action space using U-Net..."
 	./src/experiments/lunarlander/diffusion/unet/diffusion_obs_act_start_obs_waypoint.sh
+	./src/experiments/lunarlander/diffusion/unet/diffusion_obs_act_start_obs_goal.sh
 
-cfm-joint:
-	@echo "Running CFM on joint state-action space..."
+diffusion-joint-cnn:
+	@echo "Running Diffusion on joint state-action space using CNN..."
+	./src/experiments/lunarlander/diffusion/cnn/diffusion_obs_act_start_obs_waypoint.sh
+	./src/experiments/lunarlander/diffusion/cnn/diffusion_obs_act_start_obs_goal.sh
+
+cfm-joint-unet:
+	@echo "Running CFM on joint state-action space using U-Net..."
 	./src/experiments/lunarlander/cfm/unet/cfm_obs_act_start_obs_goal.sh
 	./src/experiments/lunarlander/cfm/unet/cfm_obs_act_start_obs_waypoint.sh
+
+cfm-joint-cnn:
+	@echo "Running CFM on joint state-action space using CNN..."
+	./src/experiments/lunarlander/cfm/ccnn/cfm_obs_act_start_obs_goal.sh
+	./src/experiments/lunarlander/cfm/ccnn/cfm_obs_act_start_obs_waypoint.sh
