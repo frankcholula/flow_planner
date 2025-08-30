@@ -211,88 +211,48 @@ class ConditionalUNet1D(nn.Module):
         self,
         input_dim: int,
         horizon: int,
-        cond_dim: int = 8,
+        cond_dim: int,
         hidden_dim: int = 128,
-        fusion_strategy: str = "concat",
-        use_mlp_embedding: bool = False,
+        time_dim: Optional[int] = None,
     ):
         super().__init__()
         self.horizon = horizon
-        self.cond_dim = cond_dim
-        self.fusion_strategy = fusion_strategy
-
         assert input_dim % horizon == 0, "input_dim must be divisible by horizon"
         self.transition_dim = input_dim // horizon
 
-        if use_mlp_embedding:
-            time_embed_dim = hidden_dim * 4
-            self.time_embedding = nn.Sequential(
-                SinusoidalPosEmb(hidden_dim),
-                nn.Linear(hidden_dim, time_embed_dim),
-                Mish(),
-                nn.Linear(time_embed_dim, hidden_dim),
-            )
-            cond_embed_dim = hidden_dim * 4
-            self.cond_embedding = nn.Sequential(
-                nn.Linear(cond_dim, cond_embed_dim),
-                Mish(),
-                nn.Linear(cond_embed_dim, hidden_dim),
-            )
-        else:
-            self.time_embedding = SinusoidalPosEmb(hidden_dim)
-            self.cond_embedding = nn.Linear(cond_dim, hidden_dim)
+        if time_dim is None:
+            time_dim = hidden_dim
 
-        if self.fusion_strategy == "concat":
-            # need to project back to hidden_dim
-            self.feature_projection = nn.Linear(hidden_dim * 2, hidden_dim)
+        self.time_embedding = nn.Sequential(
+            SinusoidalPosEmb(time_dim),
+            nn.Linear(time_dim, hidden_dim),
+            Swish(),
+            nn.Linear(hidden_dim, hidden_dim),
+        )
+        self.cond_embedding = nn.Sequential(
+            nn.Linear(cond_dim, hidden_dim),
+            Swish(),
+            nn.Linear(hidden_dim, hidden_dim),
+        )
 
-        # Initial convolution to map input to hidden dimension
         self.initial_conv = nn.Conv1d(self.transition_dim, hidden_dim, kernel_size=1)
-
-        # Downsampling Path
         self.down1 = DownBlock(hidden_dim, hidden_dim * 2)
         self.down2 = DownBlock(hidden_dim * 2, hidden_dim * 4)
-
-        # Bottleneck
         self.bottleneck = ResidualBlock(hidden_dim * 4, hidden_dim * 4)
-
-        # Upsampling Path
-        self.up1 = UpBlock(
-            in_channels=hidden_dim * 4,
-            skip_channels=hidden_dim * 4,
-            out_channels=hidden_dim * 2,
-        )
-        self.up2 = UpBlock(
-            in_channels=hidden_dim * 2,
-            skip_channels=hidden_dim * 2,
-            out_channels=hidden_dim,
-        )
-
-        # Final convolution to map back to the original transition dimension
+        self.up1 = UpBlock(hidden_dim * 4, hidden_dim * 4, hidden_dim * 2)
+        self.up2 = UpBlock(hidden_dim * 2, hidden_dim * 2, hidden_dim)
         self.final_conv = nn.Conv1d(hidden_dim, self.transition_dim, kernel_size=1)
 
     def forward(self, x: Tensor, t: Tensor, c: Optional[Tensor] = None) -> Tensor:
-        x_initial = self.initial_conv(rearrange(x, "b (h d) -> b d h", h=self.horizon))
+        x_reshaped = rearrange(x, "b (h d) -> b d h", h=self.horizon)
+        h = self.initial_conv(x_reshaped)
 
-        t_float = t.float()
-        t_scaled = t_float * 1000.0 if t_float.max() <= 1.0 else t_float
-        t_emb = self.time_embedding(t_scaled)
+        t_emb = self.time_embedding(t)
+        h = h + rearrange(t_emb, "b d -> b d 1")
 
         if c is not None:
-            c_emb = self.cond_embedding(c.float())
-
-            if self.fusion_strategy == "concat":
-                combined_emb = torch.cat([t_emb, c_emb], dim=-1)
-                final_emb = self.feature_projection(combined_emb)
-            elif self.fusion_strategy == "add":
-                final_emb = t_emb + c_emb
-            else:
-                raise ValueError(f"Unknown fusion strategy: {self.fusion_strategy}")
-        else:
-            final_emb = t_emb
-
-        time_cond_emb = repeat(final_emb, "b d -> b d h", h=self.horizon)
-        h = x_initial + time_cond_emb
+            c_emb = self.cond_embedding(c)
+            h = h + rearrange(c_emb, "b d -> b d 1")
 
         skip1, h = self.down1(h)
         skip2, h = self.down2(h)
@@ -300,11 +260,5 @@ class ConditionalUNet1D(nn.Module):
         h = self.up1(h, skip2)
         h = self.up2(h, skip1)
 
-        output_reshaped = self.final_conv(h)
-        output_flat = rearrange(output_reshaped, "b d h -> b (h d)")
-        return output_flat
-
-
-# TODO: Implement ControlNet for conditioning case.
-class ControlNet(nn.Module):
-    pass
+        out_reshaped = self.final_conv(h)
+        return rearrange(out_reshaped, "b d h -> b (h d)")
