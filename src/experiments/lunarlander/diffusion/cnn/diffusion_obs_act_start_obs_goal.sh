@@ -1,6 +1,5 @@
 #!/bin/bash
-# model both state and actions and condition on start_obs_goal
-# try with ccnn fist
+
 python -m src.diffusion \
     --environment "LunarLander-v3" \
     --horizon 100 \
@@ -14,6 +13,7 @@ python -m src.diffusion \
     --hidden-dim 128 \
     --scheduler "ddpm" \
     --num-train-timesteps 1000 \
-    --num-inference-steps 1000 \
+    --num-inference-steps 100 \
+    --inference-batch-size 1 \
     --condition-on "start_obs_goal" \
     --model-target "obs_act"

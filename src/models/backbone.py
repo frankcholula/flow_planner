@@ -16,16 +16,25 @@ class Mish(nn.Module):
 
 
 class MLP(nn.Module):
-    def __init__(self, input_dim: int, time_dim: int = 1, hidden_dim: int = 128):
+    def __init__(
+        self, input_dim: int, hidden_dim: int = 128, time_dim: Optional[int] = None
+    ):
         super().__init__()
-
         self.input_dim = input_dim
-        self.time_dim = time_dim
 
-        self.main = nn.Sequential(
-            nn.Linear(input_dim + time_dim, hidden_dim),
+        if time_dim is None:
+            time_dim = hidden_dim
+
+        self.time_embedding = nn.Sequential(
+            SinusoidalPosEmb(time_dim),
+            nn.Linear(time_dim, hidden_dim),
             Swish(),
             nn.Linear(hidden_dim, hidden_dim),
+        )
+
+        self.initial_projection = nn.Linear(input_dim, hidden_dim)
+
+        self.main = nn.Sequential(
             Swish(),
             nn.Linear(hidden_dim, hidden_dim),
             Swish(),
@@ -34,11 +43,12 @@ class MLP(nn.Module):
             nn.Linear(hidden_dim, input_dim),
         )
 
-    def forward(self, x: Tensor, t: Tensor, c: Tensor = None) -> Tensor:
+    def forward(self, x: Tensor, t: Tensor, c: Optional[Tensor] = None) -> Tensor:
         original_shape = x.shape
         x = x.view(-1, self.input_dim)
-        t = t.reshape(-1, 1).float()
-        h = torch.cat([x, t], dim=1)
+        x_proj = self.initial_projection(x)
+        t_emb = self.time_embedding(t)
+        h = x_proj + t_emb
         output = self.main(h)
         return output.view(original_shape)
 
@@ -48,19 +58,23 @@ class CNN(nn.Module):
         self,
         input_dim: int,
         horizon: int,
-        hidden_dim: int = 128,
         kernel_size: int = 5,
+        hidden_dim: int = 128,
+        time_dim: Optional[int] = None,
     ):
         super().__init__()
         self.horizon = horizon
         assert input_dim % horizon == 0, "input_dim must be divisible by horizon"
         self.transition_dim = input_dim // horizon
 
+        if time_dim is None:
+            time_dim = hidden_dim
+
         self.time_embedding = nn.Sequential(
-            SinusoidalPosEmb(hidden_dim),
-            nn.Linear(hidden_dim, hidden_dim * 4),
+            SinusoidalPosEmb(time_dim),
+            nn.Linear(time_dim, hidden_dim),
             Swish(),
-            nn.Linear(hidden_dim * 4, hidden_dim),
+            nn.Linear(hidden_dim, hidden_dim),
         )
 
         self.initial_conv = nn.Conv1d(self.transition_dim, hidden_dim, kernel_size=1)
@@ -74,7 +88,7 @@ class CNN(nn.Module):
         )
         self.final_conv = nn.Conv1d(hidden_dim, self.transition_dim, kernel_size=1)
 
-    def forward(self, x: Tensor, t: Tensor) -> Tensor:
+    def forward(self, x: Tensor, t: Tensor, c: Optional[Tensor] = None) -> Tensor:
         x_reshaped = rearrange(x, "b (h d) -> b d h", h=self.horizon)
         h = self.initial_conv(x_reshaped)
         t_emb = self.time_embedding(t)
@@ -84,73 +98,62 @@ class CNN(nn.Module):
         return rearrange(out_reshaped, "b d h -> b (h d)")
 
 
-class ConditionalCNN(torch.nn.Module):
+class ConditionalCNN(nn.Module):
     def __init__(
         self,
         input_dim: int,
         horizon: int,
-        time_dim: int = 32,
-        cond_dim: int = 1,
+        cond_dim: int,
         hidden_dim: int = 128,
+        time_dim: Optional[int] = None,
         kernel_size: int = 5,
     ):
         super().__init__()
         self.horizon = horizon
-        self.cond_dim = cond_dim
-
         assert input_dim % horizon == 0, "input_dim must be divisible by horizon"
         self.transition_dim = input_dim // horizon
 
-        self.time_mlp = SinusoidalPosEmb(time_dim)
-        input_channels = self.transition_dim + time_dim + cond_dim
+        if time_dim is None:
+            time_dim = hidden_dim
 
-        self.main = torch.nn.Sequential(
-            torch.nn.Conv1d(
-                input_channels, hidden_dim, kernel_size=kernel_size, padding="same"
-            ),
-            torch.nn.SiLU(),
-            torch.nn.Conv1d(
-                hidden_dim, hidden_dim, kernel_size=kernel_size, padding="same"
-            ),
-            torch.nn.SiLU(),
-            torch.nn.Conv1d(
-                hidden_dim, hidden_dim, kernel_size=kernel_size, padding="same"
-            ),
-            torch.nn.SiLU(),
-            torch.nn.Conv1d(
-                hidden_dim, self.transition_dim, kernel_size=kernel_size, padding="same"
-            ),
+        self.time_embedding = nn.Sequential(
+            SinusoidalPosEmb(time_dim),
+            nn.Linear(time_dim, hidden_dim),
+            Swish(),
+            nn.Linear(hidden_dim, hidden_dim),
+        )
+        self.cond_embedding = nn.Sequential(
+            nn.Linear(cond_dim, hidden_dim),
+            Swish(),
+            nn.Linear(hidden_dim, hidden_dim),
         )
 
-    def forward(
-        self, x: torch.Tensor, t: torch.Tensor, c: torch.Tensor
-    ) -> torch.Tensor:
-        x_reshaped = x.view(-1, self.horizon, self.transition_dim).permute(0, 2, 1)
-
-        # scaling my time embedding
-        t_float = t.float()
-        if t_float.max() <= 1.0:
-            t_scaled = t_float * 1000.0
-        else:
-            t_scaled = t_float
-
-        t_emb = self.time_mlp(t_scaled)  # Shape: (batch_size, time_dim)
-
-        t_emb_expanded = t_emb.unsqueeze(-1).expand(-1, -1, self.horizon)
-
-        # Reshape and expand the condition
-        c_expanded = c.view(-1, self.cond_dim, 1).expand(
-            -1, self.cond_dim, self.horizon
+        self.initial_conv = nn.Conv1d(self.transition_dim, hidden_dim, kernel_size=1)
+        self.main = nn.Sequential(
+            nn.Conv1d(hidden_dim, hidden_dim, kernel_size=kernel_size, padding="same"),
+            Swish(),
+            nn.Conv1d(hidden_dim, hidden_dim, kernel_size=kernel_size, padding="same"),
+            Swish(),
+            nn.Conv1d(hidden_dim, hidden_dim, kernel_size=kernel_size, padding="same"),
+            Swish(),
         )
+        self.final_conv = nn.Conv1d(hidden_dim, self.transition_dim, kernel_size=1)
 
-        # Concatenate along the channel dimension
-        h = torch.cat([x_reshaped, t_emb_expanded, c_expanded], dim=1)
-        output_reshaped = self.main(h)
+    def forward(self, x: Tensor, t: Tensor, c: Optional[Tensor] = None) -> Tensor:
+        x_reshaped = rearrange(x, "b (h d) -> b d h", h=self.horizon)
+        h = self.initial_conv(x_reshaped)
 
-        return output_reshaped.permute(0, 2, 1).reshape(x.shape)
+        t_emb = self.time_embedding(t)
+        h = h + rearrange(t_emb, "b d -> b d 1")
+
+        if c is not None:
+            c_emb = self.cond_embedding(c)
+            h = h + rearrange(c_emb, "b d -> b d 1")
+        h = self.main(h)
+        out_reshaped = self.final_conv(h)
+        return rearrange(out_reshaped, "b d h -> b (h d)")
 
 
-# diffusers doesn't have a conditional Unet1D, so we implement our own.
 class ResidualBlock(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size=5):
         super().__init__()
@@ -208,88 +211,48 @@ class ConditionalUNet1D(nn.Module):
         self,
         input_dim: int,
         horizon: int,
-        cond_dim: int = 8,
+        cond_dim: int,
         hidden_dim: int = 128,
-        fusion_strategy: str = "concat",
-        use_mlp_embedding: bool = False,
+        time_dim: Optional[int] = None,
     ):
         super().__init__()
         self.horizon = horizon
-        self.cond_dim = cond_dim
-        self.fusion_strategy = fusion_strategy
-
         assert input_dim % horizon == 0, "input_dim must be divisible by horizon"
         self.transition_dim = input_dim // horizon
 
-        if use_mlp_embedding:
-            time_embed_dim = hidden_dim * 4
-            self.time_embedding = nn.Sequential(
-                SinusoidalPosEmb(hidden_dim),
-                nn.Linear(hidden_dim, time_embed_dim),
-                Mish(),
-                nn.Linear(time_embed_dim, hidden_dim),
-            )
-            cond_embed_dim = hidden_dim * 4
-            self.cond_embedding = nn.Sequential(
-                nn.Linear(cond_dim, cond_embed_dim),
-                Mish(),
-                nn.Linear(cond_embed_dim, hidden_dim),
-            )
-        else:
-            self.time_embedding = SinusoidalPosEmb(hidden_dim)
-            self.cond_embedding = nn.Linear(cond_dim, hidden_dim)
+        if time_dim is None:
+            time_dim = hidden_dim
 
-        if self.fusion_strategy == "concat":
-            # need to project back to hidden_dim
-            self.feature_projection = nn.Linear(hidden_dim * 2, hidden_dim)
+        self.time_embedding = nn.Sequential(
+            SinusoidalPosEmb(time_dim),
+            nn.Linear(time_dim, hidden_dim),
+            Swish(),
+            nn.Linear(hidden_dim, hidden_dim),
+        )
+        self.cond_embedding = nn.Sequential(
+            nn.Linear(cond_dim, hidden_dim),
+            Swish(),
+            nn.Linear(hidden_dim, hidden_dim),
+        )
 
-        # Initial convolution to map input to hidden dimension
         self.initial_conv = nn.Conv1d(self.transition_dim, hidden_dim, kernel_size=1)
-
-        # Downsampling Path
         self.down1 = DownBlock(hidden_dim, hidden_dim * 2)
         self.down2 = DownBlock(hidden_dim * 2, hidden_dim * 4)
-
-        # Bottleneck
         self.bottleneck = ResidualBlock(hidden_dim * 4, hidden_dim * 4)
-
-        # Upsampling Path
-        self.up1 = UpBlock(
-            in_channels=hidden_dim * 4,
-            skip_channels=hidden_dim * 4,
-            out_channels=hidden_dim * 2,
-        )
-        self.up2 = UpBlock(
-            in_channels=hidden_dim * 2,
-            skip_channels=hidden_dim * 2,
-            out_channels=hidden_dim,
-        )
-
-        # Final convolution to map back to the original transition dimension
+        self.up1 = UpBlock(hidden_dim * 4, hidden_dim * 4, hidden_dim * 2)
+        self.up2 = UpBlock(hidden_dim * 2, hidden_dim * 2, hidden_dim)
         self.final_conv = nn.Conv1d(hidden_dim, self.transition_dim, kernel_size=1)
 
     def forward(self, x: Tensor, t: Tensor, c: Optional[Tensor] = None) -> Tensor:
-        x_initial = self.initial_conv(rearrange(x, "b (h d) -> b d h", h=self.horizon))
+        x_reshaped = rearrange(x, "b (h d) -> b d h", h=self.horizon)
+        h = self.initial_conv(x_reshaped)
 
-        t_float = t.float()
-        t_scaled = t_float * 1000.0 if t_float.max() <= 1.0 else t_float
-        t_emb = self.time_embedding(t_scaled)
+        t_emb = self.time_embedding(t)
+        h = h + rearrange(t_emb, "b d -> b d 1")
 
         if c is not None:
-            c_emb = self.cond_embedding(c.float())
-
-            if self.fusion_strategy == "concat":
-                combined_emb = torch.cat([t_emb, c_emb], dim=-1)
-                final_emb = self.feature_projection(combined_emb)
-            elif self.fusion_strategy == "add":
-                final_emb = t_emb + c_emb
-            else:
-                raise ValueError(f"Unknown fusion strategy: {self.fusion_strategy}")
-        else:
-            final_emb = t_emb
-
-        time_cond_emb = repeat(final_emb, "b d -> b d h", h=self.horizon)
-        h = x_initial + time_cond_emb
+            c_emb = self.cond_embedding(c)
+            h = h + rearrange(c_emb, "b d -> b d 1")
 
         skip1, h = self.down1(h)
         skip2, h = self.down2(h)
@@ -297,11 +260,5 @@ class ConditionalUNet1D(nn.Module):
         h = self.up1(h, skip2)
         h = self.up2(h, skip1)
 
-        output_reshaped = self.final_conv(h)
-        output_flat = rearrange(output_reshaped, "b d h -> b (h d)")
-        return output_flat
-
-
-# TODO: Implement ControlNet for conditioning case.
-class ControlNet(nn.Module):
-    pass
+        out_reshaped = self.final_conv(h)
+        return rearrange(out_reshaped, "b d h -> b (h d)")

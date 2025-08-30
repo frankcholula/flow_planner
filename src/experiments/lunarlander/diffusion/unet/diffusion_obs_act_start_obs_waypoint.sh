@@ -1,12 +1,11 @@
 #!/bin/bash
-# set eval-every to bypass eval because there is no obs.
-python -m src.run \
+python -m src.diffusion \
     --environment "LunarLander-v3" \
-    --horizon 25 \
+    --horizon 100 \
     --batch-size 32 \
     --num-epochs 100 \
     --print-every 1 \
-    --eval-every 500 \
+    --eval-every 5 \
     --lr 1e-3 \
     --model-type "unet" \
     --hidden-dim 64 \
@@ -14,5 +13,8 @@ python -m src.run \
     --num-train-timesteps 1000 \
     --num-inference-steps 100 \
     --inference-batch-size 1 \
-    --condition-on "start_obs_goal" \
-    --model-target "act_only"
+    --condition-on "start_obs_waypoint" \
+    --model-target "obs_act" \
+    --cfg true \
+    --cfg_dropout_prob 0.1 \
+    --guidance_scale 1.5

@@ -7,11 +7,10 @@ python -m src.run \
     --print-every 1 \
     --eval-every 5 \
     --lr 1e-3 \
-    --model-type "ccnn" \
-    --kernel-size 5 \
-    --hidden-dim 128 \
+    --model-type "unet" \
+    --hidden-dim 64 \
     --step-size 0.05 \
     --solver-method "midpoint" \
     --inference-batch-size 1 \
-    --condition-on "start_obs" \
+    --condition-on "start_obs_waypoint" \
     --model-target "obs_act"
