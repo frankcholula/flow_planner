@@ -211,14 +211,14 @@ download-agents:
 diffusion-unconditional:
 	@echo "Running Unconditional Diffusion Experiments..."
 	./src/experiments/lunarlander/uncond/diffusion_mlp.sh
-	./src/experiments/lunarlander/uncond/diffusion_cnn.sh
-	./src/experiments/lunarlander/uncond/diffusion_unet.sh
+# 	./src/experiments/lunarlander/uncond/diffusion_cnn.sh
+# 	./src/experiments/lunarlander/uncond/diffusion_unet.sh
 
 fm-unconditional:
 	@echo "Running Unconditional Flow Matching Experiments..."
 	./src/experiments/lunarlander/uncond/fm_mlp.sh
-	./src/experiments/lunarlander/uncond/fm_cnn.sh
-	./src/experiments/lunarlander/uncond/fm_unet.sh
+# 	./src/experiments/lunarlander/uncond/fm_cnn.sh
+# 	./src/experiments/lunarlander/uncond/fm_unet.sh
 
 diffusion-joint:
 	@echo "Running Diffusion on joint state-action space..."

@@ -16,10 +16,14 @@ class Mish(nn.Module):
 
 
 class MLP(nn.Module):
-    def __init__(self, input_dim: int, time_dim: int = 128, hidden_dim: int = 128):
+    def __init__(
+        self, input_dim: int, hidden_dim: int = 128, time_dim: Optional[int] = None
+    ):
         super().__init__()
-
         self.input_dim = input_dim
+
+        if time_dim is None:
+            time_dim = hidden_dim
 
         self.time_embedding = nn.Sequential(
             SinusoidalPosEmb(time_dim),
@@ -39,7 +43,7 @@ class MLP(nn.Module):
             nn.Linear(hidden_dim, input_dim),
         )
 
-    def forward(self, x: Tensor, t: Tensor, c: Tensor = None) -> Tensor:
+    def forward(self, x: Tensor, t: Tensor, c: Optional[Tensor] = None) -> Tensor:
         original_shape = x.shape
         x = x.view(-1, self.input_dim)
         x_proj = self.initial_projection(x)
@@ -54,19 +58,23 @@ class CNN(nn.Module):
         self,
         input_dim: int,
         horizon: int,
-        hidden_dim: int = 128,
         kernel_size: int = 5,
+        hidden_dim: int = 128,
+        time_dim: Optional[int] = None,
     ):
         super().__init__()
         self.horizon = horizon
         assert input_dim % horizon == 0, "input_dim must be divisible by horizon"
         self.transition_dim = input_dim // horizon
 
+        if time_dim is None:
+            time_dim = hidden_dim
+
         self.time_embedding = nn.Sequential(
-            SinusoidalPosEmb(hidden_dim),
-            nn.Linear(hidden_dim, hidden_dim * 4),
+            SinusoidalPosEmb(time_dim),
+            nn.Linear(time_dim, hidden_dim),
             Swish(),
-            nn.Linear(hidden_dim * 4, hidden_dim),
+            nn.Linear(hidden_dim, hidden_dim),
         )
 
         self.initial_conv = nn.Conv1d(self.transition_dim, hidden_dim, kernel_size=1)
@@ -80,7 +88,7 @@ class CNN(nn.Module):
         )
         self.final_conv = nn.Conv1d(hidden_dim, self.transition_dim, kernel_size=1)
 
-    def forward(self, x: Tensor, t: Tensor) -> Tensor:
+    def forward(self, x: Tensor, t: Tensor, c: Optional[Tensor] = None) -> Tensor:
         x_reshaped = rearrange(x, "b (h d) -> b d h", h=self.horizon)
         h = self.initial_conv(x_reshaped)
         t_emb = self.time_embedding(t)
