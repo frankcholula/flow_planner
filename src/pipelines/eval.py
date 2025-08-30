@@ -92,36 +92,57 @@ def evaluate_open_loop_diffusion(
     return fig, ax
 
 
-def evaluate_open_loop(env, model, stats, input_dim, args, logger=None):
+def evaluate_open_loop(env, model, stats, input_dim, args, logger=None, dataset=None):
     model.eval()
     cond_dict = None
     if args.condition_on == "start_obs":
         start_observation, _ = env.reset()
         cond_dict = {"start_obs": torch.from_numpy(start_observation)}
+
+    elif args.condition_on == "start_obs_waypoint":
+        if dataset is None:
+            raise ValueError("Dataset must be provided for waypoint evaluation.")
+
+        valid_episode_found = False
+        while not valid_episode_found:
+            episode = dataset[random.choice(range(len(dataset)))]
+            if len(episode.observations) > args.horizon:
+                valid_episode_found = True
+
+        start_observation = episode.observations[0]
+        goal_observation = episode.observations[args.horizon - 1]
+
+        print(
+            f"Start obs (x,y): ({start_observation[0]:.4f}, {start_observation[1]:.4f})"
+        )
+        print(
+            f"Goal obs (x,y):  ({goal_observation[0]:.4f}, {goal_observation[1]:.4f})"
+        )
+        cond_dict = {
+            "start_obs_goal": (
+                torch.from_numpy(start_observation).to(args.device),
+                torch.from_numpy(goal_observation).to(args.device),
+            )
+        }
+
     elif args.condition_on == "start_obs_goal":
         start_observation, _ = env.reset()
-        if args.environment == "LunarLander-v3":
-            goal_observation = torch.tensor(
-                [0, 0, 0, 0, 0, 0, 1, 1], dtype=torch.float32
-            )
-        elif (
-            args.environment == "BipedalWalker-v3" or args.environment == "CarRacing-v3"
-        ):
-            goal_observation = torch.from_numpy(start_observation)
-        else:
-            raise ValueError(f"Unknown environment: {args.environment}")
+        goal_observation = torch.tensor(
+            [0, 0, 0, 0, 0, 0, 1, 1], dtype=torch.float32
+        ).to(args.device)
         cond_dict = {
-            args.condition_on: (torch.from_numpy(start_observation), goal_observation)
+            "start_obs_goal": (
+                torch.from_numpy(start_observation).to(args.device),
+                goal_observation,
+            )
         }
-    elif args.condition_on == "reward":
-        # TODO: implement reward conditioning
-        pass
     if cond_dict is not None:
         wrapped_vf = WrappedConditionalModel(model)
     else:
         wrapped_vf = WrappedModel(model)
     T = torch.linspace(0, 1, 10)
     solver = ODESolver(velocity_model=wrapped_vf)
+
     trajectory_fn = lambda: generate_trajectory(
         stats=stats,
         solver=solver,

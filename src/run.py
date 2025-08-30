@@ -2,26 +2,20 @@ import os
 import time
 import random
 import pprint
-import minari
 import numpy as np
 from matplotlib import pyplot as plt
 
 import torch
-from torch.utils.data import DataLoader
 
-from src.models.backbone import MLP, CNN, ConditionalCNN, ConditionalUNet1D
 from src.pipelines.sampling import generate_trajectory
 from src.utils.args import parse_fm_args
 from src.utils.loggers import WandBLogger
-
+from src.utils.training import build_model, build_dataloader, load_dataset
 from flow_matching.path.scheduler import CondOTScheduler
 from flow_matching.path import AffineProbPath
 from flow_matching.solver import ODESolver
 
-from src.conf.environment import BipedalWalkerConfig, CarRacingConfig, LunarLanderConfig
 from src.pipelines.preprocessing import (
-    collate_fn,
-    get_dataset_stats,
     create_normalized_chunks,
 )
 from src.pipelines.eval import (
@@ -30,116 +24,6 @@ from src.pipelines.eval import (
     evaluate_open_loop,
     evaluate_policy_mpc,
 )
-
-env_config_map = {
-    "LunarLander-v3": LunarLanderConfig,
-    "CarRacing-v3": CarRacingConfig,
-    "BipedalWalker-v3": BipedalWalkerConfig,
-}
-
-
-def load_dataset(args, env_render_mode="rgb_array", eval_env=False):
-    if args.environment not in env_config_map:
-        raise ValueError(f"Unknown environment: {args.environment}")
-
-    dataset_config = env_config_map[args.environment]()
-    dataset = minari.load_dataset(dataset_id=dataset_config.dataset_name)
-    recovered_env = dataset.recover_environment(
-        eval_env=eval_env, render_mode=env_render_mode
-    )
-    # recovered_env = dataset.recover_environment()
-    return dataset_config, dataset, recovered_env
-
-
-def build_model(args, obs_dim, action_dim):
-    horizon = args.horizon
-    # setting input dimension based on what we're modeling
-    if args.model_target == "obs_act":
-        input_dim = (obs_dim + action_dim) * horizon
-    elif args.model_target == "obs_only":
-        input_dim = obs_dim * horizon
-    elif args.model_target == "act_only":
-        input_dim = action_dim * horizon
-    else:
-        raise ValueError(f"Invalid model_target: {args.model_target}")
-    print(f"Modeling {args.model_target} with an input_dim of {input_dim}")
-
-    # setting the right model based on args
-    # unconditional models
-    if args.model_type == "mlp":
-        model = MLP(input_dim=input_dim, time_dim=1, hidden_dim=args.hidden_dim).to(
-            args.device
-        )
-    elif args.model_type == "cnn":
-        model = CNN(
-            input_dim=input_dim,
-            hidden_dim=args.hidden_dim,
-            horizon=horizon,
-            kernel_size=args.kernel_size,
-        ).to(args.device)
-
-    # conditional models
-    elif args.model_type == "ccnn":
-        print("Using CCNN for training...")
-        # setting conditioning dimension
-        if args.condition_on == "reward":
-            cond_dim = 1
-        elif args.condition_on == "start_obs":
-            cond_dim = obs_dim
-        elif args.condition_on == "start_obs_goal":
-            cond_dim = obs_dim * 2
-        else:
-            raise ValueError(
-                f"ConditionalCNN requires a valid --condition-on argument ('reward', 'start_obs', 'start_obs_goal'). but got: {args.condition_on!r}"
-            )
-        model = ConditionalCNN(
-            input_dim=input_dim,
-            horizon=horizon,
-            hidden_dim=args.hidden_dim,
-            kernel_size=args.kernel_size,
-            cond_dim=cond_dim,
-        ).to(args.device)
-
-    elif args.model_type == "unet":
-        print("Using UNet1D model for training...")
-        if args.condition_on:
-            if args.condition_on == "reward":
-                cond_dim = 1
-            elif args.condition_on == "start_obs":
-                cond_dim = obs_dim
-            elif args.condition_on == "start_obs_goal":
-                cond_dim = obs_dim * 2
-            else:
-                raise ValueError(
-                    f"UNet1D requires a valid --condition-on argument ('reward', 'start_obs', 'start_obs_goal'), but got: {args.condition_on!r}"
-                )
-        else:
-            print("Running unconditional UNet1D model...")
-            cond_dim = 1
-        model = ConditionalUNet1D(
-            input_dim=input_dim,
-            horizon=horizon,
-            hidden_dim=args.hidden_dim,
-            cond_dim=cond_dim,
-            fusion_strategy="concat",
-            use_mlp_embedding=False,
-        ).to(args.device)
-    else:
-        raise ValueError(f"Invalid model_type: {args.model_type}")
-    return model, input_dim
-
-
-def build_dataloader(dataset, args):
-    generator = torch.Generator(device=args.device) if args.device == "cuda" else None
-    dataloader = DataLoader(
-        dataset,
-        batch_size=args.batch_size,
-        shuffle=True,
-        collate_fn=collate_fn,
-        generator=generator,
-    )
-    stats = get_dataset_stats(dataset)
-    return dataloader, stats
 
 
 def run_epoch(model, dataloader, path, optim, args, stats):
@@ -236,7 +120,7 @@ def evaluate(
             condition_type=condition_type,
             goal_obs=goal_obs,
             args=args,
-            dataset=dataset
+            dataset=dataset,
         )
         if logger:
             logger.log({"reward mean": np.mean(model_rewards)})

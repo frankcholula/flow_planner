@@ -18,7 +18,6 @@ from src.pipelines.eval import (
     evaluate_policy_mpc,
 )
 
-
 # diffusion
 from diffusers.schedulers.scheduling_ddim import DDIMScheduler
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
@@ -147,7 +146,6 @@ def train(config, args, dataset, env, noise_scheduler, run_name=None, logger=Non
 
     # getting the dataloadergit p and dataset statistics
     dataloader, stats = build_dataloader(dataset, args)
-    # TODO: replace path with a noise scheduler
     optim = torch.optim.Adam(model.parameters(), lr=args.lr)
 
     save_dir = "src/checkpoints"
