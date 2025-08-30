@@ -216,7 +216,6 @@ def evaluate(
         T = torch.linspace(0, 1, 10)
         T = T.to(device=args.device)
         solver = ODESolver(velocity_model=wrapped_vf)
-        # create trajectory function
         planner_fn = lambda cond_dict: generate_trajectory(
             stats=stats,
             solver=solver,
@@ -236,6 +235,8 @@ def evaluate(
             max_episode_length=300,
             condition_type=condition_type,
             goal_obs=goal_obs,
+            args=args,
+            dataset=dataset
         )
         if logger:
             logger.log({"reward mean": np.mean(model_rewards)})
