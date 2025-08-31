@@ -232,10 +232,10 @@ diffusion-joint-cnn:
 
 cfm-joint-unet:
 	@echo "Running CFM on joint state-action space using U-Net..."
-	./src/experiments/lunarlander/cfm/unet/cfm_obs_act_start_obs_goal.sh
 	./src/experiments/lunarlander/cfm/unet/cfm_obs_act_start_obs_waypoint.sh
+	./src/experiments/lunarlander/cfm/unet/cfm_obs_act_start_obs_goal.sh
 
 cfm-joint-cnn:
 	@echo "Running CFM on joint state-action space using CNN..."
-	./src/experiments/lunarlander/cfm/ccnn/cfm_obs_act_start_obs_goal.sh
 	./src/experiments/lunarlander/cfm/ccnn/cfm_obs_act_start_obs_waypoint.sh
+	./src/experiments/lunarlander/cfm/ccnn/cfm_obs_act_start_obs_goal.sh
