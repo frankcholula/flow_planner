@@ -1,4 +1,3 @@
-#!/bin/bash
 python -m src.diffusion \
     --environment "LunarLander-v3" \
     --horizon 100 \
@@ -11,7 +10,11 @@ python -m src.diffusion \
     --hidden-dim 64 \
     --scheduler "ddpm" \
     --num-train-timesteps 1000 \
-    --num-inference-steps 1000 \
+    --num-inference-steps 100 \
     --inference-batch-size 1 \
     --condition-on "start_obs_goal" \
-    --model-target "obs_only"
+    --model-target "obs_only" \
+    --cfg true \
+    --cfg-dropout-prob 0.1 \
+    --guidance-scale 1.5 \
+    --fusion-strategy "concat"
