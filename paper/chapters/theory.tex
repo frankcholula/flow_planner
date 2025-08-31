@@ -1,42 +1,180 @@
 \chapter{Background Theory and Literature Review}
-This chapter begins by examining the fundamental concepts in offline reinforcement learning and established methodologies for addressing distributional shift. Next, it explores diffusion models through the lens of variational bayesian framework, before unifying these concepts through the lens of continuous flows to introduce flow matching. The chapter concludes with an analysis of diffusion applications in trajectory synthesis and state-of-the-art approaches that integrate these models directly into reinforcement learning frameworks. Particular emphasis is placed on the mathematical formulations of diffusion and flow matching, as this constitutes the central focus of this dissertation and the subsequent methodologies.
+This chapter begins by examining the fundamental concepts in offline reinforcement learning and established methodologies for addressing distributional shift. Next, it explores diffusion models through the lens of variational inference before unifying these concepts through continuous flows to introduce flow matching. The chapter concludes with an analysis of diffusion applications in trajectory synthesis and state-of-the-art approaches that integrate these models directly into reinforcement learning frameworks. Particular emphasis is placed on the mathematical formulations of diffusion and flow matching, as this constitutes the central focus of this dissertation and the applied methodologies after.
 
 
 \section{Offline Reinforcement Learning}
-As mentioned in chapter 1, a significant hurdle in offline RL is distribution shift between the static dataset and the policy being learned. This results in standard off-policy RL methods to fail due to overestimation of Q-values, particularly when dealing with complex and multi-modal data distributions. When an agent's policy deviates from the offline dataset, it queries the Q-function for actions not present in the training data. This leads to erroneous and optimistically high value estimates. The problem is especially severe when the policy is chosen to maximize the Q-value, thereby exploiting regions of the state-action space where the Q-function is highly inaccurate. As a result, the Q-function believes it will perform exceptionally well, while actual performance is often poor.
+As established in Chapter 1, a significant hurdle in offline reinforcement learning is the distributional shift between the static dataset and the policy being learned. This can lead to erroneous value estimates for out-of-distribution actions, resulting in brittle policies that perform poorly when deployed [1]. To mitigate this issue, the literature has broadly converged on three primary classes of approach: policy constraint methods, implicit policy constraint methods, and model-based methods.
 
 \subsection{Policy Constraint Methods}
-One early class of methods that’s been explored extensively is policy constraint methods. These approaches aim to mitigate distributional shift by updating the policy not just by maximizing the Q-value, but by doing so **su**bject to a constraint that the learned policy remains sufficiently close to the behavioral policy (collected data). This closeness is typically measured by a divergence metric, such as KL divergence or Maximum Mean Discrepancy (MMD).
+One early class of methods that’s been explored extensively is policy constraint methods. These approaches aim to mitigate distributional shift by updating the policy not just by maximizing the Q-value, but by doing so subject to a constraint that the learned policy remains sufficiently close to the behavioral policy (collected data). This closeness is typically measured by a divergence metric, such as KL divergence or Maximum Mean Discrepancy (MMD).
 
-To a degree, these methods can bound the distributional shift and the impact of out-of-distribution actions, potentially leading to more stable learning. Examples include **BEAR** (Bootstrapping Error Accumulation Reduction) by Kumar et al and **BRAC** (Behavior Regularized Actor Critic) by Wu et al [8], [9].
+To a degree, these methods can bound the distributional shift and the impact of out-of-distribution actions, potentially leading to more stable learning. Examples include BEAR (Bootstrapping Error Accumulation Reduction) by Kumar et al. [8] and BRAC (Behavior Regularized Actor Critic) by Wu et al. [9].
 
-A significant challenge is their potential to be overly conservative, as a single constraint value $\epsilon$  might not work well across all states, especially if the behavior policy exhibits both highly random and highly deterministic actions. More critically, these methods often require **accurately estimating the behavior policy itself**, which can be extremely difficult, particularly when the data comes from diverse sources (e.g., humans or a mixture of different policies). Errors in this estimation can lead to an imperfect constraint and poor practical performance, making it a major bottleneck, especially during online fine-tuning.
+A significant challenge is their potential to be overly conservative, as a single constraint value $\epsilon$  might not work well across all states, especially if the behavior policy exhibits both highly random and highly deterministic actions. More critically, these methods often require accurately estimating the behavior policy itself, which can be extremely difficult, particularly when the data comes from diverse sources (e.g., humans or a mixture of different policies). Errors in this estimation can lead to an imperfect constraint and poor practical performance, making it a major bottleneck, especially during online fine-tuning.
+
 \subsection{Implicit Policy Constraint Methods}
-Building upon the insights into the limitations of explicit policy constraint methods, **implicit policy constraint methods**, such as **AWAC** (Advantage Weighted Actor Critic) by Nair et al. , emerged as an alternative that addresses the difficulty of behavior policy modeling. AWAC leverages a theoretical identity that shows the solution to a constrained optimization problem can be approximated using a **weighted maximum likelihood objective**. In this formulation, actions taken from the behavior policy are weighted by the exponentiated advantage function, effectively embedding the constraint implicitly [10]. More intuitively, AWAC approximates the best new policy by look at actions already in the dataset and give more weight (advantage) to the really good ones. 
+Building upon the insights into the limitations of explicit policy constraint methods, implicit policy constraint methods, such as AWAC (Advantage Weighted Actor Critic) by Nair et al. [10] , emerged as an alternative that addresses the difficulty of behavior policy modeling. AWAC leverages a theoretical identity that shows the solution to a constrained optimization problem can be approximated using a weighted maximum likelihood objective. In this formulation, actions taken from the behavior policy are weighted by the exponentiated advantage function, effectively embedding the constraint implicitly [10]. More intuitively, AWAC approximates the best new policy by look at actions already in the dataset and give more weight (advantage) to the really good ones. 
 
-This approach **obviates the need for explicit modeling of the behavior policy**, only requiring samples from it, which are readily available in the offline dataset. AWAC has shown to be effective for online fine-tuning after offline initialization and demonstrates strong performance on complex tasks like dexterous manipulation with human demonstration data.
+This approach obviates the need for explicit modeling of the behavior policy, only requiring samples from it, which are readily available in the offline dataset. AWAC has shown to be effective for online fine-tuning after offline initialization and demonstrates strong performance on complex tasks like dexterous manipulation with human demonstration data.
 
 While the sources highlight its advantages, it is still a form of policy constraint.  Its inherent conservativeness might limit the extent to which it can discover entirely novel, optimal behaviors far from the observed data.
+
 \subsection{Model-based Offline RL Methods}
-Taking a different algorithmic direction, **model-based offline RL methods**, exemplified by **MOPO** (Model-based Offline Policy Optimization) by Yu et al., propose to tackle the problem by learning a model of the environment's dynamics. While vanilla model-based RL (like MBPO) already showed some promise in offline settings, MOPO specifically modifies these algorithms to handle distributional shift. MOPO achieves this by **punishing the policy for exploiting out-of-distribution states** during model rollouts. This is implemented by subtracting an **uncertainty penalty** from the reward function, which becomes larger for state-action tuples that are more out of distribution (i.e., where the learned model's predictions are less certain) [11], [12].
+Taking a different algorithmic direction, model-based offline RL methods, exemplified by MOPO (Model-based Offline Policy Optimization) by Yu et al. [11], propose to tackle the problem by learning a model of the environment's dynamics. While vanilla model-based RL (like MBPO) already showed some promise in offline settings, MOPO specifically modifies these algorithms to handle distributional shift. MOPO achieves this by punishing the policy for exploiting out-of-distribution states during model rollouts. This is implemented by subtracting an uncertainty penalty from the reward function, which becomes larger for state-action tuples that are more out of distribution (i.e., where the learned model's predictions are less certain).
 
-MOPO hence has the ability to **generalize beyond the state and action support of the offline data**, enabling the learning of policies for tasks different from those for which the data was collected. It is more resilient to overestimation and overfitting than model-free methods and theoretically maximizes a lower bound of the policy's true return, balancing exploration and risk. Empirically, MOPO outperforms existing model-free offline RL methods and vanilla model-based approaches, especially on tasks requiring out-of-distribution generalization.
+MOPO hence has the ability to generalize beyond the state and action support of the offline data, enabling the learning of policies for tasks different from those for which the data was collected. It is more resilient to overestimation and overfitting than model-free methods and theoretically maximizes a lower bound of the policy's true return, balancing exploration and risk. Empirically, MOPO outperforms existing model-free offline RL methods and vanilla model-based approaches, especially on tasks requiring out-of-distribution generalization.
 
-Nevertheless, models can still be inaccurate in regions far from the training data, and in a purely offline setting, these errors cannot be corrected through further interaction. The effectiveness relies heavily on the quality of the uncertainty estimation and the tuning of the penalty coefficient. It may also struggle with datasets lacking sufficient action diversity, and there are limits to its generalization capabilities if the new task requires exploring states completely outside the available data support.
+Nevertheless, models can still be inaccurate in regions far from the training data, and in a purely offline setting, these errors cannot be corrected through further interaction. The effectiveness relies heavily on the quality of the uncertainty estimation and the tuning of the penalty coefficient [12]. It may also struggle with datasets lacking sufficient action diversity, and there are limits to its generalization capabilities if the new task requires exploring states completely outside the available data support.
+
+
 \subsection{Conservative Q Learning}
-Finally, a distinct and highly effective approach is **Conservative Q-Learning (CQL)** by Kumar et al., which directly addresses the core problem of **Q-value overestimation**. Instead of constraining the policy, CQL augments the standard Bellman error objective with a novel **Q-value regularizer**. This regularizer works by finding and minimizing (pushing down) erroneously high Q-values for out-of-distribution actions, while a more advanced version also compensates by pushing up Q-values for actions present in the dataset. This makes the learned Q-function inherently "pessimistic".
+Finally, a distinct and highly effective approach is Conservative Q-Learning (CQL) by Kumar et al., which directly addresses the core problem of Q-value overestimation. Instead of constraining the policy, CQL augments the standard Bellman error objective with a novel Q-value regularizer. This regularizer works by finding and minimizing (pushing down) erroneously high Q-values for out-of-distribution actions, while a more advanced version also compensates by pushing up Q-values for actions present in the dataset. This makes the learned Q-function inherently "pessimistic" [13].
 
-CQL is theoretically guaranteed to learn a **lower bound on the true Q-function**, effectively preventing the problematic overestimation. This direct approach leads to state-of-the-art performance across a wide range of tasks on standard benchmarks like D4RL and Atari. It significantly outperforms many previous offline RL methods, demonstrating the ability to "stitch" together parts of different trajectories to find more optimal paths, and achieving up to five times better results on challenging dexterous manipulation tasks. While conservative, the full CQL method only slightly underestimates Q-values, making it a robust and reliable algorithm.
+CQL is theoretically guaranteed to learn a lower bound on the true Q-function, effectively preventing the problematic overestimation. This direct approach leads to state-of-the-art performance across a wide range of tasks on standard benchmarks like D4RL and Atari. It significantly outperforms many previous offline RL methods, demonstrating the ability to "stitch" together parts of different trajectories to find more optimal paths, and achieving up to five times better results on challenging dexterous manipulation tasks. While conservative, the full CQL method only slightly underestimates Q-values, making it a robust and reliable algorithm.
 
 The effectiveness of CQL depends on the appropriate selection of the regularization weight (alpha). Simpler variants of the algorithm without the compensatory term for in-distribution actions can lead to excessive underestimation. Despite its strong performance, ongoing research continues to explore further improvements.
 
-In conclusion, policy constraint methods and implicit policy constraint methods both try to constrain the learned policy to remain close to the behavior policy. However, they do not aim to learn a pessimistic Q-function or ensure a lower bound on Q-values. The simply avoid the problematic evaluation of out-of-distribution action. On the other hand, MOPO and CQL are methods that embrace a conservative and “pessimistic” strategy in order to mitigate the risks associated with going out of distributions and value overestimation by either directly pushing down the Q-values or penalized rewards based on uncertainty. This ensures the learned policies are robust, accepting the trade-off that may lead to sub-optimal but reliable performance.
+In summary, policy constraint methods and implicit policy constraint methods both try to constrain the learned policy to remain close to the behavior policy. However, they do not aim to learn a pessimistic Q-function or ensure a lower bound on Q-values. They simply avoid the problematic evaluation of out-of-distribution actions. On the other hand, MOPO and CQL are methods that embrace a conservative and “pessimistic” strategy in order to mitigate the risks associated with going out of distributions and value overestimation by either directly pushing down the Q-values or penalized rewards based on uncertainty. This ensures the learned policies are robust, accepting the trade-off that may lead to sub-optimal but reliable performance.
 
-\section{Diffusion}
-\section{Flow Matching}
+
+\section{Diffusion Models}
+The following two sections provide the necessary background theory on diffusion and score-based models preceding flow matching. Section 2.2 introduces the formulation of diffusion models, one derived from a variational inference perspective. Section 2.3 explores a more general score-based approach defined by continuous-time stochastic differential equations. Finally, section 2.4 introduces flow matching, a simulation-free method for training Continuous Normalizing Flows based on deterministic Ordinary Differential Equations (ODEs).
+\subsection{Diffusion’s Roots in Variational Bayesian Methods}
+In probabilistic generative modeling, the common practice is to introduce latent variables $z$ and a parameterized generative model $p_\theta(x)$ with prior $p(z)$ to explain observations $x$. By Bayes’ rule, the model’s posterior distribution is expressed as:
+
+$$
+p_\theta(z \mid x) = \frac{p_\theta(x \mid z) p(z)}{p_\theta(x)}.
+$$
+
+Where the denominator is the marginal likelihood or evidence, calculated by
+
+$$
+p_\theta(x) = \int p_\theta(x \mid z)\, p(z)\, dz.
+$$
+
+The posterior $p(z \mid x)$ explains how likely different latent configurations are given the data, but computing it directly is intractable because calculating the evidence requires integrating over latent space, which explodes in complexity. This intractability means we cannot directly evaluate or differentiate  $p(x)$.
+
+Hence, the Bayesian objective is maximizing the marginal likelihood, or evidence of the observed data $\log p_\theta(x)$. It quantifies how well a generative model explains the data overall, marginalizing out the latent space. Variational Bayesian methods provide a practical workaround by introducing a tractable approximation $q_\phi (z \mid x)$ , referred to as a recognition model or probabilistic encoder, to the true posterior and maximizing the evidence lower bound (ELBO) [14]:
+
+$$
+\log p_{\theta}(x) \geq \mathbb{E}_{q_{\phi}(z \mid x)} \Big[ \log p_\theta(x, z) - \log q_{\phi}(z \mid x) \Big],
+$$
+
+or more explicitly,
+
+$$
+\log p_{\theta}(x)\geq  \mathbb{E}_{q_{\phi}(z \mid x)} \Big[ \log p_{\theta}(x \mid z) + \log p(z) - \log q_{\phi}(z \mid x) \Big].
+$$
+
+
+\subsection{Deep Unsupervised Learning using Nonequilibrium Thermodynamics}
+
+Building on principles from non-equilibrium thermodynamics, diffusion probabilistic models systematically and slowly destroy data structure by applying an iterative forward diffusion process that gradually perturbs data $x_0 \sim p_{\text{data}}(x)$ into a tractable Gaussian noise via a Markov chain:
+
+$$
+q(x_{1:T} \mid x_0) = \prod_{t=1}^T q(x_t \mid x_{t-1}).
+$$
+
+This interestingly mirrors physical diffusion processes such as ink dispersing in water or smoke spreading in air. This forward process spreads probability mass across the data landscape, creating training signals far from the original data and grounding the method in the same mathematics as Brownian motion.
+
+A reverse diffusion process is then learned to restore this structure. The ideal reverse process $q(x_{t-1} \mid x_t)$, as mentioned in 2.2.1, is intractable as it depends on the entire data distribution. Dickstein et al. therefore parameterized an approximation $p_{\theta}$ designed to match the tractable posterior $q(x_{t-1} \mid x_t, x_0)$ [15]:
+
+$$
+p_\theta(x_{t-1} \mid x_t) \;\approx\; q(x_{t-1} \mid x_t, x_0).
+$$
+
+The trained model serves as a local compass that estimates the gradient of the log probability landscape  $\nabla_x \log p_t(x)$, which points towards regions of higher data likelihood. Here, $p_t(x)$  denotes the time-varying marginal distribution of data at diffusion step $t$, obtained by evolving clean samples $x_0 \sim p_{data}$ through the forward noising process. This model does not learn $p_t(x)$ directly, but instead estimate its score function. This connects diffusion to score matching later covered extensively in Section 2.3.
+
+Adapting variational inference, one can derive a variational lower bound on this log-likelihood:
+
+$$
+\log p_{\theta}(x_0) \;\geq\; \mathbb{E}_{q(x_{0:T})} \Big[ \log p_{\theta}(x_{0:T}) - \log q(x_{1:T}\mid x_0) \Big].
+$$
+
+This entire framework can be understood intuitively through the lens of variational inference. 
+
+- The fixed forward noising process $q(x_{1:T} \mid x_0)$ serves as the probabilistic encoder, mapping the data $x_0$ into a latent space of noisy variables $x_{1:T}$.
+- The learned reverse process $p_{\theta}(x_{t-1} \mid x_{t})$ acts as the probabilistic decoder, which is trained to reverse the noising process.
+
+This means that training diffusion models amounts to optimizing a diffusion-specific ELBO, which remarkably simplifies to training the decoder to predict the noise added at each step, as demonstrated in the subsequent section.
+
+\subsection{Denoising Diffusion Probabilistic Models}
+While earlier works established the connection between diffusion and variational inference, the objective was still complex. Ho et al.’s significantly popularized the framework by reparameterizing the model’s learning target [16]. The reverse process learns the transition
+
+$$
+p_\theta(x_{t-1} \mid x_t) = \mathcal{N}\!\big(x_{t-1}; \, \mu_\theta(x_t, t), \, \Sigma_\theta(x_t, t)\big),
+$$
+
+which is modeled as a Gaussian with a mean $\mu_\theta(x_t, t)$ and variance $\Sigma_\theta(x_t, t)$. The DDPM authors made two key simplifications:
+
+First, they found that fixing the variance to a known constant was sufficient for high-quality results. Second, and most importantly, they reparameterized the mean. Instead of training the network to directly predict the mean of the reverse step, they trained it to predict the noise, $\epsilon$, that was originally added to the clean data.
+
+This transforms the complex variational objective into a simple mean-squared error loss between the true noise and the predicted noise:
+
+$$
+\mathcal{L}_{\text{simple}}(\theta)
+= \mathbb{E}_{t, x_0, \epsilon} \big[ \, \lVert \epsilon - \epsilon_\theta(x_t, t) \rVert^2 \, \big],
+$$
+
+where $\epsilon$ is the true Gaussian noise sampled at a random timestep $t$, and $\epsilon_\theta(x_t, t)$ is the network’s prediction given the noisy image $x_t$ and timestep $t$. This simplified objective was not only more stable to train but also produced significantly higher-quality samples, which was the major breakthrough that led to the widespread adoption of diffusion models.
+
+
+
+\section{Score-based Models}
+An alternative and powerful approach to generative modeling is to learn the score function of the data distribution, which is formally defined as the gradient of its log probability $ \nabla_x \log p_{\text{data}}(x)$ [15]. This score function creates a vector field that points towards regions of higher data density, providing a trajectory back to the data manifold from any point in the space. Once this score field is learned, new samples can be generated by starting from random noise and iteratively moving in the direction of the score, a process known as Langevin dynamics.
+\subsection {Denoising Score Matching}
+Estimating the score function directly is difficult. Vincent et al. provided a workaround in Denoising Score Matching (DSM). The key insight was that the objective of training a simple network to denoise data corrupted with Gaussian noise is equivalent to learning the score of that noise-perturbed data distribution [18]. Given a clean sample $x$, corruption is defined as
+
+$$
+\tilde{x} = x + \sigma \epsilon, \quad \epsilon \sim \mathcal{N}(0, I),
+$$
+
+$\tilde x$ being a noisy sample. When the corruption is additive isotropic Gaussian noise, the target score $\nabla_{\tilde{x}} \log q_{\sigma}(\tilde{x}|x)$ for a noisy sample $\tilde{x}$  given a clean sample $x$ simplifies to $\frac{1}{\sigma^2}(x - \tilde{x})$. 
+
+$$
+\nabla_{\tilde{x}} \log q_\sigma(\tilde{x} \mid x)
+= \frac{1}{\sigma^2}(x - \tilde{x} ) = -\frac{\epsilon}{\sigma}.
+$$
+
+This shows that the target score is directly proportional to the negative noise. This is why instead of a complex score matching objective, one could simply train a denoising network $D_\theta(\tilde{x})$ with a straightforward mean-squared error loss like the one in DDPM:
+
+$$
+\mathcal{L}_{\text{DSM}}(\theta) = \mathbb{E}_{x, \tilde{x}} \Big[ \, \lVert D_\theta(\tilde{x}) - x \rVert^2 \, \Big].
+$$
+This made score estimation practical and stable.
+
+\subsection{Generative Modeling by Estimating Gradients of the Data Distribution}
+
+While DSM worked for a single noise level, it struggled with real-world data that often resides on a low-dimensional manifold, leaving the score undefined in most of the space. Song et al. solved this problem similar to diffusion by perturbing the data with multiple levels of Gaussian noise. They then trained a single Noise Conditional Score Network (NCSN), denoted $s_{\theta}(x_t,σ_t)$, to jointly estimate the scores for all the different noise-perturbed distributions. This effectively creates a well-defined vector field at all locations and scales [19].
+For generation, annealed Langevin dynamics is introduced. The process starts with pure Gaussian noise and follows the gradient provided by the learned score network $s_\theta$. The noise level $\sigma$ is slowly annealed from high to low, guiding the sample from the simple noise distribution back to the complex data distribution via an iterative update step:
+$$
+x_{t-1} = x_{t} + \alpha s_{\theta} (x_t, \sigma_t )+ \sqrt{2\alpha}z_t 
+$$
+where $\alpha$ is the step size and $z_t \sim \mathcal{N}(0,I)$ is a standard Gaussian noise term.
+
+
+\subsection{Score-Based Generative Modeling Through Stochastic Differential  Equations}
+The SDE framework unifies score matching and DDPMs by describing them as discretizations of a single continuous-time process.The forward SDE is defined to transform a complex data distribution into a simple noise prior over a time interval $t \in [0, T]$:
+$$
+dx = \underbrace{f(x,t)}_{\text{drift}} dt + \underbrace{g(x,t)}_{\text{diffusion}} dW,
+$$
+where $W$ is a standard Wiener process and $f(x,t)$ and $g(x,t)$ are the drift and diffusion coefficients, respectively. This describes a continuum of noisy intermediate distributions 
+$\{p_t(x)\}$. Additionally, a corresponding reverse-time SDE that can reverse this noising process exists:
+
+$$
+dx = \underbrace{\big[f(x, t) - g(x,t)^2 \nabla_x \log p_t(x)\big]}_{\text{drift}} dt + \underbrace{g(x,t)}_{\text{diffusion}} d\bar{W},
+$$
+where $d\bar{W}$ is a standard Wiener process run backward in time. Much like the forward SDE, one can intuitively break this equation down into a deterministic drift term and a stochastic diffusion term. And conveniently, the deterministic dynamics depend only on the score function $\nabla_x \log p_t(x)$. Note that for models like DDPMs, the diffusion term simplifies from the general form $g(x,t)$ to $g(t)$ because the noise schedule is designed to be state-independent, as detailed further in Appendix A.
+Since this score is intractable, it is approximated by a neural network $s_\theta(x,t)$, which can then be used by numerical solvers to generate samples [19]. This mathematically elegant framework unlocks some new capabilities:
+\begin{enumerate}
+	\item Flexible sampling: Because the process is continuous, practitioners are no longer locked into a fixed number of discrete steps. This allows for a direct trade-off between computation speed and sample quality, as any numerical SDE solver can be used to generate samples.
+	\item The continuous nature of the SDE makes it highly amenable to controllable generation. The reverse sampling process can be guided to solve inverse problems like image inpainting and colorization, often without needing to retrain the model.
+	\item Exact Log-Likelihoods via an Equivalent ODE: The SDE framework revealed a corresponding deterministic process, described by a neural ordinary differential equation (ODE) known as the probability flow ODE [20]. This breakthrough not only enables deterministic sampling and exact likelihood computation but also provides the direct theoretical inspiration for Flow Matching, which will be detailed in the next section.
+\end{enumerate}
+
+\section{Flow-based Models}
 \section{Planning with Diffusion}
 \section{Other Relevant Works}
-
 
 Note that references work like this \cite{wall} \cite{rtems}
 
