@@ -13,4 +13,6 @@ python -m src.run \
     --solver-method "midpoint" \
     --inference-batch-size 1 \
     --condition-on "start_obs_goal" \
-    --model-target "obs_only"
+    --model-target "obs_only" \
+    --fusion-strategy "concat" 
+    

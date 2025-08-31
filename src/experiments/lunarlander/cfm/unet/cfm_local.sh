@@ -4,7 +4,7 @@ python -m src.run \
     --environment "LunarLander-v3" \
     --horizon 25 \
     --batch-size 32 \
-    --num-epochs 100 \
+    --num-epochs 10 \
     --print-every 1 \
     --eval-every 500 \
     --lr 1e-3 \
@@ -13,5 +13,6 @@ python -m src.run \
     --step-size 0.05 \
     --solver-method "midpoint" \
     --inference-batch-size 1 \
-    --condition-on "start_obs_goal" \
-    --model-target "act_only"
+    --condition-on "start_obs_waypoint" \
+    --model-target "act_only" \
+    --fusion-strategy "concat"
