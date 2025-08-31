@@ -236,7 +236,7 @@ class ConditionalUNet1D(nn.Module):
         hidden_dim: int = 128,
         fusion_strategy: str = "concat",
         use_mlp_embedding: bool = False,
-        expansion_factor: int = 4,
+        expansion_factor: int = 1,
     ):
         super().__init__()
         self.horizon = horizon
@@ -315,8 +315,7 @@ class ConditionalUNet1D(nn.Module):
         h = self.up2(h, skip1)
 
         output_reshaped = self.final_conv(h)
-        output_flat = rearrange(output_reshaped, "b d h -> b (h d)")
-        return output_flat
+        return rearrange(output_reshaped, "b d h -> b (h d)")
 
 
 # class ConditionalUNet1D(nn.Module):
