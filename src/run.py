@@ -237,16 +237,16 @@ def main():
         run_name=run_name,
         logger=logger,
     )
-    evaluate(
-        env=env,
-        model=model,
-        stats=stats,
-        input_dim=input_dim,
-        args=args,
-        logger=logger,
-        eval_mode="mpc",
-        dataset=dataset,
-    )
+    # evaluate(
+    #     env=env,
+    #     model=model,
+    #     stats=stats,
+    #     input_dim=input_dim,
+    #     args=args,
+    #     logger=logger,
+    #     eval_mode="mpc",
+    #     dataset=dataset,
+    # )
     if logger:
         logger.finish()
 

@@ -4,7 +4,7 @@ python -m src.run \
     --environment "LunarLander-v3" \
     --horizon 25 \
     --batch-size 32 \
-    --num-epochs 10 \
+    --num-epochs 50 \
     --print-every 1 \
     --eval-every 500 \
     --lr 1e-3 \

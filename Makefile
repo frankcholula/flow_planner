@@ -239,3 +239,15 @@ cfm-joint-cnn:
 	@echo "Running CFM on joint state-action space using CNN..."
 	./src/experiments/lunarlander/cfm/cnn/cfm_obs_act_start_obs_waypoint.sh
 	./src/experiments/lunarlander/cfm/cnn/cfm_obs_act_start_obs_goal.sh
+
+diffusion-flow-planner:
+	@echo "Training Diffusion Action Planner..."
+	./src/experiments/lunarlander/diffusion/unet/diffusion_local.sh
+	@echo "Training Diffusion Waypoint Planner..."
+	./src/experiments/lunarlander/diffusion/unet/diffusion_global.sh
+
+cfm-flow-planner:
+	@echo "Training CFM Action Planner..."
+	./src/experiments/lunarlander/cfm/unet/cfm_local.sh
+	@echo "Training CFM Waypoint Planner..."
+	./src/experiments/lunarlander/cfm/unet/cfm_global.sh
