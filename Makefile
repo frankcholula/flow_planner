@@ -222,7 +222,7 @@ fm-unconditional:
 
 diffusion-joint-unet:
 	@echo "Running Diffusion on joint state-action space using U-Net..."
-	./src/experiments/lunarlander/diffusion/unet/diffusion_obs_act_start_obs_waypoint.sh
+# 	./src/experiments/lunarlander/diffusion/unet/diffusion_obs_act_start_obs_waypoint.sh
 	./src/experiments/lunarlander/diffusion/unet/diffusion_obs_act_start_obs_goal.sh
 
 diffusion-joint-cnn:

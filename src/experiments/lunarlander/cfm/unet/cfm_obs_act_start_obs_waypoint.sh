@@ -14,4 +14,4 @@ python -m src.run \
     --inference-batch-size 1 \
     --condition-on "start_obs_waypoint" \
     --model-target "obs_act" \
-    --fusion-strategy "concat"
+    --fusion-strategy "add"

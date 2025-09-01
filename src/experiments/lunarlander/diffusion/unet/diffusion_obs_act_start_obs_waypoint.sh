@@ -9,9 +9,9 @@ python -m src.diffusion \
     --lr 1e-3 \
     --model-type "unet" \
     --hidden-dim 64 \
-    --scheduler "ddpm" \
+    --scheduler "ddim" \
     --num-train-timesteps 1000 \
-    --num-inference-steps 100 \
+    --num-inference-steps 50 \
     --inference-batch-size 1 \
     --condition-on "start_obs_waypoint" \
     --model-target "obs_act" \
