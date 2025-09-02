@@ -42,12 +42,29 @@ A single training step is summarized in Algorithm \ref{alg:cfm_training}
 \EndFor
 \end{algorithmic}
 \end{algorithm}
+This is a simulation-free objective, hence it only requires sampling one data point, one noise vector, and a time to perform a standard regression update. It avoids the costly ODE solves of traditional CNF training and forms the foundational recipe for the specific planners detailed in the following sections. While the CondOT path is a common choice, the implementation in this dissertation utilizes a more general affine probability path. This formulation, known as the "Affine Conditional Flow Matching" variant in Albergo et al. [cite here], defines an exact conditional distribution over the interpolants instead of a single deterministic interpolation. This preserves key probabilistic properties, leading to more stable training dynamics and a closer theoretical alignment with Schrödinger Bridge formulations \cite{tongSimulationfreeSchrodingerBridges2024}. The detailed derivation of the base CFM objective is provided in Appendix \ref{app:cfm_derivation}.
 
+\subsection{CFM Inference}
+While the training process for CFM is simulation-free, inference requires simulating the learned dynamics. The goal of inference is to generate a new sample  $x_1$  that approximates a draw from the true distribution by solving an Ordinary Differential Equation (ODE). The trained neural network $v_\theta(x_t, t, c)$ now serves as an approximation of the true (but intractable) marginal vector field that transforms noise into data. Generation begins by sampling an initial point from the prior distribution $\mathbf{x}_0 \sim p_0(\mathbf{x})$. This point is then evolved from $t=0$ to $t=1$ by solving the following ODE:
+\begin{equation}
+	\frac{d\mathbf{x}t}{dt} \;=\; v_\theta(\mathbf{x}_t, t, c).
+\end{equation}
+The solution to this ODE, $x_1$, is the final generated sample. Since this ODE rarely has an analytical solution, it must be solved numerically. A common choice is the simple \textbf{Euler method}, detailed in Algorithm \ref{alg:euler}.
+\begin{algorithm}
+	\caption{Euler Method}\label{alg:euler}
+	\begin{algorithmic}[1]
+	\Require Neural network $v_\theta$, prior distribution $p_0$, condition $c$, number of steps $N$
+	\State $\mathbf{x}_0 \sim p_0(\mathbf{x})$ \Comment{Sample an initial point}
+	\State $\Delta t \gets 1/N$
+		\For{$i = 0$ to $N-1$}
+    		\State $t \gets i \cdot \Delta t$
+		    \State $\mathbf{x}_{t+\Delta t} \gets \mathbf{x}_t + v_\theta(\mathbf{x}_t, t, c) \cdot \Delta t$ \Comment{Take a step along vector field}
+		\EndFor
+	\State \Return $\mathbf{x}_1$
+\end{algorithmic}
+\end{algorithm}
 
-
-
-
-
+ It is worth noting that for Stochastic Differential Equations (SDEs), the corresponding simple solver is the Euler-Maruyama method. For the experiments in this dissertation, a more advanced solver, \textbf{the midpoint method} (a 2nd-order Runge-Kutta scheme) is employed \cite{lipmanFlowMatchingGuide2024a}. This choice offers a better trade-off between computational cost and numerical stability, leading to higher-quality samples compared to the basic Euler method.
 
 \section{Planners Formulation}
 \label{sec:planners}
