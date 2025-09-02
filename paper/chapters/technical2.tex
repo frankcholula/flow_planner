@@ -1,11 +1,56 @@
 \chapter{Dataset Preparation}
-You need to work out how many technical chapters you will require, possibly more than two in this template. Normally your final chapter before the conclusion will include some clear results or proof of concepts from the end goals of your dissertation and it is important to document these well and show the value of what you have achieved. Frequently many dissertations fail to document this information correctly because it is rushed at the end so do ensure you allow time to write it properly.
+This chapter details the data pipeline designed to generate the expert trajectories used to train and evaluate the Flow Planner framework. The process begins with the selection of a suitable evaluation environment, followed by the training of an expert agent using Proximal Policy Optimization (PPO) to generate the demonstration dataset. The datasets as well as the trained agents can be found on my personal \href {https://huggingface.co/frankcholula}{Hugging Face Hub}.
 
-\section{Section}
-Text to insert
+\section{Environment Suite}
 
-\section{Section}
-Text to insert – but ensure the last section really does show the value of your work and where you have got to.
+\section{Expert Policy Training}
+\label{sec:expert_training}
+To generate the expert datasets, a Proximal Policy Optimization (PPO) agent was trained in each environment until convergence. PPO was chosen for its exceptional training stability. As a state-of-the-art on-policy algorithm, it optimizes the policy by taking a series of small, conservative steps. It uses a “clipped” surrogate objective that acts as a guardrail, preventing any single update from changing the policy too dramatically [cite PPO here]. This inherent stability makes PPO a robust workhorse for the continuous control challenges in these environments.
+
+All agents were trained using the tuned hyper-parameters supplied by the RL Baselines3 Zoo \cite{rl-zoo3} library, with the final performance summarized below :
+
+\begin{table}[H]
+\centering
+\caption{Performance and specifications of PPO expert agents.}
+\label{tab:ppo_agents}
+\begin{tabular}{|l|c|c|p{4cm}|}
+\hline
+\textbf{PPO Agents} & \textbf{LunarLanderContinuous-v3} & \textbf{BipedalWalker-v3} & \textbf{CarRacing-v3} \\
+\hline
+\textbf{Mean Reward} & 236.78 $\pm$ 79.67 & 271.87 $\pm$ 2.08 & 248.24 $\pm$ 168.67 \\
+\hline
+\textbf{Wrappers} & None & None & \textbf{FrameSkip, Resize, GrayScale, FrameStack} \\
+\hline
+\textbf{Observation Space} & Box(8,) float32 & Box(24,) float32 & Box(64, 64, 2) uint8 \\
+\hline
+\textbf{Action Space} & Box(2,) float32 & Box(4,) float32 & Box(3,) float32 \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Expert Dataset Collection}
+To train the generative planners described in Chapter 3, a dataset of expert trajectories were required for each environment. This data was collected by executing the trained policies from Section \ref{sec:expert_training}. The Minari \cite{minari} Library’s  DataCollector wrapper was used to systematically record trajectory data during these rollouts. Approximately 300,000 to 350,000 steps were sampled for each environment to create a robust dataset capturing a wide range of expert behaviors. The resulting datasets are summarized in the table below. Note the number of episodes collected for each environment was tailored to its specific characteristics. For instance, the stochastic nature of LunarLander-v3 necessitated a large number of episodes (1000) to ensure a diverse set of successful landing trajectories. On the other hand, the high-dimensional visual observations in CarRacing-v3 resulted in a substantial dataset size from fewer but longer episodes (250). The dataset statistics for different environments are summarized in Table \ref{tab:datasets}.
+\begin{table}[H]
+\centering
+\caption{Dataset statistics for different environments.}
+\label{tab:datasets}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Environment} & \textbf{LunarLanderContinuous-v3} & \textbf{BipedalWalker-v3} & \textbf{CarRacing-v3} \\
+\hline
+\textbf{\# Episodes} & \textbf{1000} & 500 & 250 \\
+\hline
+\textbf{\# Steps}    & 335K & \textbf{346K} & 245K \\
+\hline
+\textbf{Size}        & 33.7 MB & 49.9 MB & \textbf{446.8 MB} \\
+\hline
+\end{tabular}
+\end{table}
+
+Again, to ensure full reproducibility and to facilitate future research, these datasets have been version-controlled and are publicly available on my personal \href {https://huggingface.co/frankcholula}{Hugging Face Hub}.
+
+
+
 
 
 \chapter{Experimental Results}
