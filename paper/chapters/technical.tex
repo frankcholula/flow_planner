@@ -205,18 +205,23 @@ Therefore, the Flow Planner Framework is centered around a “hierarchical decom
 	p(\tau_s, \tau_a \mid c) = \underbrace{p(\tau_s \mid c)}_{\text{Waypoint Planner}} \cdot \underbrace{p(\tau_a \mid \tau_s , c)}_{\text{Action Planner}}.
 \end{equation}
 
-While this dissertation focuses on a separate training scheme to maximize modularity, this factorization also provides a theoretical foundation for a joint training paradigm. The new objective and its implications for learning a disentangled representation are detailed in Appendix C. By decoupling long-horizon planning into strategic reasoning and reactive control, this framework gains several advantages:
+While this dissertation focuses on a separate training scheme to maximize modularity, this factorization also provides a theoretical foundation for a joint training paradigm. The new objective and its implications for learning a disentangled representation are detailed in Appendix \ref{app:joint_training}. By decoupling long-horizon planning into strategic reasoning and reactive control, this framework gains several advantages:
+\begin{enumerate}
+	\item \textbf{Computational Efficiency}: The most computationally intensive component, the long-horizon Waypoint Planner, is invoked infrequently. For tasks shorter than its maximum horizon $H$, it is called only once. For extremely long-horizon tasks, it can be re-invoked periodically to generate the next strategic plan. In contrast, the lightweight Action Planner operates within the high-frequency MPC loop. The overall planning cost is therefore amortized.
+	\item \textbf{Reduced Learning Complexity}: The learning task for each component is dramatically simplified. The waypoint planner is freed from learning fine-grained actions and can focus solely on the high-level structure of the state space. Conversely, the action planner only needs to solve a simple, short-horizon goal-reaching problem.
+	\item \textbf{Modularity and Separation of Concerns}: Modularity and Separation of Concerns: The framework’s modular design allows for the independent development, optimization, and debugging of the high-level and low-level planners. The decoupling of perception from planning also allows seamless adaptation to different observation spaces. For high-dimensional, vision-based environments, a VAE encoder \cite{kingmaAutoEncodingVariationalBayes2022a} can be inserted to handle the perception task, allowing the planners to operate in a compressed latent space, as shown in the Figure \ref{fig:agent_centric} and \ref{fig:world_centric} \cite{haWorldModels2018}. This separation of concerns also facilitates the integration of hybrid systems where, for example, a learned generative high-level planner could be paired with a classical low-level controller like an LQR or PID.
+\end{enumerate}
 
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=1.0\textwidth]{agent_centric}
+  \caption{Flow Planner Framework for Agent-centric Observations}
+  \label{fig:agent_centric}
+\end{figure}
 
-
-
-
-
-
-
-
-
-
-
-
-
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=1.0\textwidth]{world_centric}
+  \caption{Flow Planner Framework Adapted for World-centric Observations}
+  \label{fig:world_centric}
+\end{figure}
