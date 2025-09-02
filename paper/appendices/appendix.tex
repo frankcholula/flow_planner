@@ -4,13 +4,103 @@
 
 \section{Specializing the SDE for DDPM}
 \label{app:sde_ddpm}
+Section \ref{sec:score_based} introduced the general SDE framework. This appendix provides the specific forms of these SDEs for the DDPMs models, which are defined by a noise schedule $\beta(t)$.
+\subsection{DDPM Forward SDE}
+The general forward SDE is given by:
 
+\begin{equation}
+	dx=f(x,t)dt+g(t)dw
+\end{equation}
+For the popular Variance Preserving (VP) SDE, which is the continuous-time equivalent of the DDPM forward process, the coefficients are chosen as follows:
+\begin{itemize}
+    \item \textbf{Drift Coefficient:} 
+    \[
+    f(x,t) = -\tfrac{1}{2}\beta(t)x
+    \]
+    This is a linear drift term that deterministically pulls any data point $x$ towards the origin (the mean of the noise distribution). The rate at which it pulls is controlled by the noise schedule $\beta(t)$.
+
+    \item \textbf{Diffusion Coefficient:}
+    \[
+    g(t) = \sqrt{\beta(t)}
+    \]
+    This term controls the magnitude of the random noise injected into the process at time $t$. The amount of noise is also directly governed by the noise schedule $\beta(t)$.
+\end{itemize}
+Substituting these specific functions into the general SDE yields the precise form for the DDPM forward process:
+\begin{equation}
+	dx=-\frac{1}{2}\beta(t)xdt+\sqrt{\beta(t)}dw
+\end{equation}
+
+\subsection{DDPM Reverse SDE}
+The corresponding general reverse-time SDE, which transforms noise back into data, is defined as:
+\begin{equation}
+	d{x} = \left[f({x}, t) - g(t)^2\nabla_{\mathbf{x}} \log p_t(\mathbf{x})\right] dt + g(t)d\bar{w}
+\end{equation}
+\begin{equation}
+	dx=[-\frac{1}{2}\beta(t)x-\beta(t)\nabla_x\log p_t(x)]dt+\sqrt{\beta(t)}d\bar{w}
+\end{equation}
+This is the equation that is solved during the sampling process. The score function allows the model to deterministically drift the samples towards regions of high data density while being guided by the stochastic diffusion term.
 
 \section{Derivation of the CFM Objective}
 \label{app:cfm_derivation}
+The Flow Matching framework is built upon a distinction between marginal and conditional formulations. The marginal quantities represent the true flow to be learned but are computationally intractable. The conditional quantities, however, are simple and tractable. The main takeaway is that a model trained on the tractable conditional objective provably converges to the desired marginal model.
+
+\subsection{Marginal Formulations}
+The marginal formulations describe the flow of transforming the noise distribution into the entire data distribution $p_data$ by averaging over all possible data points $z$.
+\begin{enumerate}
+	\item \textbf{Marginal Probability Path $p_t$}: This describes the distribution of points at time $t$ as it morphs from simple noise into the full data distribution, defined by an integral over all possible conditional paths:
+		\begin{equation}
+			p_t(x)=\int p_t(x|z)p_{data}(z)dz.
+		\end{equation}
+		Because $p_{\text{data}}$ is complex, this integral is intractable.
+	\item \textbf{Marginal Vector Field $u_{t}^{\text{target}}(x)$}: This is the average vector field that generates the marginal path and is the target for the neural network to learn. It is also defined by an intractable integral: 
+		\begin{equation}
+			u_t^{\text{target}}(x) = \int u_t^{\text{target}}(x|z) \frac{p_t(x|z)p_{\text{data}}(z)}{p_t(x)} dz
+		\end{equation}
+\end{enumerate}
+
+\subsection{Conditional Formulations}
+To solve the intractability of the marginal formulations, simpler conditional quantities are defined with respect to a single point  $z∼p_{\text{data}}$. These describe the process of transforming noise into that one chosen sample and are analytically tractable.
+
+\begin{enumerate}
+	\item \textbf{Conditional Probability Path $p_t( \cdot \mid z)$}: This describes a path of probability distributions that interpolates between the initial noise distribution $p_{\text{init}}$ and a single data point $z$.
+        For the Gaussian path used in CFM, the position on this path at time $t$ is defined by the noise schedulers $\alpha_t$ and $\beta_{t}$:
+        \begin{equation}
+        	x_t = \alpha_t z + \beta_tx_0
+        \end{equation}
+        The distribution at time $t$ is therefore 
+        \begin{equation}
+        	p_t(x|z)=\mathcal{N}(\alpha_t z, \beta_t^2 I_d)
+        \end{equation}
+    \item \textbf{Conditional Vector Field $ u_t^{target}(x\mid z)$}: This is the ground truth velocity field that generates the conditional probability path. Taking the derivative of the path equation with respect to time gives the velocity in terms of the start and end points:
+    	\begin{equation}
+    		\text{velocity} = \frac{d}{dt}(\alpha_t z + \beta_t x_0) = \dot{\alpha}_t + \dot{\beta}_tx_0
+    	\end{equation}
+    	but the neural network only has access to the current position on the path $x$, not the initial noise $x_0$. We can solve $x_0$ by rearranging the path equation:
+    	\begin{equation}
+    		x_0 = \frac{x- \alpha_t z} {\beta_t}
+    	\end{equation}
+    	Substituting this back into the velocity equation yields the final vector field formula in terms of the current position $x$ and the target data point $z$:
+    	\begin{equation}
+    		u_t^{target}(x\mid z)=\left(\frac{\dot{\alpha}_t}{\alpha_t}-\frac{\beta_t\dot{\beta}_t}{\alpha_t}\right)z+\frac{\beta_t\dot{\beta}_t}{\alpha_t}x
+    	\end{equation}
+    	This tractable field serves as the direct regression target for the neural network.
+\end{enumerate}
+
+
 
 \section{Joint Training Objective for Hierarchical Planners}
 \label{app:joint_training}
 
+
+
+
+
 \section{Latent Dataset Generation}
 \label{app:latent_dataset}
+
+
+
+
+
+
+
