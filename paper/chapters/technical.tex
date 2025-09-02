@@ -145,9 +145,52 @@ A summary of each planner can be found in Table \ref{tab:planners}
 
 \section{Flow Planner Framework}
 \label{sec:fp_framework}
+The individual planners in Section \ref{sec:planners} are composed into a hierarchical framework that tackles long-horizon tasks by decoupling high-level strategic reasoning from low-level reactive control. This section details the framework’s operational flow and motivates the key design choices. The architecture pairs a state-only Waypoint Planner (WP) at the high level with an Action Planner (AP) at the low level, executed within a Model Predictive Control (MPC) loop. MPC follows a receding-horizon scheme: at each step a finite-horizon open-loop plan is computed; only its first action is applied, after which the horizon is shifted and the optimization re-solved \cite{mayneConstrainedModelPredictive2000}.
 
 
+\subsection{Hierarchical Planning Process}
 
+The planning process unfolds in two distinct stages: an initial strategic planning phase and a continuous, reactive control loop.
+\begin{enumerate}
+	\item \textbf{Global Plan Generation}: At the beginning of a planning cycle, the Waypoint Planner (WP) is invoked to generate a strategic plan, $\tau_s=(s_0,\dots,s_H)$, over its fixed planning horizon $H$. The conditioning signal for this planner, $c = (s_{start}, s_{goal})$ can be formulated in two ways, each with distinct purpose:
+	\begin{itemize}
+		\item \textbf{Final Goal Conditioning}: The planner can be conditioned on the final goal of the entire task horizon, where $s_{goal} = s_T$. This provides the model with the ultimate objective, encouraging it to generate a plan that is globally directed towards the final destination.
+		\item \textbf{Waypoint Goal Conditioning}: Alternatively, the planner can be conditioned on an intermediate goal at the end of its planning window, $s_{goal} = s_H$. In this receding-horizon approach, the planner solves a shorter, more immediate problem. For tasks whose total duration exceeds the planning horizon ($T \gg H)$, the WP can be invoked in a low-frequency receding-horizon manner as well to generate the next segment of the plan once the current one is near completion.
+	\end{itemize}
+
+	\item \textbf{Reactive MPC Loop}: The system then enters a high-frequency MPC loop to execute the plan:
+		\begin{enumerate}	
+			\item The agent's current state, $s_{current}$, is observed.
+			\item The next immediate waypoint, $s_{waypoint}$, is selected from the global plan $\tau_s$.
+			\item The  AP is conditioned on both the current state and the target waypoint, $c=(s_{current},s_{waypoint})$ and generates a short-horizon action sequence, $\tau_{a}=(a_0,\ldots,a_{T_{a}})$.
+			\item The first action $a_0$ from this sequence is executed in the environment.
+			\item The process repeats, with the agent progressing through the waypoints of the global plan.
+	\end{enumerate}
+\end{enumerate}
+The full procedure is detailed in Algorithm \ref{alg:hierarchical}.
+\begin{algorithm}
+\caption{Hierarchical Planning}\label{alg:hierarchical}
+\begin{algorithmic}[1]
+\Require Trained Waypoint Planner $v_{\theta}^{WP}$, Trained Action Planner $v_{\theta}^{AP}$, initial state $\mathbf{s}_{\text{start}}$, goal state $\mathbf{s}_{\text{goal}}$
+\Ensure Action sequence leading to $\mathbf{s}_{\text{goal}}$
+
+\State $\tau_s \gets \text{sample}\!\left(v_{\theta}^{WP} \;\mid\; \mathbf{s}_{\text{start}}, \mathbf{s}_{\text{goal}}\right)$ \Comment{Generate high-level plan}
+\State $i \gets 1$
+\State $\mathbf{s}_{\text{current}} \gets \mathbf{s}_{\text{start}}$
+
+\While{not terminated}
+    \State $\mathbf{s}_{\text{waypoint}} \gets \tau_s[i]$
+    \State $\mathbf{A}_{\text{seq}} \gets \text{sample}\!\left(v_{\theta}^{AP} \;\mid\; \mathbf{s}_{\text{current}}, \mathbf{s}_{\text{waypoint}}\right)$
+    \State $a_0 \gets \mathbf{A}_{\text{seq}}[0]$
+    \State $\mathbf{s}_{\text{next}} \gets \text{Execute}(a_0)$ \Comment{Execute action and observe next state}
+    \State $\mathbf{s}_{\text{current}} \gets \mathbf{s}_{\text{next}}$
+    \If{$\text{distance}(\mathbf{s}_{\text{current}}, \mathbf{s}_{\text{waypoint}}) < \text{threshold}$} \Comment{Check if waypoint was reached}
+        \State $i \gets i+1$ 
+    \EndIf
+\EndWhile
+
+\end{algorithmic}
+\end{algorithm}
 
 
 
