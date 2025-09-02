@@ -269,7 +269,6 @@ Two key design choices were investigated for conditioning the planners: the fusi
     \item \textbf{Addition:} The embeddings are first projected to the same hidden dimensions then combined via simple element-wise addition. This approach imposes a strong inductive bias, forcing the model to learn time and condition embeddings that exist in the same semantic space where their dimensions are directly comparable.
     \item \textbf{Concatenation:} The embeddings are first concatenated and then passed through a linear layer to learn a joint representation. This strategy offers a bit more expressive power because the network can learn a complex, non-linear relationship between time and the condition. However, it lacks the strong structural bias the addition method provides.
 \end{enumerate}
-
 The second methodological choice involves the goal conditioning signal, comparing the two strategies formulated in Section~3.3.1:
 
 \begin{enumerate}
