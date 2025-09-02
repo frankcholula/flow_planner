@@ -279,7 +279,7 @@ This formulation learns the score function of the conditional action distributio
 To make this formulation practical for real-world robotics, Chi et al. combines the prediction of action sequences with receding horizon control, where the policy predicts a future sequence of actions $(T_p)$ but only executes a shorter subsequence $(T_{\alpha})$ before replanning. Second, it uses an efficient visual conditioning scheme where visual features are extracted once per inference cycle for real-time performance. Finally, the paper proposes Time-series diffusion transformer architecture to better handle tasks requiring high-frequency action changes. These contributions allow Diffusion Policy to consistently outperform prior state-of-the-art methods across numerous robot manipulation benchmarks.
 
 \section{Other Relevant Works}
-
+\label{sec:other_works}
 \subsection{Q-Score Matching (QSM)}
 Q-Score Matching offers a novel training objective that reframes policy optimization from a geometric perspective\cite{psenkaLearningDiffusionModel2025b}. The core insight is to directly align the score function of the diffusion policy, $\nabla \log \pi_{\theta}(a|s)$, with the action-gradient of the learned Q-function, $\nabla_a Q(s,a)$. In other words, the policy is trained such that its vector field of log-probabilities is iteratively "pushed" to match the direction of steepest ascent in the Q-value landscape.
 
