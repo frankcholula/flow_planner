@@ -259,13 +259,11 @@ This distinction was also reflected in the training process. Flow Matching model
 \label{sec:joint_planner_baseline}
 Having identified the U-Net as the most expressive network backbone in the initial analysis, this section evaluates the performance of the monolithic Joint Planner (JP) using this architecture. The goal is to establish a performance baseline for an end-to-end approach under two distinct conditioning schemes, quantifying its capabilities and limitations before evaluating the fully decoupled framework in Section \ref{sec:flat_hieararchical_planning}.
 \subsection{Experimental Setup}
-For this comparison, both the Flow Matching and Diffusion planners were implemented using the U-Net architecture. To provide a comprehensive analysis of practical inference trade-offs, results are also presented for the Diffusion planner using an accelerated DDIM scheduler. This comparison highlights how sampling can be sped up, typically at the cost of reduced sample fidelity and stochasticity [cite DDIM].
+For this comparison, both the Flow Matching and Diffusion planners were implemented using the U-Net architecture. To provide a comprehensive analysis of practical inference trade-offs, results are also presented for the Diffusion planner using an accelerated DDIM scheduler \cite{songDenoisingDiffusionImplicit2022a}. This comparison highlights how sampling can be sped up, typically at the cost of reduced sample fidelity and stochasticity.
 
 The evaluation of these planners centers on three key metrics: final control performance, training time per epoch, and inference time per trajectory. Final control performance is measured by cumulative reward in a closed-loop MPC evaluation, where a score above 100 indicates a successful landing.
 \subsection{Conditioning Signals and Fusion Strategy}
-Two key design choices were investigated for conditioning the planners: the fusion strategy for combining embeddings and the type of goal signal used.
-
-The first choice concerns how the time embedding and the condition embedding are combined. Two fusion strategies were implemented and compared:
+Two key design choices were investigated for conditioning the planners: the fusion strategy for combining embeddings and the type of goal signal used. The first choice concerns how the time embedding and the condition embedding are combined. Two fusion strategies were implemented and compared:
 
 \begin{enumerate}
     \item \textbf{Addition:} The embeddings are first projected to the same hidden dimensions then combined via simple element-wise addition. This approach imposes a strong inductive bias, forcing the model to learn time and condition embeddings that exist in the same semantic space where their dimensions are directly comparable.
@@ -282,11 +280,11 @@ The second methodological choice involves the goal conditioning signal, comparin
 \subsection{Classifier-free Guidance vs. Modeling Conditional Distribution}
 A fundamental difference between the Diffusion and Flow Matching planners lies in how they incorporate conditioning. The Diffusion JP employs Classifier-Free Guidance (CFG), a powerful technique for strengthening the conditioning signal at inference time \cite{hoClassifierFreeDiffusionGuidance2022a}. CFG allows the model to be paused at each denoising step to compute both a conditional and an unconditional prediction. These are then combined to "steer" the generation towards the desired outcome, with the strength of this steering controlled by a guidance scale. In this work, a scale of 1.5 was used to ensure strong adherence to the condition.
 
-This iterative intervention is not naturally compatible with the Flow Matching planner. A Flow Matching model is trained as a deterministic ODE, and inference is a more holistic process where a numerical solver integrates the entire vector field $v_\theta$ from start to finish. Attempting to apply the CFG trick at each internal step of an ODE solver would violate its assumptions and be computationally inefficient. While recent work has begun to explore CFG-like techniques for flow models [cite CFG-Zero], I opted for injecting the condition directly into the network, $v_\theta(x_t,t,c).$ It is worth noting that inference-time flexibility afforded by diffusion's iterative guidance is a distinct advantage over the standard flow-matching paradigm.
+This iterative intervention is not naturally compatible with the Flow Matching planner. A Flow Matching model is trained as a deterministic ODE, and inference is a more holistic process where a numerical solver integrates the entire vector field $v_\theta$ from start to finish. Attempting to apply the CFG trick at each internal step of an ODE solver would violate its assumptions and be computationally inefficient. While recent work has begun to explore CFG-like techniques for flow models \cite{fanCFGZeroImprovedClassifierFree2025}, I opted for injecting the condition directly into the network, $v_\theta(x_t,t,c).$ It is worth noting that inference-time flexibility afforded by diffusion's iterative guidance is a distinct advantage over the standard flow-matching paradigm.
 
 
 \subsection{Results and Analysis}
-The results highlight several key findings regarding the monolithic planner's performance and design.
+The results highlight several key findings regarding the monolithic planner's performance and design, as seen in Table \ref{tab:jp_fusion} and \ref{tab:jp_diffusion_flow}:
 \begin{table}[H]
 \centering
 \caption{Comparison of Flow Joint Planner (JP) fusion strategies under different goal conditioning methods.}
