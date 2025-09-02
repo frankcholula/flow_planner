@@ -169,8 +169,73 @@ Since this score is intractable, it is approximated by a neural network $s_\thet
 
 \section{Flow-based Models}
 \label{sec:flow_based}
+Sections \ref{sec:diffusion} and \ref{sec:score_based} laid the foundation of simulation-based models, where generating a sample requires simulating a multi-step denoising process. This section now turns to a powerful successor paradigm: the recently proposed flow-based models. Representing the next generation of generative modeling, this framework learns a direct, invertible transformation that can map noise to data in a single, continuous pass. By reframing the generative process around deterministic Ordinary Differential Equations (ODEs), this approach offers substantial advantages, most notably a dramatic reduction in inference time, a key motivation for the planning framework developed in this dissertation.
+
+\subsection{Normalizing Flows}
+The core idea of Normalizing Flows is to learn an invertible function $f$ that warps a simple base distribution like a standard Gaussian $p_z(z)$ to a data distribution $p_X(x)$ directly \cite{papamakariosNormalizingFlowsProbabilistic}. Using the change of variables formula, the probability density of $x=f(z)$ can be calculated exactly:
+\begin{equation}
+\label{eq:nf}
+	p_X(x) = p_Z\!\big(f^{-1}(x)\big) \cdot \left| \det \left( \frac{\partial f^{-1}(x)}{\partial x} \right) \right|.
+\end{equation}
+The $\frac{\partial f^{-1}(x)}{\partial x}$  is the Jacobian matrix of the inverse transformation, and its determinant measures how the function locally stretches or compresses space. For a general, unrestricted neural network, this determinant is computationally infeasible as data dimension scales up.
+
+To solve this, NFs decompose $f$  into a series of transformations $f_1\circ \dots \circ f_k$, each designed to have a Jacobian determinant that is easy and efficient to compute. However, this poses architectural constraints as the network cannot be a dense web of all-to-all connections. Specialized blocks like coupling layers are used in RealNVP\cite{dinhDensityEstimationUsing2017} and Glow \cite{kingmaGlowGenerativeFlow2018}. These layers operate by splitting the input data in half and leaving one half frozen while transforming the other. Though this makes training feasible, the necessary rigidity limits the model’s expressivity and flexibility.
+
+\subsection{Continuous Normalizing Flows}
+The architectural limitations of discrete NFs motivated Continuous Normalizing Flows (CNFs). Instead of a finite stack of layers, a CNF conceptualizes the transformation as a continuous-time process using Ordinary Differential Equations (ODEs) \cite{chenNeuralOrdinaryDifferential2019}. The entire process can be visualized as a smooth “flow” that gradually warps a simple initial distribution into a complex target data distribution, as illustrated in the figures \ref{fig:cnf}.
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=1.0\textwidth]{cnf}
+  \caption{An illustration of a Continuous Normalizing Flow. Over time, a simple, unimodal Gaussian distribution (left) is progressively transformed by a learned vector field into a complex, multimodal data distribution (right).}
+  \label{fig:cnf}
+\end{figure}
+In other words, instead of having the neural network representing the entire transformation, it defines a time-dependent vector field $ v(z(t),t,\theta)$.  This vector field dictates the direction and speed that any point z moves at any given time t. The dynamics of this transformation can be expressed as:
+\begin{equation}
+	\frac{dz(t)}{dt}= v(z(t),t,\theta).
+\end{equation}
+This continuous formulation elegantly sidesteps the primary issue of discrete NFs. The change of variables formula from \ref{eq:nf} now becomes:
+\begin{equation}
+	log(p_X(x)) = log(p_Z(z(0))) - \int_{0}^{1} Tr\left(\frac{\partial v(z(t), t, \theta)}{\partial z(t)}\right)dt.
+\end{equation}
+Since the trace of a Jacobian is much more efficient to compute than the full determinant, there are no architectural constraints. Any standard neural network architecture like a ResNet \cite{heDeepResidualLearning2015a} can be used to learn the vector field, granting CNF much more flexibility. However, to calculate the likelihood for each training step, a numerical ODE solver must compute the entire trajectory of a data point. Furthermore, computing gradients requires solving a second adjoint ODE. This is computationally and memory intensive, as well as being numerically unstable.
+
+
+\subsection{Flow Matching for Generative Models}
+Flow Matching was introduced to bypass the training bottleneck of CNF by reframing the CNF training objective from complex likelihood computations into a direct regression objective \cite{lipmanFlowMatchingGenerative2023a}.
+
+To construct such an objective, a continuous probability path  $p_t(x)$ is first defined. This path smoothly interpolates between a simple prior distribution $p_0(x)$ at $t = 0$  and the data distribution $p_1 (x)$ at $t= 1$. The key insight is that  any such path has a unique corresponding vector field $u_t(x)$ that generates it. This relationship is governed by the continuity equation:
+\begin{equation}
+	\frac{\partial p_t(x)}{\partial t} = -\nabla \cdot [p_t(x) u_t(x)].
+\end{equation}
+This equation provides a link between the rate of change of the probability density and the divergence $\nabla$of the probability flux. The divergence measures how much the vector field is “flowing out” of a given point. In essence, the continuity equation formalizes the intuition that if more probability flows away from a region than into it, the density in that region must decrease. This principle then guarantees the existence of a “ground truth” vector field $ u_t $ for any defined path $p_t$. The goal of flow matching is to train a neural network $v(x,t,\theta)$ to learn this underlying vector field, which can be visualized as a time-varying “current” that guides the probability mass, as shown in figure \ref{fig:flow}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=1.0\textwidth]{flow}
+  \caption{A visualization of the learned vector field at different times t. The field represents the direction and magnitude of the "flow" that transports the initial noise distribution (left) towards the target data distribution (right).}
+  \label{fig:flow}
+\end{figure}
+The general flow matching objective then becomes a straightforward L2 loss between the model’s predicted vector field and the target vector field:
+\begin{equation}
+	\mathcal{L}_{\text{FM}}(\theta) = \mathbb{E}_{t, p_t(x)} \left[ \| v(x, t, \theta) - u_t(x) \|^2 \right].
+\end{equation}
+This objective is simulation free because it only requires sampling a time $t$ and a point $x$ from the known marginal distribution $p_t(x)$ and regressing the model’s output onto the target vector \cite{holderriethIntroductionFlowMatching2025}. While this general formulation is theoretically convenient, it requires access to both the marginal probability path $p_t(x)$ and the marginal vector field $ u_t(x)$. For most paths connecting a simple prior to a complex data distribution, both of these quantities are intractable. This issue is the primary motivation for conditional flow matching, with a practical implementation covered extensively in Section \ref{sec:cnf_formulation} that constructs the path in a specific way to ensure the target vector field is simple and known.
+
 
 \section{Planning with Diffusion}
 \label{sec:planning}
+
+
+
+
+
+
+
+
+
+
+
+
+
 \section{Other Relevant Works}
 
