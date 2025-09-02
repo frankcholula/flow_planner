@@ -194,7 +194,7 @@ The full procedure is detailed in Algorithm \ref{alg:hierarchical}.
 
 
 \subsection{Framework Design Philosophy}
-
+\label{sec:framework_design}
 The design of the Flow Planner framework is motivated by the inherent limitations of reactive policies. While powerful for short-horizon tasks, the Diffusion Policy framework proposed by Chi et al can exhibit a “gold fish effect” where a limited observation history makes it difficult to maintain coherence over long durations \cite{jannerPlanningDiffusionFlexible2022}. This is particularly challenging in tasks with long-horizon multimodality, where the policy may lack sufficient history to disambiguate between different strategic modes, leading to indecisive or “stuck” behaviors.
 
 On the other hand, end-to-end approaches that excel in open-loop planning like the inpainting-based planner proposed by Janner et al. runs into a different scalability issue \cite{chiDiffusionPolicyVisuomotor2023}. While theoretically capable of generating long plans, modeling the entire joint state-action space over a long horizon is often practically infeasible due to the sample complexity and computational cost associated with such high-dimensional model inputs.
