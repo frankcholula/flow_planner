@@ -1,8 +1,7 @@
 # Flow Planner 👾
+Introducing **Flow Planner**, a fresh take on trajectory planning with generative models. 
 ![Flow](assets/flow.gif)
-Guided trajectory synthesis via conditional flow matching.
-
-
+**Flow Planner** is a hierarchical framework for trajectory generation built on Conditional Flow Matching (CFM). It splits planning into two parts: a long-horizon Waypoint Planner for strategy and a short-horizon Action Planner for control. Together, they run inside a receding-horizon MPC loop, combining high-level reasoning with low-latency reactivity.
 
 ## Repository Layout
 ```
