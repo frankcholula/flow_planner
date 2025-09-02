@@ -150,7 +150,7 @@ The 1D Temporal CNN is designed to process trajectories as sequences, explicitly
 \end{enumerate}
 
 \subsection{U-Net}
-To further enhance the model’s ability to capture features at multiple timescales, a U-Net architecture is adapted. Originally designed for medical imaging [cite here] , the standard 2D convolutions are replaced with 1D temporal convolutions. This allows the model’s encoder-decoder structure and skip connections to capture both coarse, long-range dependencies  and fine-grained, local patterns. This multi-scale processing makes the U-Net a highly expressive architecture for modeling complex, long-horizon trajectories. Again, a detailed implementation is provided below.
+To further enhance the model’s ability to capture features at multiple timescales, a U-Net architecture is adapted. Originally designed for medical imaging \cite{ronnebergerUNetConvolutionalNetworks2015a}, the standard 2D convolutions are replaced with 1D temporal convolutions. This allows the model’s encoder-decoder structure and skip connections to capture both coarse, long-range dependencies  and fine-grained, local patterns. This multi-scale processing makes the U-Net a highly expressive architecture for modeling complex, long-horizon trajectories. Again, a detailed implementation is provided below.
 
 \begin{figure}[H]
   \centering
