@@ -3,6 +3,7 @@
 This chapter begins by examining the fundamental concepts in offline reinforcement learning and established methodologies for addressing distributional shift. Next, it explores diffusion models through the lens of variational inference before unifying these concepts through continuous flows to introduce flow matching. The chapter concludes with an analysis of diffusion applications in trajectory synthesis and state-of-the-art approaches that integrate these models directly into reinforcement learning frameworks. Particular emphasis is placed on the mathematical formulations of diffusion and flow matching, as this constitutes the central focus of this dissertation and the applied methodologies after.
 
 \section{Offline Reinforcement Learning}
+\label{sec:offline_rl}
 As established in Chapter \ref{chap:intro}, a significant hurdle in offline reinforcement learning is the distributional shift between the static dataset and the policy being learned. This can lead to erroneous value estimates for out-of-distribution actions, resulting in brittle policies that perform poorly when deployed \cite{levineOfflineReinforcementLearning2020}. To mitigate this issue, the literature has broadly converged on three primary classes of approach: policy constraint methods, implicit policy constraint methods, and model-based methods.
 
 
@@ -23,6 +24,7 @@ While the sources highlight its advantages, it is still a form of policy constra
 
 
 \subsection{Model-based Offline RL Methods}
+\label{sec:mopo}
 Taking a different algorithmic direction, model-based offline RL methods, exemplified by MOPO (Model-based Offline Policy Optimization) by Yu et al. \cite{yuMOPOModelbasedOffline2020}, propose to tackle the problem by learning a model of the environment's dynamics. While vanilla model-based RL (like MBPO \cite{jannerWhenTrustYour2021}) already showed some promise in offline settings, MOPO specifically modifies these algorithms to handle distributional shift. MOPO achieves this by punishing the policy for exploiting out-of-distribution states during model rollouts. This is implemented by subtracting an uncertainty penalty from the reward function, which becomes larger for state-action tuples that are more out of distribution (i.e., where the learned model's predictions are less certain).
 
 MOPO hence has the ability to generalize beyond the state and action support of the offline data, enabling the learning of policies for tasks different from those for which the data was collected. It is more resilient to overestimation and overfitting than model-free methods and theoretically maximizes a lower bound of the policy's true return, balancing exploration and risk. Empirically, MOPO outperforms existing model-free offline RL methods and vanilla model-based approaches, especially on tasks requiring out-of-distribution generalization.
@@ -156,6 +158,7 @@ The forward SDE is defined to transform a complex data distribution into a simpl
 \end{equation}
 where $W$ is a standard Wiener process and $f(x,t)$ and $g(x,t)$ are the drift and diffusion coefficients, respectively. This describes a continuum of noisy intermediate distributions $\{p_t(x)\}$. Additionally, a corresponding reverse-time SDE that can reverse this noising process exists:
 \begin{equation}
+\label{eq:reverse_time_sde}
 	dx = \underbrace{\big[f(x, t) - g(x,t)^2 \nabla_x \log p_t(x)\big]}_{\text{drift}} dt + \underbrace{g(x,t)}_{\text{diffusion}} d\bar{W},
 \end{equation}
 where $d\bar{W}$ is a standard Wiener process run backward in time. Much like the forward SDE, one can intuitively break this equation down into a deterministic drift term and a stochastic diffusion term. And conveniently, the deterministic dynamics depend only on the score function $\nabla_x \log p_t(x)$. Note that for models like DDPMs, the diffusion term simplifies from the general form $g(x,t)$ to $g(t)$ because the noise schedule is designed to be state-independent, as detailed further in \ref{app:cfm_derivation}.
@@ -224,18 +227,70 @@ This objective is simulation free because it only requires sampling a time $t$ a
 
 \section{Planning with Diffusion}
 \label{sec:planning}
+Section \ref{sec:offline_rl} highlighted a core challenge in offline reinforcement learning: calibrating the precise degree of pessimism to prevent value overestimation without creating overly conservative policies. The generative models detailed in Sections \ref{sec:diffusion}, \ref{sec:score_based} and \ref{sec:flow_based} offer a powerful framework for solving this issue.
+
+Among these, diffusion models have been successfully applied to practical trajectory planning problems \cite{jannerPlanningDiffusionFlexible2022, chiDiffusionPolicyVisuomotor2023}. Rather than relying on explicit uncertainty penalties,  diffusion models learn the underlying behavioral policy itself. These trained models function as a high-fidelity sampler for in-distribution actions, providing a powerful yet implicit constraint on the learned policy. This solves the pessimism calibration problem by ensuring the policy does not stray into unsupported regions of the state-action space. This section now reviews key papers that use this approach for trajectory planning.
 
 
+\subsection{Flexible Behavior Synthesis using Diffusion}
+Model-based methods like MOPO, as referenced in \ref{sec:mopo}, rely on training a dynamics model to predict future states, but unrolling these learned dynamics models over long horizons often results in compounding prediction errors and leads to out-of-distribution states. This in turn generates adversarial plans that appear optimal but yield poor rewards in practice. Janner et al. addresses these by reconceptualizing planning as a generative modeling problem, training a diffusion model to directly generate entire trajectories \cite{jannerPlanningDiffusionFlexible2022}. This approach offloads reward optimization and dynamics rollouts into the generative process itself, making planning a sampling problem where guidance can be used to construct desired plans.
+
+The proposed model, Diffuser, operates by a non-autoregressive prediction procedure, generating the entire trajectory simultaneously from Gaussian noise. A trajectory $\tau$ is represented as an interleaved sequence of states $s$and actions $a$ of a finite horizon $H$:
+\begin{equation}
+	\tau = (s_0, a_0,s_1, a_1,\dots, s_H, a_H)
+\end{equation}
+A fixed forward process $q(\tau^i | \tau^{i-1})$  gradually adds Gaussian noise to the trajectory while a learned denoising process $p_{\theta}(\tau^{i-1} | \tau^{i})$ iteratively refines the noise over $N$ steps to recover trajectory $\tau^0.$ 
+
+To function as a planner, this sampling process is guided to satisfy task-specific objectives by sampling from a perturbed distribution:
+\begin{equation}
+	\tilde{p}_{\theta}(\tau)\propto{p}_{\theta}(\tau)h(\tau)
+\end{equation}
+Here, ${p}_{\theta}(\tau)$ ensures the plan is realistic and $h(\tau)  $ acts as a guidance function that biases it towards the desired outcome. This decoupling of the base model from the goal is implemented in two ways:
+\begin{enumerate}
+	\item Guided sampling is used for reward maximization, where the mean of the reverse process is shifted at each step by the gradient of the reward function $\nabla \mathcal{J(\mu)}$.
+	\item Inpainting is used for hard constraints, such as reaching a specific goal, where known values like the start and end states are fixed in the final denoised trajectory.
+\end{enumerate}
+The use of generative sampling as planning allows for flexible behavior synthesis by composing the learned model with various guidance functions at test time. As a result, a single trained model can be adapted to diverse tasks without retraining, including:
+\begin{itemize}
+	\item Offline reinforcement learning, where the model can be guided by different reward functions to perform competitively with specialized techniques.
+	\item Goal-seeking policies for long-horizon and sparse-reward problems by fixing the start and end observations via inpainting. This was shown to be effective in complex maze environments.
+	\item Arbitrary user-defined constraints, such as completing complex block-stacking configurations, by combining multiple perturbation functions.
+\end{itemize}
 
 
+\subsection{Diffusion Policy: Visuomotor Policy Learning via Action Diffusion}
+While Planning with diffusion treats planning as a conditional generation problem over entire state–action trajectories, Diffusion Policy focus on learning a reactive, visuomotor policy via imitation learning \cite{chiDiffusionPolicyVisuomotor2023}.	The paper addresses the core challenges of behavior cloning, where standard explicit policies (e.g., direct regression) struggle to model complex, multimodal action distributions, and implicit policies (e.g., energy-based models) suffer from training instability due to reliance on negative sampling. Chi et al. proposes to overcome these issues by representing the policy itself as a conditional denoising diffusion process.
 
+This formulation can be understood as a practical, discretized implementation of the general reverse-time SDE introduced in equation \ref{eq:reverse_time_sde}. Instead of directly mapping an observation $O_t$ to an action sequence $A_t$, the neural network $\epsilon_\theta(O_t, A_t^k, k)$ learns to predict the noise present in a noised action sequence $A_t^k$ at diffusion step $k$. 
 
+At inference time, the policy starts with an action sequence $A_t^K$ sampled from pure Gaussian noise and iteratively refines it over $K$ steps to produce a clean, executable action sequence $A_t^0$. The denoising update at each step is given by:
 
+\begin{equation}
+	A_{t}^{k-1}=\alpha\left(A_{t}^{k}-\gamma\epsilon_{\theta}(O_{t},A_{t}^{k},k)\right)+\mathcal{N}(0,\sigma^{2}I).
+\end{equation}
+The network is optimized with a simple mean-squared error loss between the true and predicted noise:
+\begin{equation}
+	\mathcal{L} = \text{MSE}(\epsilon_k, \epsilon_\theta(O_t, A_t^0 + \epsilon_k, k)).
+\end{equation}
+This formulation learns the score function of the conditional action distribution $p(A_{t}\mid O_t)$, which provides excellent distribution expressivity while remaining stable to train, unlike prior implicit methods.
 
-
-
-
-
+To make this formulation practical for real-world robotics, Chi et al. combines the prediction of action sequences with receding horizon control, where the policy predicts a future sequence of actions $(T_p)$ but only executes a shorter subsequence $(T_{\alpha})$ before replanning. Second, it uses an efficient visual conditioning scheme where visual features are extracted once per inference cycle for real-time performance. Finally, the paper proposes Time-series diffusion transformer architecture to better handle tasks requiring high-frequency action changes. These contributions allow Diffusion Policy to consistently outperform prior state-of-the-art methods across numerous robot manipulation benchmarks.
 
 \section{Other Relevant Works}
 
+\subsection{Q-Score Matching (QSM)}
+Q-Score Matching offers a novel training objective that reframes policy optimization from a geometric perspective\cite{psenkaLearningDiffusionModel2025b}. The core insight is to directly align the score function of the diffusion policy, $\nabla \log \pi_{\theta}(a|s)$, with the action-gradient of the learned Q-function, $\nabla_a Q(s,a)$. In other words, the policy is trained such that its vector field of log-probabilities is iteratively "pushed" to match the direction of steepest ascent in the Q-value landscape.
+
+This approach provides a direct, analytical objective for policy improvement that completely avoids the need to differentiate through the diffusion sampling chain. By exploiting the inherent score-based structure of the diffusion model, QSM enables the stable and sample-efficient learning of complex, multi-modal policies that can more effectively cover the modes of the optimal action distribution.
+
+
+\subsection{Diffusion Steering via Reinforcement Learning (DSRL)}
+In contrast to modifying the training objective, Diffusion Steering via Reinforcement Learning (DSRL) is an inference-time optimization technique \cite{wagenmakerSteeringYourDiffusion2025b}. It leaves the pre-trained diffusion policy fixed and instead focuses on the initial latent noise,  $w∼N(0,I)$, which is the seed for the denoising process. The key idea is to train a secondary, lightweight "steering" policy that learns to select an initial noise vector $w$ that, when denoised by the fixed diffusion model, produces a high-value action.
+
+This method also tries to address counterfactual query: "What if a different initial noise had been chosen?" By learning to navigate the latent noise space, DSRL can rapidly steer the powerful generative prior towards actions that maximize rewards for a specific task. This allows for extremely fast and sample-efficient policy adaptation without the computational cost or potential instability of fine-tuning the large, pre-trained diffusion model itself.
+
+
+\subsection{Flow Q-Learning}
+A third, highly effective approach to the policy extraction problem is presented in Flow Q-Learning (FQL) \cite{parkFlowQLearning2025}. This method elegantly circumvents the challenges of direct policy optimization by decoupling the learning of the expressive behavioral prior from the value maximization task itself. FQL uses a "teacher-student" distillation framework \cite{hintonDistillingKnowledgeNeural2015}. 
+
+First, an iterative, flow-matching policy is trained solely with behavioral cloning (BC) to serve as an expressive "teacher" model that perfectly captures the complex, multimodal action distributions in the expert dataset. The reinforcement learning objective is then offloaded to a separate, simple one-step "student" policy. This student policy is trained to maximize the learned Q-function, but it is simultaneously regularized by a distillation loss that forces its output to stay close to that of the powerful flow-matching teacher. This strategy is extremely clever because it completely avoids the unstable and computationally expensive backpropagation through the iterative ODE solver, and the final deployed policy is the efficient one-step student. Costly iterative sampling at inference time is therefore completely avoided. FQL thus achieves the best of both worlds, a distributional expressivity of a flow model with the training stability and inference speed of a simple policy.
