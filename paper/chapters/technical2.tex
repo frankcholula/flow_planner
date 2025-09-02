@@ -2,6 +2,35 @@
 This chapter details the data pipeline designed to generate the expert trajectories used to train and evaluate the Flow Planner framework. The process begins with the selection of a suitable evaluation environment, followed by the training of an expert agent using Proximal Policy Optimization (PPO) to generate the demonstration dataset. The datasets as well as the trained agents can be found on my personal \href {https://huggingface.co/frankcholula}{Hugging Face Hub}.
 
 \section{Environment Suite}
+To test the capabilities of a generative planner, a suite of three distinct environments from the Gymnasium \cite{towers2024gymnasium} Library was selected, each representing a unique set of challenges. While this dissertation will focus on the empirical evaluation of LunarLanderContinuous-v3 for a more focused analysis, the other environments are included here for future research into scaling the Flow Planner framework to more complex locomotion and vision-based tasks.
+\subsection{LunarLanderContinuous-v3}
+This environment presents a classic control problem where the agent's objective is to land a craft safely and with minimal fuel consumption between two designated flags. The low-dimensional state and continuous dynamics makes it an ideal benchmark for testing an agent’s ability to learn precise thrust control and solve a delayed credit assignment problem, where early actions have critical consequences. A successful landing requires scoring over 200 points, which incorporates rewards for proximity, velocity, stability, and fuel efficiency, with a bonus of +100 for a safe landing and -100 for crashing.
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=1.0\textwidth]{lunar_lander}
+  \caption{LunarLanderContinuous-v3 Environment}
+  \label{fig:lunar}
+\end{figure}
+
+
+\subsection{BipedalWalker-v3}
+This environment increases the complexity by focusing on continuous locomotion over a randomly generated, uneven terrain. Success requires the agent to master the coordination of multiple joints to develop a robust and efficient walking gait, making it a challenging benchmark for learning stable locomotion policies.
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=1.0\textwidth]{bipedal_walker}
+  \caption{BipedalWalker-v3 Environment}
+  \label{fig:bipedal}
+\end{figure}
+
+
+\subsection{CarRacing-v3}
+This environment introduces the challenge of vision-based control from high-dimensional 96x96 pixel images. The objective is to complete a lap on a procedurally generated track, testing the agent’s representation learning capabilities and its ability to perform high-speed continuous control from raw pixels. The detailed procedure for processing these visual observations and generating the final latent dataset is provided in Appendix \ref{app:latent_dataset}.
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=1.0\textwidth]{car_racing}
+  \caption{CarRacing-v3 Environment}
+  \label{fig:carracing}
+\end{figure}
 
 \section{Expert Policy Training}
 \label{sec:expert_training}
@@ -51,8 +80,7 @@ All agents were trained using the tuned hyper-parameters supplied by the RL Base
 \end{table}
 
 To ensure a comprehensive set of expert policies, agents were also trained using the A2C and TD3 algorithms. Although these methods demonstrated superior performance in certain environments, solely the PPO agents were used to generate the expert datasets. This decision was made to prioritize the quality and stability of the expert behavior for imitation. PPO's on-policy nature and clipped objective function consistently produce smooth and generalizable policies, which serve as a more robust and reliable foundation for training a generative model. While off-policy methods like TD3 can be highly performant, they can also yield more exploitative or brittle policies that are less suitable as a behavioral prior. 
-
-
+For the benefit of future research and to ensure reproducibility, all trained models, including the A2C and TD3 agents, have been made publicly available on my \href {https://huggingface.co/frankcholula}{Hugging Face Hub}.
 \section{Expert Dataset Collection}
 To train the generative planners described in Chapter 3, a dataset of expert trajectories were required for each environment. This data was collected by executing the trained policies from Section \ref{sec:expert_training}. The Minari \cite{minari} Library’s  DataCollector wrapper was used to systematically record trajectory data during these rollouts. Approximately 300,000 to 350,000 steps were sampled for each environment to create a robust dataset capturing a wide range of expert behaviors. The resulting datasets are summarized in the table below. Note the number of episodes collected for each environment was tailored to its specific characteristics. For instance, the stochastic nature of LunarLander-v3 necessitated a large number of episodes (1000) to ensure a diverse set of successful landing trajectories. On the other hand, the high-dimensional visual observations in CarRacing-v3 resulted in a substantial dataset size from fewer but longer episodes (250). The dataset statistics for different environments are summarized in Table \ref{tab:datasets}.
 \begin{table}[H]
