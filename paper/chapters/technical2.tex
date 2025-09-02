@@ -7,24 +7,46 @@ This chapter details the data pipeline designed to generate the expert trajector
 \label{sec:expert_training}
 To generate the expert datasets, a Proximal Policy Optimization (PPO) agent was trained in each environment until convergence. PPO was chosen for its exceptional training stability. As a state-of-the-art on-policy algorithm, it optimizes the policy by taking a series of small, conservative steps. It uses a “clipped” surrogate objective that acts as a guardrail, preventing any single update from changing the policy too dramatically \cite{schulmanProximalPolicyOptimization2017}. This inherent stability makes PPO a robust workhorse for the continuous control challenges in these environments.
 
-All agents were trained using the tuned hyper-parameters supplied by the RL Baselines3 Zoo \cite{rl-zoo3} library, with the final performance summarized below :
-
+All agents were trained using the tuned hyper-parameters supplied by the RL Baselines3 Zoo \cite{rl-zoo3} library, with the final performance summarized in Table \ref{tab:ppo_llc}, \ref{tab:ppo_bipedal} and \ref{tab:ppo_carracing}.
+% --- LunarLanderContinuous-v3 ---
 \begin{table}[H]
 \centering
-\caption{Performance and specifications of PPO expert agents.}
-\label{tab:ppo_agents}
-\begin{tabular}{|l|c|c|p{4cm}|}
+\caption{PPO expert (LunarLanderContinuous-v3).}
+\label{tab:ppo_llc}
+\begin{tabular}{|l|p{7.5cm}|}
 \hline
-\textbf{PPO Agents} & \textbf{LunarLanderContinuous-v3} & \textbf{BipedalWalker-v3} & \textbf{CarRacing-v3} \\
+\textbf{Mean Reward}       & 236.78 $\pm$ 79.67 \\ \hline
+\textbf{Wrappers}          & None \\ \hline
+\textbf{Observation Space} & Box(8,) float32 \\ \hline
+\textbf{Action Space}      & Box(2,) float32 \\ \hline
+\end{tabular}
+\end{table}
+
+% --- BipedalWalker-v3 ---
+\begin{table}[H]
+\centering
+\caption{PPO expert (BipedalWalker-v3).}
+\label{tab:ppo_bipedal}
+\begin{tabular}{|l|p{7.5cm}|}
 \hline
-\textbf{Mean Reward} & 236.78 $\pm$ 79.67 & 271.87 $\pm$ 2.08 & 248.24 $\pm$ 168.67 \\
+\textbf{Mean Reward}       & 271.87 $\pm$ 2.08 \\ \hline
+\textbf{Wrappers}          & None \\ \hline
+\textbf{Observation Space} & Box(24,) float32 \\ \hline
+\textbf{Action Space}      & Box(4,) float32 \\ \hline
+\end{tabular}
+\end{table}
+
+% --- CarRacing-v3 ---
+\begin{table}[H]
+\centering
+\caption{PPO expert (CarRacing-v3).}
+\label{tab:ppo_carracing}
+\begin{tabular}{|l|p{7.5cm}|}
 \hline
-\textbf{Wrappers} & None & None & \textbf{FrameSkip, Resize, GrayScale, FrameStack} \\
-\hline
-\textbf{Observation Space} & Box(8,) float32 & Box(24,) float32 & Box(64, 64, 2) uint8 \\
-\hline
-\textbf{Action Space} & Box(2,) float32 & Box(4,) float32 & Box(3,) float32 \\
-\hline
+\textbf{Mean Reward}       & 248.24 $\pm$ 168.67 \\ \hline
+\textbf{Wrappers}          & \textbf{FrameSkip, Resize, GrayScale, FrameStack} \\ \hline
+\textbf{Observation Space} & Box(64, 64, 2) uint8 \\ \hline
+\textbf{Action Space}      & Box(3,) float32 \\ \hline
 \end{tabular}
 \end{table}
 
