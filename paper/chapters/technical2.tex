@@ -208,14 +208,162 @@ This distinction was also reflected in the training process. Flow Matching model
 
 \section{Planner Baseline: The Joint Planner}
 \label{sec:joint_planner_baseline}
+Having identified the U-Net as the most expressive network backbone in the initial analysis, this section evaluates the performance of the monolithic Joint Planner (JP) using this architecture. The goal is to establish a performance baseline for an end-to-end approach under two distinct conditioning schemes, quantifying its capabilities and limitations before evaluating the fully decoupled framework in Section \ref{sec:flat_hieararchical_planning}.
 \subsection{Experimental Setup}
+For this comparison, both the Flow Matching and Diffusion planners were implemented using the U-Net architecture. To provide a comprehensive analysis of practical inference trade-offs, results are also presented for the Diffusion planner using an accelerated DDIM scheduler. This comparison highlights how sampling can be sped up, typically at the cost of reduced sample fidelity and stochasticity [cite DDIM].
+
+The evaluation of these planners centers on three key metrics: final control performance, training time per epoch, and inference time per trajectory. Final control performance is measured by cumulative reward in a closed-loop MPC evaluation, where a score above 100 indicates a successful landing.
 \subsection{Conditioning Signals and Fusion Strategy}
+Two key design choices were investigated for conditioning the planners: the fusion strategy for combining embeddings and the type of goal signal used.
+
+The first choice concerns how the time embedding and the condition embedding are combined. Two fusion strategies were implemented and compared:
+
+\begin{enumerate}
+    \item \textbf{Addition:} The embeddings are first projected to the same hidden dimensions then combined via simple element-wise addition. This approach imposes a strong inductive bias, forcing the model to learn time and condition embeddings that exist in the same semantic space where their dimensions are directly comparable.
+    \item \textbf{Concatenation:} The embeddings are first concatenated and then passed through a linear layer to learn a joint representation. This strategy offers a bit more expressive power because the network can learn a complex, non-linear relationship between time and the condition. However, it lacks the strong structural bias the addition method provides.
+\end{enumerate}
+
+The second methodological choice involves the goal conditioning signal, comparing the two strategies formulated in Section~3.3.1:
+
+\begin{enumerate}
+    \item \textbf{Final Goal Conditioning ($s_{\text{goal}} = s_T$):} The planner is conditioned on the final goal of the entire task. This provides the model with a more global objective.
+    \item \textbf{Waypoint Goal Conditioning ($s_{\text{goal}} = s_H$):} The planner is conditioned on an intermediate goal at the end of its planning horizon. This may encourage the model to generate more coherent local plan segments.
+\end{enumerate}
+
 \subsection{Classifier-free Guidance vs. Modeling Conditional Distribution}
+A fundamental difference between the Diffusion and Flow Matching planners lies in how they incorporate conditioning. The Diffusion JP employs Classifier-Free Guidance (CFG), a powerful technique for strengthening the conditioning signal at inference time \cite{hoClassifierFreeDiffusionGuidance2022a}. CFG allows the model to be paused at each denoising step to compute both a conditional and an unconditional prediction. These are then combined to "steer" the generation towards the desired outcome, with the strength of this steering controlled by a guidance scale. In this work, a scale of 1.5 was used to ensure strong adherence to the condition.
+
+This iterative intervention is not naturally compatible with the Flow Matching planner. A Flow Matching model is trained as a deterministic ODE, and inference is a more holistic process where a numerical solver integrates the entire vector field $v_\theta$ from start to finish. Attempting to apply the CFG trick at each internal step of an ODE solver would violate its assumptions and be computationally inefficient. While recent work has begun to explore CFG-like techniques for flow models [cite CFG-Zero], I opted for injecting the condition directly into the network, $v_\theta(x_t,t,c).$ It is worth noting that inference-time flexibility afforded by diffusion's iterative guidance is a distinct advantage over the standard flow-matching paradigm.
+
+
 \subsection{Results and Analysis}
+The results highlight several key findings regarding the monolithic planner's performance and design.
+\begin{table}[H]
+\centering
+\caption{Comparison of Flow Joint Planner (JP) fusion strategies under different goal conditioning methods.}
+\label{tab:jp_fusion}
+\begin{tabular}{|c|c|c|c|}
+\hline
+\textbf{Model} & \textbf{MPC Results} & \textbf{Training Time (s)} & \textbf{Inference Time (s)} \\
+\hline
+Flow JP Goal (concat) & \textbf{172.93 $\pm$ 38.55} & 60.82 & \textbf{0.0910} \\
+\hline
+Flow JP Goal (add) & 145.09 $\pm$ 22.01 & 63.52 & 0.0920 \\
+\hline
+Flow JP Waypoint (concat) & 136.98 $\pm$ 38.14 & \textbf{42.31} & 0.0930 \\
+\hline
+Flow JP Waypoint (add) & 143.91 $\pm$ 26.35 & 43.30 & 0.0932 \\
+\hline
+\end{tabular}
+\end{table}
+
+First, the choice of fusion strategy for the time and condition embeddings had some noticeable impact. For final goal conditioning, the more expressive concatenation strategy performs best. This suggests that the model benefits from the flexibility of the joint representation. For waypoint goal conditioning, the addition strategy performs better. The strong inductive bias imposed by addition appears to act as a powerful regularizer for simpler, more well-defined tasks.
+
+\begin{table}[H]
+\centering
+\caption{Comparison of Diffusion and Flow Joint Planners (JP) under different configurations.}
+\label{tab:jp_diffusion_flow}
+\begin{tabular}{|c|c|c|c|}
+\hline
+\textbf{Model} & \textbf{MPC Results} & \textbf{Training Time (s)} & \textbf{Inference Time (s)} \\
+\hline
+Diffusion JP Goal & 116.71 $\pm$ 55.73 & 60.84 & 0.2780 \\
+\hline
+Diffusion JP Waypoint & 69.98 $\pm$ 85.93 & 42.70 & 0.2670 \\
+\hline
+Diffusion JP Goal (DDIM) & 116.97 $\pm$ 82.78 & 62.54 & 0.1244 \\
+\hline
+Flow JP Goal & \textbf{172.93 $\pm$ 38.55} & 60.82 & \textbf{0.0910} \\
+\hline
+Flow JP Waypoint & 136.98 $\pm$ 38.14 & \textbf{42.30} & 0.0930 \\
+\hline
+\end{tabular}
+\end{table}
+
+Regarding the conditioning signals, conditioning on the final task goal proved to be a much more effective strategy than conditioning on an intermediate waypoint for both paradigms. Conditioning on a waypoint led to a substantial performance drop for both models, indicating that for a monolithic planner on this task, global context is critical. This is likely because providing the ultimate objective allows the model to generate a more globally coherent plan, which is particularly effective for a task like Lunar Lander where the task horizon $T$ is reasonably close to the model's planning horizon $H$.
+
+Finally, the Flow Matching planner significantly outperforms the Diffusion planner in terms of MPC reward, achieving a top score of 172.93 compared to the diffusion baseline of 116.71. This suggests that the deterministic and stable nature of the ODE-based generation is beneficial for this control task. Furthermore, the results confirm the significant inference speed advantage of Flow Matching. The Flow JP generated trajectories approximately 3x faster than the Diffusion JP using a standard DDPM sampler. While a tuned DDIM sampler closes this gap considerably (halving the DDPM inference time), it does so without improving the final reward.
+
 
 \section{Flat vs. Hierarchical Planning}
 \label{sec:flat_hieararchical_planning}
-\subsection{Individual Planner Performance}
-\subsection{Hierarchical Plannning}
+While effective, the monolithic "inpainting" approach for goal-conditioning is computationally expensive because it requires generating a complete state-action trajectory. In contrast, modeling only the conditional action distribution, as seen in Diffusion Policy, creates a fast, reactive policy but often struggles with long-term strategic reasoning. This section evaluates our proposed hierarchical framework that balances these trade-offs by decoupling strategic, long-horizon planning from low-level, reactive control.
 
+The analysis unfolds in two parts. First, we evaluate the individual components (WP and AP) in isolation to validate their standalone capabilities. Second, we assess the full hierarchical system against the baselines established in Section 5.2 and our original expert policy. The Waypoint Planner is designed with a horizon of 100 steps, whereas the Action Planner is trained to predict 25 steps.
+\subsection{Individual Planner Performance}
+As explained, the Waypoint Planner generates a set of observations only. To evaluate its performance in isolation, the trained WP model was used to generate open-loop state trajectories conditioned on a variety of start and goal states sampled from the expert dataset. 
+
+A qualitative review of these plans confirms that both waypoint planners successfully generate smooth and dynamically plausible waypoint sequences. As illustrated in the above figures, the generated paths consistently connect the start states (typically at a height between 1.4 and 1.8) and point to the final landing pad. However, the trajectories generated by the Diffusion WP show significantly more diversity and variation, while the Flow WP produces more direct and deterministic paths. This contrast reinforces the stochastic, exploratory nature of diffusion versus the deterministic, goal-oriented nature of flow matching.
+
+Next, the Action Planner handles low-level, reactive control. Its performance was first evaluated in an open-loop "tracking" task. The trained AP model received the agent's current state and a waypoint sampled from a ground-truth expert trajectory, then generated an action sequence to reach that waypoint. The results are summarized in the table below.
+
+\begin{table}[H]
+\centering
+\caption{Comparison of Diffusion vs. Flow Matching Action Planners (AP).}
+\label{tab:ap_results}
+\begin{tabular}{|c|c|c|c|}
+\hline
+\textbf{Model} & \textbf{Training Time (s)} & \textbf{Inference Time (s)} & \textbf{MPC} \\
+\hline
+Diffusion AP & 40.28 & 0.2956 & 101.27 $\pm$ 52.45 \\
+\hline
+Flow AP & \textbf{39.38} & \textbf{0.0912} & \textbf{133.93 $\pm$ 30.35} \\
+\hline
+\end{tabular}
+\end{table}
+
+The results clearly demonstrate the advantages of the flow matching paradigm for reactive control. The Flow AP significantly outperforms its diffusion counterpart, delivering both higher and more consistent rewards. Additionally, it processes inference three times faster. Both AP models benefit from much quicker training times compared to long-horizon planners, as they only need to learn a low-dimensional action distribution over a short time frame.
+
+\subsection{Hierarchical Plannning}
+The final experiment evaluates the full, integrated Flow Planner framework as described in Section 3.3. The Waypoint Planner generates a strategic plan, which is then executed by the Action Planner in a closed-loop MPC setting. The performance is measured by the cumulative reward over 10 episodes and directly compared to the PPO expert that generated the dataset.
+
+\begin{table}[H]
+\centering
+\caption{Amortized inference time across different waypoint (WP) replanning frequencies.}
+\label{tab:wp_inference}
+\begin{tabular}{|c|c|c|}
+\hline
+\textbf{Model} & \textbf{WP Replan Freq} & \textbf{Amortized Inference Time (s)} \\
+\hline
+PPO Baseline & - & - \\
+\hline
+Flow WP + Flow AP & 10 & 0.1315 \\
+\hline
+Flow WP + Flow AP & 20 & 0.1118 \\
+\hline
+Flow WP + Flow AP & 30 & 0.0984 \\
+\hline
+Flow WP + Flow AP & 40 & 0.0930 \\
+\hline
+Flow WP + Flow AP & 50 & \textbf{0.0917} \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{MPC results and highest reward across different waypoint (WP) replanning frequencies.}
+\label{tab:wp_mpc}
+\begin{tabular}{|c|c|c|c|}
+\hline
+\textbf{Model} & \textbf{WP Replan Freq} & \textbf{MPC Result} & \textbf{Highest Reward} \\
+\hline
+PPO Baseline & - & \textbf{236.78} $\pm$ 79.67 & \textbf{305.92} \\
+\hline
+Flow WP + Flow AP & 10 & 220.37 $\pm$ 54.30 & 289.52 \\
+\hline
+Flow WP + Flow AP & 20 & 232.40 $\pm$ \textbf{40.78} & 295.58 \\
+\hline
+Flow WP + Flow AP & 30 & 210.50 $\pm$ 51.29 & 278.22 \\
+\hline
+Flow WP + Flow AP & 40 & 194.47 $\pm$ 56.03 & 274.82 \\
+\hline
+Flow WP + Flow AP & 50 & 180.43 $\pm$ 44.89 & 256.23 \\
+\hline
+\end{tabular}
+\end{table}
+
+The results confirm the effectiveness of the hierarchical Flow Planner framework. The integrated system successfully solves the long-horizon task, achieving a mean reward of 232.40, which is statistically comparable to the original PPO expert's performance. While the mean reward doesn't surpass the expert baseline, the Flow Planner delivers significantly more consistent and reliable performance, as evidenced by its substantially lower standard deviation (40.78 vs. 79.67). This demonstrates that the framework can robustly reproduce the expert policy from the offline dataset!
+
+Furthermore, analysis of the waypoint replan frequency, a tunable hyperparameter, reveals a clear trade-off between strategic guidance and computational cost. Optimal performance occurs when the Waypoint Planner is invoked every 20 steps, suggesting a "sweet spot" that provides sufficient high-level correction without unnecessary overhead. This configuration also demonstrates the framework's efficiency, achieving an amortized inference time of only 0.1118 seconds per trajectory generation. The planner's highest reward of 295.58 is also competitive with the expert's peak performance, showing the model can indeed generate high-quality, near-optimal trajectories.
 
