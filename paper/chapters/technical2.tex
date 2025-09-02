@@ -103,21 +103,39 @@ To train the generative planners described in Chapter 3, a dataset of expert tra
 Again, to ensure full reproducibility and to facilitate future research, these datasets have been version-controlled and are publicly available on my personal \href {https://huggingface.co/frankcholula}{Hugging Face Hub}.
 
 \chapter{Experimental Results}
-\subsection{Experimental Setup}
-\subsection{Conditioning Signals and Fusion Strategy}
-\subsection{Classifier-free Guidance vs. Modeling Conditional Distribution}
-\subsection{Results and Analysis}
+\label{sec:exp_results}
+This chapter presents the empirical evaluation of the proposed Flow Planner Framework, with experiments designed to validate the performance of the hierarchical planning methodology and to analyze the impact of different architectural choices and conditioning signals. To ensure fair and reproducible comparisons, all experiments were conducted on a workstation equipped with an NVIDIA RTX 4080 Super GPU and an AMD Ryzen 7 7800X3D CPU. The LunarLander-v3 environment serves as the primary testbed for this analysis.
+
+This chapter is structured as follows: Section \ref{sec:architecture} details and compares the performance of different neural network architectures for both flow matching and diffusion-based planners[cite diffuser here]. Leveraging the best-performing architecture from this initial analysis, Section \ref{sec:joint_planner_baseline}	 establishes a performance baseline by evaluating the monolithic Joint Planner under two different conditioning schemes. Finally, Section \ref{sec:flat_hieararchical_planning} evaluates the core contribution of this work: the decoupled, hierarchical planner that combines the Waypoint and Action Planners. Each of these experimental sections will present both qualitative analysis of  the open-loop trajectory generation and a qualitative, closed-loop MPC evaluation to measure the final planner’s performance via cumulative rewards over 10 episodes.
+
+Unless otherwise specified, all models for the remainder of Section \ref{sec:exp_results} were trained for 100 epochs with a learning rate of 1e-3. For CNN-based models, the kernel size was standardized to 5. For the diffusion model comparison, models were trained with 1000 diffusion steps and sampled using 100 inference steps with a standard DDPM scheduler.
 
 \section{Neural Network Architecture Comparisons}
+The initial phase of this empirical study is to determine the most effective architectural backbone. A generative planner’s performance is directly tied to its network architecture, especially for sequential data such as a trajectory that possesses a strong temporal structure. This section establishes a simple MLP as a baseline, then evaluates its performance against two more sophisticated architectures: a 1D CNN \cite{osheaIntroductionConvolutionalNeural2015} and a U-Net \cite{ronnebergerUNetConvolutionalNetworks2015a}. Each architecture is implemented for both our novel flow matching planners and the existing diffusion-based models (used as baselines), to determine the optimal neural network backbone for the planning experiments that follow. Note that all models in this section are trained on the unconditional tasks of modeling the full state-action trajectories.
+
+\label{sec:architecture}
 \subsection{MLP Baseline}
+As a foundational baseline, a simple Multi-Layer Perceptron (MLP) is used. The network first processes a flattened representation of the entire trajectory and projects it into a hidden dimension. This is then combined with a sinusoidal time embedding before being passed through a series of feedforward layers \cite{vaswaniAttentionAllYou2023}. While computationally efficient, this architecture deliberately ignores the inherent temporal coherence of the data. Nevertheless, it serves as a crucial baseline to quantify the performance gains achieved by more structured, sequence-aware architectures. The detailed implementation is provided below.
+
+The MLP baseline is a fully-connected neural network designed to process the entire trajectory as a single, flattened vector. The architecture consists of three main components: an initial projection, a time embedding module, and a main processing block.
+\begin{enumerate}
+\item
+\end{enumerate}
+
+
 \subsection{1D CNN}
 \subsection{U-Net}
 \subsection{Results and Analysis}
 
 \section{Planner Baseline: The Joint Planner}
-
+\label{sec:joint_planner_baseline}
+\subsection{Experimental Setup}
+\subsection{Conditioning Signals and Fusion Strategy}
+\subsection{Classifier-free Guidance vs. Modeling Conditional Distribution}
+\subsection{Results and Analysis}
 
 \section{Flat vs. Hierarchical Planning}
+\label{sec:flat_hieararchical_planning}
 \subsection{Individual Planner Performance}
 \subsection{Hierarchical Plannning}
 
