@@ -205,6 +205,8 @@ Therefore, the Flow Planner Framework is centered around a “hierarchical decom
 	p(\tau_s, \tau_a \mid c) = \underbrace{p(\tau_s \mid c)}_{\text{Waypoint Planner}} \cdot \underbrace{p(\tau_a \mid \tau_s , c)}_{\text{Action Planner}}.
 \end{equation}
 
+While this dissertation focuses on a separate training scheme to maximize modularity, this factorization also provides a theoretical foundation for a joint training paradigm. The new objective and its implications for learning a disentangled representation are detailed in Appendix C. By decoupling long-horizon planning into strategic reasoning and reactive control, this framework gains several advantages:
+
 
 
 
