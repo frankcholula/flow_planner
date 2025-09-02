@@ -1,6 +1,8 @@
-# Flow Planner 👾🦿🏎️
+# Flow Planner 👾
+![Flow](assets/flow.gif)
 Guided trajectory synthesis via conditional flow matching.
-![Overview](assets/latent_cfm.png)
+
+
 
 ## Repository Layout
 ```
@@ -41,6 +43,9 @@ Optionally, if you want to download the agents used for the datasets:
 ```bash
 make download-agents
 ```
+
+## Architecture
+![Architecture](assets/arch.png)
 
 ## About the Datasets
 ![Replay](assets/replay.gif)
