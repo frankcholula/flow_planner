@@ -116,16 +116,34 @@ The initial phase of this empirical study is to determine the most effective arc
 \label{sec:architecture}
 \subsection{MLP Baseline}
 As a foundational baseline, a simple Multi-Layer Perceptron (MLP) is used. The network first processes a flattened representation of the entire trajectory and projects it into a hidden dimension. This is then combined with a sinusoidal time embedding before being passed through a series of feedforward layers \cite{vaswaniAttentionAllYou2023}. While computationally efficient, this architecture deliberately ignores the inherent temporal coherence of the data. Nevertheless, it serves as a crucial baseline to quantify the performance gains achieved by more structured, sequence-aware architectures. The detailed implementation is provided below.
-
 The MLP baseline is a fully-connected neural network designed to process the entire trajectory as a single, flattened vector. The architecture consists of three main components: an initial projection, a time embedding module, and a main processing block.
+
+\subsection{1D CNN}
+To explicitly model the temporal dependencies within the trajectory data, a 1D Temporal Convolutional Neural Network is implemented. This architecture, inspired by its successful application in the Diffuser framework, reshapes the trajectory into channels by sequence length format. A series of 1D convolutional layers then operate along the time axis, allowing the model to effectively capture local temporal patterns and dependencies between adjacent state-action pairs. A detailed implementation is provided below.
+The 1D Temporal CNN is designed to process trajectories as sequences, explicitly modeling temporal dependencies. Its architecture is composed of projection layers, embedding modules with a flexible fusion strategy, and a main convolutional block.
 \begin{enumerate}
-\item
+    \item \textbf{Input Processing:} The input trajectory x is reshaped from a flattened vector into a (batch, transition\_dim, horizon) sequence. A 1x1 convolution (initial\_conv) is then used to project the feature dimension (transition\_dim) into the hidden\_dim.
+    \item \textbf{Embedding and Fusion:} The model processes the time t and conditioning variable c through separate two-layer MLP embedding networks. The resulting embeddings are combined into a single vector using a specified fusion\_strategy. Depending on the strategy, the embeddings are either added element-wise or concatenated. The fused embeddings then pass through an additional linear layer to project them back to hidden\_dim.
+    \item \textbf{Core Computation:} The fused embedding vector is broadcasted and added to the hidden state h produced by the initial convolution.
+    \item \textbf{Main Block:} The core of the network is a sequence of three Conv1d layers with a kernel size of 5 and ``same'' padding, with Swish activations between them. This block processes the trajectory along its temporal axis.
+    \item \textbf{Output:} A final 1x1 convolution (final\_conv) projects the hidden representation back to the original transition\_dim (feature dimension of each timestep, e.g. state-action). The output is then reshaped to match the original flattened trajectory format.
 \end{enumerate}
 
 
-\subsection{1D CNN}
 \subsection{U-Net}
+To further enhance the model’s ability to capture features at multiple timescales, a U-Net architecture is adapted. Originally designed for medical imaging [cite here] , the standard 2D convolutions are replaced with 1D temporal convolutions. This allows the model’s encoder-decoder structure and skip connections to capture both coarse, long-range dependencies  and fine-grained, local patterns. This multi-scale processing makes the U-Net a highly expressive architecture for modeling complex, long-horizon trajectories. Again, a detailed implementation is provided below.
+The 1D Temporal U-Net is a more sophisticated convolutional architecture that processes sequential data at multiple resolutions to capture both local and global temporal patterns. It is built upon the same input processing and embedding fusion logic as the 1D CNN.
+\begin{enumerate}
+    \item \textbf{Input and Embedding:} The initial processing of the trajectory x, time t, and condition c is identical to the 1D Temporal CNN. The input is reshaped and projected with a 1x1 convolution, and the time and condition embeddings are fused and added to this initial hidden state.
+    \item \textbf{Encoder Path (Downsampling):} The architecture employs two DownBlock modules. Each DownBlock consists of a ResidualBlock followed by a strided Conv1d layer that halves the temporal resolution of the feature map. The output of the residual block is also passed forward as a skip connection to the corresponding decoder block.
+    \item \textbf{Bottleneck:} At the lowest temporal resolution, a single ResidualBlock processes the feature map without further downsampling.
+    \item \textbf{Decoder Path (Upsampling):} The architecture employs two UpBlock modules. Each UpBlock first uses a ConvTranspose1d layer to double the temporal resolution of its input. The upsampled feature map is then concatenated with the corresponding skip connection from the encoder path. This combined feature map is then processed by a ResidualBlock.
+    \item \textbf{Output:} A final 1x1 convolution (final\_conv) projects the output of the final UpBlock back to the original transition\_dim. The output is then reshaped to match the original flattened trajectory format.
+\end{enumerate}
+
 \subsection{Results and Analysis}
+
+The experimental results highlight a consistent set of trade-offs between flow matching and diffusion paradigms across all tested architectures. While both methods prove capable of modeling the trajectory distributions, they exhibit several key differences in efficiency, determinism, and training dynamics.
 
 \section{Planner Baseline: The Joint Planner}
 \label{sec:joint_planner_baseline}
