@@ -195,6 +195,13 @@ Flow Matching U-Net & 26.37 & \textbf{0.0843} \\
 \end{table}
 The most significant quantitative difference observed was in inference speed. For a given architecture, Flow Matching was consistently 3-4x faster at generating a single trajectory compared to the standard DDPM sampling schedule. This efficiency gain is a direct result of its formulation; as a deterministic ODE, it can often be solved in fewer steps than a stochastic SDE. While diffusion sampling can be accelerated using schedulers like DDIM, this often comes at the cost of reduced stochasticity and sample fidelity \cite{songDenoisingDiffusionImplicit2022a}.
 
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=1.0\textwidth]{arch_loss}
+  \caption{Architecture vs. Epoch Loss over 50 epochs}
+  \label{fig:arch_loss}
+\end{figure}
+
 Regarding training, both models had comparable wall-clock training times. While Flow Matching achieved a lower final training loss, this did not directly translate to higher control rewards in the subsequent MPC evaluation. The MPC results for these unconditional models were noisy, but suggested that Flow Matching performed "less-badly," likely due to the deterministic and stable nature of its generated trajectories.
 
 \begin{table}[H]
@@ -220,12 +227,33 @@ Flow Matching U-Net & -320.12 $\pm$ 138.21 & 3.48e-4 \\
 \end{tabular}
 \end{table}
 
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=1.0\textwidth]{diffusion_arch}
+  \caption{Diffusion MLP vs. CNN vs. U-Net}
+  \label{fig:diffusion_arch}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=1.0\textwidth]{fm_arch}
+  \caption{Flow Matching MLP vs. CNN vs. U-Net}
+  \label{fig:fm_arch}
+\end{figure}
+
 As anticipated, the more sophisticated U-Net consistently produced trajectories with superior temporal coherence, confirming the benefits of its multi-scale processing for both Flow Matching and Diffusion. The core difference between the methods became visually apparent in the nature of the generated paths.
 \begin{itemize}
     \item Flow Matching consistently produced more direct, deterministic trajectories. For a given starting noise, the resulting path is fixed, reflecting its roots as a learned ODE.
     \item Diffusion Models, by comparison, generated a much wider variety of ``creative'' and diverse paths. This is a direct consequence of its stochastic SDE formulation, which allows it to explore a broader range of solutions.
 \end{itemize}
 This distinction was also reflected in the training process. Flow Matching models began producing coherent, structured paths very early in training. This can be attributed to its direct regression objective, which provides a somewhat constrained learning signal from the outset. Diffusion models, however, took significantly longer to form coherent trajectories, as the network must first learn the score function across all noise levels before it can effectively reverse the diffusion process. This resulted in “wilder”, less structured generation in the early stages of training. From a practical standpoint, the diffusion framework also requires much more “bells and whistles” (e.g. noise schedule $\beta(t)$, training steps $N$, inference steps $K$, learning rate schedules $\eta(i)$, making flow matching the simpler paradigm to implement.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=1.0\textwidth]{diffusion_vs_flow_trajectory}
+  \caption{Diffusion CNN at Epoch 0 and 5 (left) vs. FM CNN at Epoch 0 and 5 (right)}
+  \label{fig:diffusion_vs_flow}
+\end{figure}
 
 \section{Planner Baseline: The Joint Planner}
 \label{sec:joint_planner_baseline}
