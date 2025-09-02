@@ -204,6 +204,7 @@ Since the trace of a Jacobian is much more efficient to compute than the full de
 
 
 \subsection{Flow Matching for Generative Models}
+\label{sec:fm_generative_models}
 Flow Matching was introduced to bypass the training bottleneck of CNF by reframing the CNF training objective from complex likelihood computations into a direct regression objective \cite{lipmanFlowMatchingGenerative2023a}.
 
 To construct such an objective, a continuous probability path  $p_t(x)$ is first defined. This path smoothly interpolates between a simple prior distribution $p_0(x)$ at $t = 0$  and the data distribution $p_1 (x)$ at $t= 1$. The key insight is that  any such path has a unique corresponding vector field $u_t(x)$ that generates it. This relationship is governed by the continuity equation:
@@ -220,6 +221,7 @@ This equation provides a link between the rate of change of the probability dens
 \end{figure}
 The general flow matching objective then becomes a straightforward L2 loss between the model’s predicted vector field and the target vector field:
 \begin{equation}
+	\label{eq:fm_objective}
 	\mathcal{L}_{\text{FM}}(\theta) = \mathbb{E}_{t, p_t(x)} \left[ \| v(x, t, \theta) - u_t(x) \|^2 \right].
 \end{equation}
 This objective is simulation free because it only requires sampling a time $t$ and a point $x$ from the known marginal distribution $p_t(x)$ and regressing the model’s output onto the target vector \cite{holderriethIntroductionFlowMatching2025}. While this general formulation is theoretically convenient, it requires access to both the marginal probability path $p_t(x)$ and the marginal vector field $ u_t(x)$. For most paths connecting a simple prior to a complex data distribution, both of these quantities are intractable. This issue is the primary motivation for conditional flow matching, with a practical implementation covered extensively in Section \ref{sec:cnf_formulation} that constructs the path in a specific way to ensure the target vector field is simple and known.

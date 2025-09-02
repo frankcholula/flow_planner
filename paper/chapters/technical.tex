@@ -1,18 +1,56 @@
 \chapter{Methodology}
+This chapter details the methodology for the proposed Flow Planner framework, a novel hierarchical framework for long-horizon trajectory planning. This chapter is structured to build from foundational theory to the specific contributions of this work.
 
+Section \ref{sec:cnf_formulation} first introduces the theoretical underpinnings of Conditional Flow Matching (CFM), a powerful, recently proposed paradigm for generative modeling. Building upon this, Section \ref{sec:planners} introduces a clever reformulation of the CFM objective, specializing this framework to the complex domains of robotic trajectory planning. This section goes over the general formulations for each planner component developed in this dissertation. Finally, Section \ref{sec:fp_framework} describes how these components are integrated into the complete hierarchical framework. 
+
+The formulations presented herein are adapted from the convention from "An Introduction to Flow Matching and Diffusion Models" by MIT CSAIL \cite{holderriethIntroductionFlowMatching2025}, as well as the “Flow Matching Guide and Code” provided by Meta \cite{lipmanFlowMatchingGuide2024a}.
 
 
 \section{Conditional Flow Matching Formulation}
 \label{sec:cnf_formulation}
-
+Recall in Section \ref{sec:fm_generative_models}, the general Flow Matching objective \ref{eq:fm_objective} is intractable because it requires access to the marginal probability path $p_t(x)$ and its corresponding vector field $u_t(x)$. Conditional Flow Matching (CFM) is a practical implementation that solves this problem by defining the probability path such that it yields a tractable target vector field. This transforms the objective into a stable and efficient regression problem. 
 
 \subsection{CFM Training}
+CFM constructs the path as a simple linear interpolation between a point sampled from a prior distribution $x_0 \sim p_0$ and a point from the data distribution $x_1 \sim p_1$. The prior is usually standard Gaussian noise $p_0(x) = \mathcal{N} (0, I)$. The point on the path at any time $t \in [0,1]$ is defined as:
+\begin{equation}
+	x_t=(1 - t)x_0+ tx_1.
+\end{equation}
+This specific construction is a type of Gaussian probability path referred to as the CondOT (Conditional Optimal Transport) path \cite{lipmanFlowMatchingGuide2024a}. The ground truth vector field requiring to move a particle along this straight path is constant at all times, and it is simply the vector connecting the two endpoints:
+\begin{equation}
+	u_t(x_t) = x_1-x_0.
+\end{equation}
+This replaces the intractable integral of the general formulation with a simple difference of two vectors, which are readily available during training.
+By substituting this simplified target vector field into the general objective in \ref{eq:fm_objective}, one arrives at the final CFM loss function. The goal is to train a neural network $ v_{\theta} (x_t, t, c)$ to predict the target vector $(x_1 - x_0) $ given the interpolated point $x_t$ and time $t$, and any optional conditioning variables $c$. This objective is a straightforward L2 regression loss:
+\begin{equation}
+	L_{CFM}(\theta)=E_{t,p_0(x_0),p_1(x_1)}[\|v_\theta((1-t)x_0 + tx_1, t, c)-(x_1-x_0)\|^2].
+\end{equation}
+A single training step is summarized in Algorithm \ref{alg:cfm_training}
 
 
-\subsection{Second Subsection}
-And, as required, more subsections.
+\begin{algorithm}
+\caption{CFM Training}\label{alg:cfm_training}
+\begin{algorithmic}[1]
+\Require Dataset of samples $\mathbf{x}_1 \sim p_{\text{data}}$, neural network $v_\theta$, prior distribution $p_0$ (e.g.\ $\mathcal{N}(0, I)$)
+\For{each training step}
+    \State $\mathbf{x}_1 \sim p_{\text{data}}$ \Comment{Sample a data point}
+    \State $\mathbf{x}_0 \sim p_{0}$ \Comment{Sample a noise vector}
+    \State $t \sim \text{Unif}[0,1]$ \Comment{Sample a random time}
+    \State $\mathbf{x}_t \gets (1-t)\mathbf{x}_0 + t\mathbf{x}_1$ \Comment{Compute interpolated point}
+    \State $\mathbf{u} \gets \mathbf{x}_1 - \mathbf{x}_0$ \Comment{Compute target vector}
+    \State $\mathcal{L}(\theta) \gets \|v_\theta(\mathbf{x}_t, t, c) - \mathbf{u}\|^2$ \Comment{Compute the loss}
+    \State $\theta \gets \theta - \eta \nabla_\theta \mathcal{L}(\theta)$ \Comment{Gradient descent update}
+\EndFor
+\end{algorithmic}
+\end{algorithm}
 
-\section{Second Section}
+
+
+
+
+
+
+\section{Planners Formulation}
+\label{sec:planners}
 
 
 \begin{table}[H]
@@ -30,13 +68,5 @@ And, as required, more subsections.
 	\label{tab:rtos}
 \end{table}
 
-\section{Third Section}
-
-This sections hows how to do equations and to show that they number correctly as LaTeX can do with the chapter number and equation number to refer to equation in a piece of text:
-
-\begin{equation}
-y = x^2
-\label{eq_test}
-\end{equation}
-
-but note it is usually after putting in an equation that you may refer back to equation (\ref{eq_test}) later in the document or chapter.
+\section{Flow Planner Framework}
+\label{sec:fp_framework}
