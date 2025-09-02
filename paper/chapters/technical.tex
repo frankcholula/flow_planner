@@ -193,10 +193,17 @@ The full procedure is detailed in Algorithm \ref{alg:hierarchical}.
 \end{algorithm}
 
 
+\subsection{Framework Design Philosophy}
 
+The design of the Flow Planner framework is motivated by the inherent limitations of reactive policies. While powerful for short-horizon tasks, the Diffusion Policy framework proposed by Chi et al can exhibit a “gold fish effect” where a limited observation history makes it difficult to maintain coherence over long durations \cite{jannerPlanningDiffusionFlexible2022}. This is particularly challenging in tasks with long-horizon multimodality, where the policy may lack sufficient history to disambiguate between different strategic modes, leading to indecisive or “stuck” behaviors.
 
+On the other hand, end-to-end approaches that excel in open-loop planning like the inpainting-based planner proposed by Janner et al. runs into a different scalability issue \cite{chiDiffusionPolicyVisuomotor2023}. While theoretically capable of generating long plans, modeling the entire joint state-action space over a long horizon is often practically infeasible due to the sample complexity and computational cost associated with such high-dimensional model inputs.
 
+Therefore, the Flow Planner Framework is centered around a “hierarchical decomposition” philosophy designed to address both of these challenges simultaneously. It is also worth noting that it is grounded in probabilistic factorization. Using the chain rule of probability, one can factorize the original complex joint state-action space distribution into two simpler conditional parts:
 
+\begin{equation}
+	p(\tau_s, \tau_a \mid c) = \underbrace{p(\tau_s \mid c)}_{\text{Waypoint Planner}} \cdot \underbrace{p(\tau_a \mid \tau_s , c)}_{\text{Action Planner}}.
+\end{equation}
 
 
 
