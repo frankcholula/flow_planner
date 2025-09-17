@@ -44,6 +44,7 @@ make download-agents
 ```
 
 ## Architecture
+
 ![Architecture](assets/arch.png)
 
 ## Datasets
