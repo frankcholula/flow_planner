@@ -211,3 +211,4 @@ logs/
 
 # hugging face
 hub/
+checkpoints/
